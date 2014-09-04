@@ -41,6 +41,9 @@ class ImportLeaf(ComparatorMixin):
         if ' as ' in name:
             name, as_name = list_strip(name.split(' as '))
 
+        if name == as_name:
+            as_name = None
+
         self.name = name
         self.as_name = as_name
 
@@ -205,13 +208,37 @@ def parse_statements(iterable):
 
         if import_line.startswith('import'):
             stem = import_line.replace('import', '').strip()
+            leafs = []
 
             if stem.startswith('.'):
                 stem, leafs_string = DOTS.findall(stem)[0]
-                leafs = [ImportLeaf(leafs_string)]
-                statement = ImportStatement(line_numbers, stem, leafs)
+
+                # handle ``import .foo.bar``
+                leafs_split = leafs_string.rsplit('.', 1)
+                if len(leafs_split) == 2:
+                    stem += leafs_split[0]
+                    leafs_string = leafs_split[1]
+
+                leafs.append(ImportLeaf(leafs_string))
+
             else:
-                statement = ImportStatement(line_numbers, stem)
+                # handle ``import a.b.c.d``
+                stem_split = stem.rsplit('.', 1)
+                if len(stem_split) == 2:
+                    stem = stem_split[0]
+                    leafs_string = stem_split[1]
+                    leafs.append(ImportLeaf(leafs_string))
+
+            # handle when ``as`` is present and is unnecessary
+            # in import without leafs
+            # e.g. ``import foo as foo``
+            # if leaf is present, leaf will take care of normalization
+            if ' as ' in stem and not leafs:
+                name, as_name = stem.split(' as ')
+                if name == as_name:
+                    stem = name
+
+            statement = ImportStatement(line_numbers, stem, leafs)
 
         else:
             stem, leafs_string = list_strip(
