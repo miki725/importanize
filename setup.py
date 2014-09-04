@@ -4,7 +4,7 @@ from __future__ import unicode_literals, print_function
 import os
 from setuptools import setup, find_packages
 
-from .importanize import __author__, __email__, __version__
+from importanize import __author__, __version__
 
 
 def read(fname):
@@ -38,6 +38,11 @@ setup(
     install_requires=requirements,
     test_suite='tests',
     tests_require=test_requirements,
+    entry_points={
+        'console_scripts': [
+            'importanize = importanize:main',
+        ]
+    },
     keywords=' '.join([
         'importanize',
     ]),

@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals, print_function
 import six
 import unittest
 
-from importanize.importanize import parse_statements
+from importanize.parser import parse_statements
 
 
 class TestParsing(unittest.TestCase):
