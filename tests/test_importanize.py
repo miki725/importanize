@@ -14,6 +14,13 @@ class TestParsing(unittest.TestCase):
         )
 
     def test_import_statements(self):
+        """
+        Test that ``import ..`` statements are correctly parsed
+        and that string output of ImportStatement matches
+        expected string.
+
+        This test is not strictly a unittest.
+        """
         self._test_import_string_matches(
             'import a',
             'import a'
@@ -53,4 +60,53 @@ class TestParsing(unittest.TestCase):
         self._test_import_string_matches(
             'import ..a.b',
             'from ..a import b'
+        )
+
+    def test_from_statements(self):
+        """
+        Test that ``from .. import ..`` statements are correctly parsed
+        and that string output of ImportStatement matches
+        expected string.
+
+        This test is not strictly a unittest.
+        """
+        self._test_import_string_matches(
+            'from a import b',
+            'from a import b',
+        )
+        self._test_import_string_matches(
+            'from a.b import c',
+            'from a.b import c',
+        )
+        self._test_import_string_matches(
+            'from a.b import c as d',
+            'from a.b import c as d',
+        )
+        self._test_import_string_matches(
+            'from a import\n b',
+            'from a import b',
+        )
+        self._test_import_string_matches(
+            'from a import \nb',
+            'from a import b',
+        )
+        self._test_import_string_matches(
+            'from a import\nb',
+            'from a import b',
+        )
+        self._test_import_string_matches(
+            'from a import b,d, c',
+            'from a import b, c, d',
+        )
+        self._test_import_string_matches(
+            'from a import b,d as e, c',
+            'from a import b, c, d as e',
+        )
+        self._test_import_string_matches(
+            'from a import b as e,d as g, c as f',
+            'from a import b as e, c as f, d as g',
+        )
+        self._test_import_string_matches(
+            'from a import b as e,d as g, c as c',
+            'from a import b as e, c, d as g',
         )
