@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
+import operator
 import sys
 from contextlib import contextmanager
 from importlib import import_module
@@ -33,3 +34,10 @@ def is_std_lib(module):
         finally:
             if imported_module:
                 sys.modules[module] = imported_module
+
+
+def list_strip(data):
+    """
+    Return list of stripped strings from given list
+    """
+    return list(map(operator.methodcaller('strip'), data))
