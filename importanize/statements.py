@@ -8,7 +8,6 @@ from .mixin import ComparatorMixin
 from .utils import list_strip
 
 
-CHARS = re.compile(r'[\\()]')
 DOTS = re.compile(r'^(\.+)(.*)')
 
 

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
+import re
 
-from .statements import CHARS, DOTS, ImportLeaf, ImportStatement
+from .statements import DOTS, ImportLeaf, ImportStatement
 from .utils import list_strip
+
+
+CHARS = re.compile(r'[\\()]')
 
 
 def find_imports_from_lines(iterator):
