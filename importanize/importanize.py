@@ -4,25 +4,12 @@ import operator
 import re
 from future.utils import python_2_unicode_compatible
 
+from .mixin import ComparatorMixin
 from .utils import list_strip
 
 
 CHARS = re.compile(r'[\\()]')
 DOTS = re.compile(r'^(\.+)(.*)')
-
-
-class ComparatorMixin(object):
-    def __ne__(self, other):
-        return not (self == other)
-
-    def __lt__(self, other):
-        return (not self == other) and not (self > other)
-
-    def __ge__(self, other):
-        return (self == other) and (self > other)
-
-    def __le__(self, other):
-        return not (self > other)
 
 
 @python_2_unicode_compatible
