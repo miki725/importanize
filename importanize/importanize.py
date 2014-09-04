@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
-from future.utils import python_2_unicode_compatible
+import operator
 import re
+from future.utils import python_2_unicode_compatible
 
 from utils import list_strip
 
@@ -101,9 +102,12 @@ class ImportStatement(ComparatorMixin):
         if not self.leafs:
             return 'import {}'.format(self.stem)
         else:
-            return ('from {} import {}'
-                    ''.format(self.stem,
-                              ', '.join(map(str, self.leafs))))
+            return (
+                'from {} import {}'
+                ''.format(self.stem,
+                          ', '.join(map(operator.methodcaller('as_string'),
+                                        sorted(self.leafs))))
+            )
 
     def __str__(self):
         return self.as_string()
