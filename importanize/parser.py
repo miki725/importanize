@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 
-from .importanize import CHARS, DOTS, ImportLeaf, ImportStatement
+from .statements import CHARS, DOTS, ImportLeaf, ImportStatement
 from .utils import list_strip
 
 
