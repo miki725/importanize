@@ -156,6 +156,44 @@ class ImportStatement(ComparatorMixin):
 
 
 def find_imports_from_lines(iterator):
+    """
+    Find import statements as strings from
+    enumerated iterator of lines.
+
+    Usually the iterator will of file lines.
+
+    Parameters
+    ----------
+    iterator : generator
+        Enumerated iterator which yield items
+        ``(line_number, line_string)``
+
+    Returns
+    -------
+    imports : generator
+        Iterator which yields normalized import
+        strings with line numbers from which the
+        import statement has been parsed from.
+
+    Example
+    -------
+
+    ::
+
+        >>> parsed = list(find_imports_from_lines(iter([
+        ...     (1, 'from __future__ import unicode_literals'),
+        ...     (2, 'import os.path'),
+        ...     (3, 'from datetime import ('),
+        ...     (4, '   date,'),
+        ...     (5, '   datetime,'),
+        ...     (6, ')'),
+        ... ])))
+        >>> assert parsed == [
+        ...     ('from __future__ import unicode_literals', [1]),
+        ...     ('import os.path', [2]),
+        ...     ('from datetime import date,datetime', [3, 4, 5, 6])
+        ... ]
+    """
     while True:
 
         try:
@@ -204,10 +242,27 @@ def find_imports_from_lines(iterator):
 
         import_line = ''.join(line_imports)
 
+        # strip ending comma if there
+        if import_line.endswith(','):
+            import_line = import_line[:-1]
+
         yield import_line, line_numbers
 
 
 def parse_statements(iterable):
+    """
+    Parse iterable into ``ImportStatement`` instances.
+
+    Parameters
+    ----------
+    iterable : generator
+        Generator as returned by ``find_imports_from_lines``
+
+    Returns
+    -------
+    statements : generator
+        Generator which yields ``ImportStatement`` instances.
+    """
     for import_line, line_numbers in iterable:
 
         if import_line.startswith('import'):
