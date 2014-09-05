@@ -3,10 +3,73 @@ from __future__ import unicode_literals, print_function
 import six
 import unittest
 
-from importanize.parser import parse_statements
+from importanize.parser import find_imports_from_lines, parse_statements
 
 
 class TestParsing(unittest.TestCase):
+    def _test_import_parsing(self, lines, expected):
+        self.assertEqual(
+            list(find_imports_from_lines(enumerate(iter(lines))))[0],
+            expected,
+        )
+
+    def test_parsing(self):
+        self._test_import_parsing(
+            ('import a',),
+            ('import a', [0]),
+        )
+        self._test_import_parsing(
+            ('import a, b',),
+            ('import a, b', [0]),
+        )
+        self._test_import_parsing(
+            ('import a, b as c',),
+            ('import a, b as c', [0]),
+        )
+        self._test_import_parsing(
+            ('from a import b',),
+            ('from a import b', [0]),
+        )
+        self._test_import_parsing(
+            ('from a.b import c',),
+            ('from a.b import c', [0]),
+        )
+        self._test_import_parsing(
+            ('from a.b import c,\\',
+             '    d'),
+            ('from a.b import c,d', [0, 1]),
+        )
+        self._test_import_parsing(
+            ('from a.b import c, \\',
+             '    d'),
+            ('from a.b import c,d', [0, 1]),
+        )
+        self._test_import_parsing(
+            ('from a.b import \\',
+             '    c,\\',
+             '    d,'),
+            ('from a.b import c,d', [0, 1, 2]),
+        )
+        self._test_import_parsing(
+            ('from a.b import (c,',
+             '    d)'),
+            ('from a.b import c,d', [0, 1]),
+        )
+        self._test_import_parsing(
+            ('from a.b import (c, ',
+             '    d',
+             ')'),
+            ('from a.b import c,d', [0, 1, 2]),
+        )
+        self._test_import_parsing(
+            ('from a.b import (',
+             '    c,',
+             '    d,',
+             ')',
+             'foo'),
+            ('from a.b import c,d', [0, 1, 2, 3]),
+        )
+
     def _test_import_string_matches(self, string, expected):
         self.assertEqual(
             six.text_type(
