@@ -32,9 +32,9 @@ clean-build:
 	@rm -rf *.egg-info
 
 clean-pyc:
-	@find . -name '*.pyc' -follow -print0 | xargs -0 rm -f
-	@find . -name '*.pyo' -follow -print0 | xargs -0 rm -f
-	@find . -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
+	-@find . -name '*.pyc' -follow -print0 | xargs -0 rm -f
+	-@find . -name '*.pyo' -follow -print0 | xargs -0 rm -f
+	-@find . -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
 
 clean-test:
 	rm -rf .coverage coverage*
