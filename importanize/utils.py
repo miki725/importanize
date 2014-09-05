@@ -49,5 +49,6 @@ def list_strip(data):
     """
     return list(map(operator.methodcaller('strip'), data))
 
+
 def read(path):
     return open(path, 'rb').read().decode('utf-8')
