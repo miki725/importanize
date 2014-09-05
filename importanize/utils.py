@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 import operator
+import os
 import sys
 from contextlib import contextmanager
 from importlib import import_module
@@ -11,10 +12,12 @@ def ignore_site_packages_paths():
     paths = sys.path
     # remove all third-party paths
     # so that only stdlib imports will succeed
-    sys.path = list(filter(
+    sys.path = list(set(filter(
         None,
         filter(lambda i: 'site-packages' not in i, sys.path)
-    ))
+    )))
+    if os.getcwd() in sys.path:
+        sys.path.remove(os.getcwd())
     yield
     sys.path = paths
 
