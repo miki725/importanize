@@ -85,18 +85,6 @@ class TestParsing(unittest.TestCase):
             'from a.b import c as d',
         )
         self._test_import_string_matches(
-            'from a import\n b',
-            'from a import b',
-        )
-        self._test_import_string_matches(
-            'from a import \nb',
-            'from a import b',
-        )
-        self._test_import_string_matches(
-            'from a import\nb',
-            'from a import b',
-        )
-        self._test_import_string_matches(
             'from a import b,d, c',
             'from a import b, c, d',
         )
