@@ -7,8 +7,12 @@ python:
   - "2.7"
   - "pypy"
 
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -r requirements-dev.txt
+install:
+  - pip install -r requirements-dev.txt
+  - pip install coveralls
 
-# command to run tests, e.g. python setup.py test
-script: make check
+script:
+  make check
+
+after_success:
+  coveralls
