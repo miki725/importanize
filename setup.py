@@ -40,7 +40,7 @@ setup(
     tests_require=test_requirements,
     entry_points={
         'console_scripts': [
-            'importanize = importanize:main',
+            'importanize = importanize.main:main',
         ]
     },
     keywords=' '.join([
