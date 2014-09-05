@@ -6,10 +6,13 @@ Importanize (import organize)
     :target: http://badge.fury.io/py/importanize
 
 .. image:: https://travis-ci.org/miki725/importanize.png?branch=master
-        :target: https://travis-ci.org/miki725/importanize
+    :target: https://travis-ci.org/miki725/importanize
+
+.. image:: https://coveralls.io/repos/miki725/importanize/badge.png?branch=master
+    :target: https://coveralls.io/r/miki725/importanize?branch=master
 
 .. image:: https://pypip.in/d/importanize/badge.png
-        :target: https://pypi.python.org/pypi/importanize
+    :target: https://pypi.python.org/pypi/importanize
 
 Utility for organizing Python imports using PEP8 or custom rules
 
