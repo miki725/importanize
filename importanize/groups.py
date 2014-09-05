@@ -51,7 +51,7 @@ class PackagesGroup(BaseImportGroup):
 
 class LocalGroup(BaseImportGroup):
     def should_add_statement(self, statement):
-        return statement.root_module.startswith('.')
+        return statement.stem.startswith('.')
 
 
 class RemainderGroup(BaseImportGroup):
