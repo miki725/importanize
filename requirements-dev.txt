@@ -4,5 +4,4 @@ flake8
 mock
 nose
 rednose
-six
 tox
