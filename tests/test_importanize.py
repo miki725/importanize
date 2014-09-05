@@ -45,7 +45,7 @@ class TestParsing(unittest.TestCase):
         )
         self._test_import_string_matches(
             'import a.b.c',
-            'from a.b import c'
+            'import a.b.c',
         )
         self._test_import_string_matches(
             'import .a',

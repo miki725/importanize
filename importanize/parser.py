@@ -135,9 +135,9 @@ def parse_statements(iterable):
                 leafs.append(ImportLeaf(leafs_string))
 
             else:
-                # handle ``import a.b.c.d``
+                # handle ``import a.b as c``
                 stem_split = stem.rsplit('.', 1)
-                if len(stem_split) == 2:
+                if len(stem_split) == 2 and ' as ' in stem:
                     stem = stem_split[0]
                     leafs_string = stem_split[1]
                     leafs.append(ImportLeaf(leafs_string))
