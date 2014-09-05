@@ -14,7 +14,8 @@ def ignore_site_packages_paths():
     # so that only stdlib imports will succeed
     sys.path = list(set(filter(
         None,
-        filter(lambda i: 'site-packages' not in i, sys.path)
+        filter(lambda i: all(('site-packages' not in i,
+                              'python' in i)), sys.path)
     )))
     if os.getcwd() in sys.path:
         sys.path.remove(os.getcwd())
