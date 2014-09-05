@@ -104,8 +104,10 @@ class ImportGroups(object):
             raise ValueError(msg)
 
     def as_string(self):
-        return '\n\n'.join(map(operator.methodcaller('as_string'),
-                               self.groups))
+        return '\n\n'.join(filter(
+            None, map(operator.methodcaller('as_string'),
+                      self.groups)
+        ))
 
     def __str__(self):
         return self.as_string()
