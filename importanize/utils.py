@@ -24,6 +24,9 @@ def ignore_site_packages_paths():
 
 
 def is_std_lib(module):
+    if not module:
+        return False
+
     if module in sys.builtin_module_names:
         return True
 
@@ -45,3 +48,6 @@ def list_strip(data):
     Return list of stripped strings from given list
     """
     return list(map(operator.methodcaller('strip'), data))
+
+def read(path):
+    return open(path, 'rb').read().decode('utf-8')

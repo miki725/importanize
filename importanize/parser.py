@@ -119,8 +119,8 @@ def parse_statements(iterable):
     """
     for import_line, line_numbers in iterable:
 
-        if import_line.startswith('import'):
-            stem = import_line.replace('import', '').strip()
+        if import_line.startswith('import '):
+            stem = import_line.replace('import ', '').strip()
             leafs = []
 
             if stem.startswith('.'):
@@ -155,7 +155,7 @@ def parse_statements(iterable):
 
         else:
             stem, leafs_string = list_strip(
-                import_line.replace('from', '').split('import')
+                import_line.replace('from ', '').split(' import ')
             )
             leafs = filter(None, list_strip(leafs_string.split(',')))
             leafs = list(map(ImportLeaf, leafs))
