@@ -11,7 +11,7 @@ from .groups import ImportGroups
 from .utils import read
 
 
-IMPORTANIZE_CONFIG = 'importanize.json'
+IMPORTANIZE_CONFIG = '.importanizerc'
 PEP8_CONFIG = {
     'groups': [
         {
