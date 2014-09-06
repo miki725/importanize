@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
+import itertools
 import operator
 from collections import OrderedDict
 from future.utils import python_2_unicode_compatible
@@ -17,6 +18,12 @@ class BaseImportGroup(object):
     @property
     def unique_statements(self):
         return sorted(list(set(self.statements)))
+
+    def all_line_numbers(self):
+        return sorted(list(set(list(
+            itertools.chain(*map(operator.attrgetter('line_numbers'),
+                                 self.statements))
+        ))))
 
     def should_add_statement(self, statement):
         raise NotImplementedError
@@ -79,6 +86,12 @@ GROUP_MAPPING = OrderedDict((
 class ImportGroups(object):
     def __init__(self):
         self.groups = []
+
+    def all_line_numbers(self):
+        return sorted(list(set(list(
+            itertools.chain(*map(operator.methodcaller('all_line_numbers'),
+                                 self.groups))
+        ))))
 
     def add_group(self, config):
         if 'type' not in config:
