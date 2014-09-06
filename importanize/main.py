@@ -86,7 +86,8 @@ def run(path, config):
     lines = (lines[:first_import_line_number]
              + formatted_imports.splitlines()
              + [''] * 2
-             + lines[first_import_line_number:])
+             + lines[first_import_line_number:]
+             + [''])
 
     print('\n'.join(lines))
 
