@@ -11,9 +11,6 @@ Importanize (import organize)
 .. image:: https://coveralls.io/repos/miki725/importanize/badge.png?branch=master
     :target: https://coveralls.io/r/miki725/importanize?branch=master
 
-.. image:: https://pypip.in/d/importanize/badge.png
-    :target: https://pypi.python.org/pypi/importanize
-
 Utility for organizing Python imports using PEP8 or custom rules
 
 * Free software: MIT license
