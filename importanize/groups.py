@@ -14,6 +14,10 @@ class BaseImportGroup(object):
 
         self.statements = []
 
+    @property
+    def unique_statements(self):
+        return sorted(list(set(self.statements)))
+
     def should_add_statement(self, statement):
         raise NotImplementedError
 
@@ -25,7 +29,11 @@ class BaseImportGroup(object):
 
     def as_string(self):
         return '\n'.join(map(operator.methodcaller('as_string'),
-                             sorted(self.statements)))
+                             self.unique_statements))
+
+    def formatted(self):
+        return '\n'.join(map(operator.methodcaller('formatted'),
+                             self.unique_statements))
 
     def __str__(self):
         return self.as_string()
@@ -106,6 +114,12 @@ class ImportGroups(object):
     def as_string(self):
         return '\n\n'.join(filter(
             None, map(operator.methodcaller('as_string'),
+                      self.groups)
+        ))
+
+    def formatted(self):
+        return '\n\n'.join(filter(
+            None, map(operator.methodcaller('formatted'),
                       self.groups)
         ))
 

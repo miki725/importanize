@@ -67,7 +67,7 @@ def run(path, config):
     for i in imports:
         groups.add_statement_to_group(i)
 
-    print(groups.as_string())
+    print(groups.formatted())
 
 
 def main():
