@@ -49,6 +49,12 @@ class ImportLeaf(ComparatorMixin):
                              self.__class__.__name__,
                              self.as_string()))
 
+    def __hash__(self):
+        if self.as_name:
+            return hash('{}+{}'.format(self.name, self.as_name))
+        else:
+            return hash(self.name)
+
     def __eq__(self, other):
         return self.name == other.name
 
@@ -121,7 +127,7 @@ class ImportStatement(ComparatorMixin):
                 'from {} import {}'
                 ''.format(self.stem,
                           ', '.join(map(operator.methodcaller('as_string'),
-                                        sorted(self.leafs))))
+                                        sorted(list(set(self.leafs))))))
             )
 
     def __str__(self):
