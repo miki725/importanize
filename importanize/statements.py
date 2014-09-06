@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 import operator
 import re
+
 from future.utils import python_2_unicode_compatible
 
 from .mixin import ComparatorMixin

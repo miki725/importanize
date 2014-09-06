@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 import itertools
 import operator
 from collections import OrderedDict
+
 from future.utils import python_2_unicode_compatible
 
 from .utils import is_std_lib

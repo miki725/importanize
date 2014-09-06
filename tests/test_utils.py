@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
-import mock
+from __future__ import print_function, unicode_literals
 import os
 import sys
 import unittest
+
+import mock
 
 from importanize.utils import (
     ignore_site_packages_paths,

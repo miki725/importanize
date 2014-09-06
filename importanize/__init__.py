@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
+
 
 __author__ = 'Miroslav Shubernetskiy'
 __email__ = 'miroslav@miki725.com'

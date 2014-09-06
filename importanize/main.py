@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 import argparse
 import json
 import operator
 import os
+
 import six
 
-from .parser import find_imports_from_lines, parse_statements
 from .groups import ImportGroups
+from .parser import find_imports_from_lines, parse_statements
 from .utils import read
 
 
