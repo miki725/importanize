@@ -7,7 +7,7 @@ class ComparatorMixin(object):
         return not (self == other)
 
     def __lt__(self, other):
-        return (not self == other) and not (self > other)
+        return not (self == other) and not (self > other)
 
     def __ge__(self, other):
         return (self == other) and (self > other)
