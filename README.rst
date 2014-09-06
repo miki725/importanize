@@ -26,6 +26,86 @@ You can install ``importanize`` using pip::
 
     $ pip install importanize
 
+Why?
+----
+
+I think imports are important in Python. I also think PEP8 is awesome
+(if you disagree, read some PHP) and there are many tools to help
+developers reformat code to match PEP8. Unfortunately there are no
+tools to reliably organize Python imports to match PEP8 suggestions.
+This is where ``importanize`` comes in. It allows to organize
+Python imports using PEP8 or your custom rules. Read on for
+more information.
+
+Using
+-----
+
+Using ``importanize`` is super easy. Just run::
+
+    $ importanize file_to_organize.py
+
+That will re-format all imports in the given file.
+As part of the default configuration, ``importanize`` will try
+it's best to organize imports to follow PEP8 however that is rather
+challenging task since it is difficult to determine all import groups
+as suggested by `PEP8 <http://legacy.python.org/dev/peps/pep-0008/#imports>`_:
+
+1) standard library imports
+2) related third party imports
+3) local application/library specific imports
+
+To help ``importanize`` distinguish between different import groups in most
+cases it would be recommended to use custom config file::
+
+    $ importanize file_to_organize.py config.json
+
+Config file is simply a ``json`` file. Default config looks something like::
+
+    {
+        'groups': [
+            {
+                'type': 'stdlib',
+            },
+            {
+                'type': 'remainder',
+            },
+            {
+                'type': 'local',
+            }
+        ],
+    }
+
+Currently the only required key is ``"groups"`` which must be an array
+of group definitions. ``importanize`` will use these group definitions
+to organize imports and will output import groups in the same order
+as defined in the config file. These are the supported group types:
+
+* ``stdlib`` - standard library imports including ``__future__``
+* ``local`` - local imports which start with ``"."``. for example
+  ``from .foo import bar``
+* ``packages`` - if this group is specified, additional key ``packages``
+  is required within import group definition which should list
+  all Python packages (root level) which should be included in that group::
+
+      {
+          "type": "packages",
+          "packages": ["foo", "bar"]
+      }
+
+* ``remaining`` - all remaining imports which did not satisfy requirements
+  of all other groups will go to this group
+
+You can use the config file by specifying it in the ``importanize``
+command as shown above however you can also create an ``.importanizerc``
+file and commit that to your repository. As a matter of fact,
+you can see the
+`.importanizerc <https://github.com/miki725/importanize/blob/master/.importanizerc>`_
+config file used for the importanize repository itself.
+
+Finally, you can see all other available ``importanize`` options::
+
+    $ importanize --help
+
 Testing
 -------
 
@@ -38,3 +118,4 @@ Then to run tests, you can use ``nosetests`` or simply use Makefile command::
     $ nosetests -sv
     # or
     $ make test
+
