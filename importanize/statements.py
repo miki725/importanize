@@ -85,6 +85,7 @@ class ImportLeaf(ComparatorMixin):
         return self.name > other.name
 
 
+@python_2_unicode_compatible
 class ImportStatement(ComparatorMixin):
     """
     Data-structure to store information about
@@ -137,6 +138,12 @@ class ImportStatement(ComparatorMixin):
     def __str__(self):
         return self.as_string()
 
+    def __repr__(self):
+        return str('<{}.{} object - "{}">'
+                   ''.format(self.__class__.__module__,
+                             self.__class__.__name__,
+                             self.as_string()))
+
     def __eq__(self, other):
         return all((self.stem == other.stem,
                     self.unique_leafs == other.unique_leafs))
@@ -146,7 +153,9 @@ class ImportStatement(ComparatorMixin):
         Follows the following rules:
 
         * ``__future__`` is always first
-        * ``import ..`` is ahead of ``from .. import ..``
+        * ``import ..`` is ahead of ``from .. import ..`` imports
+        * ``import ..a`` is ahead of ``import .a``
+        * local imports are below regular imports
         * otherwise root_module is alphabetically compared
         """
         # same stem so compare sorted first leafs, if there
@@ -168,6 +177,11 @@ class ImportStatement(ComparatorMixin):
             other_local = DOTS.findall(other.stem)[0][0]
             if len(self_local) != len(other_local):
                 return len(self_local) < len(other_local)
+
+        # only one is local import
+        if any([not self.stem.startswith('.') and other.stem.startswith('.'),
+                self.stem.startswith('.') and not other.stem.startswith('.')]):
+            return self.stem.startswith('.')
 
         # check for ``import ..`` vs ``from .. import ..``
         self_len = len(self.leafs)

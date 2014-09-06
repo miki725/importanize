@@ -40,6 +40,14 @@ class TestImportLeaf(unittest.TestCase):
         leaf = ImportLeaf('a as a')
         self.assertEqual(six.text_type(leaf), leaf.as_string())
 
+    @mock.patch.object(ImportLeaf, 'as_string')
+    def test_str_mock(self, mock_as_string):
+        self.assertEqual(
+            getattr(ImportLeaf('a'),
+                    '__{}__'.format(six.text_type.__name__))(),
+            mock_as_string.return_value
+        )
+
     def test_eq(self):
         self.assertTrue(ImportLeaf('a') == ImportLeaf('a'))
         self.assertFalse(ImportLeaf('a') == ImportLeaf('b'))
@@ -135,6 +143,21 @@ class TestImportStatement(unittest.TestCase):
             six.text_type(statement),
         )
 
+    @mock.patch.object(ImportStatement, 'as_string')
+    def test_str_mock(self, mock_as_string):
+        self.assertEqual(
+            getattr(ImportStatement([], 'a'),
+                    '__{}__'.format(six.text_type.__name__))(),
+            mock_as_string.return_value
+        )
+
+    def test_repr(self):
+        self.assertEqual(
+            repr(ImportStatement([], 'a')),
+            '<{}.{} object - "import a">'.format(ImportStatement.__module__,
+                                                 ImportStatement.__name__)
+        )
+
     def test_eq(self):
         self.assertTrue(
             ImportStatement([], 'a', [ImportLeaf('a')])
@@ -149,3 +172,44 @@ class TestImportStatement(unittest.TestCase):
             ImportStatement([], 'a', [ImportLeaf('a')])
             == ImportStatement([], 'a', [ImportLeaf('b')])
         )
+
+    def test_gt(self):
+        def _test(stem, leafs, stem2, leafs2, greater=True):
+            statement = ImportStatement(
+                list(),
+                stem,
+                list(map(ImportLeaf, leafs))
+            )
+            statement2 = ImportStatement(
+                list(),
+                stem2,
+                list(map(ImportLeaf, leafs2))
+            )
+            if greater:
+                self.assertGreater(statement2, statement)
+            else:
+                self.assertLess(statement2, statement)
+
+        # from __future import unicode_literals
+        # import a
+        _test('__future__', ['unicode_literals'],
+              'a', [])
+        _test('a', [''],
+              '__future__', ['unicode_literals'],
+              False)
+        _test('a', [],  # import a
+              'a', ['b'])  # from a import b
+        _test('a', ['b'],  # from a import b
+              'a.b', ['c'])  # from a.b import c
+        _test('a', [],  # import a
+              '.a', [])  # import .a
+        _test('a', ['b'],  # from aa import b
+              '.a', ['b'])  # from .a import b
+        _test('..a', [],  # import ..a
+              '.a', [])  # import .a
+        _test('..a', ['b'],  # from ..a import b
+              '..a.b', ['c'])  # from ..a.b import c
+        _test('.a', ['b'],  # from .a import b
+              '.a.b', ['c'])  # from .a.b import b
+        _test('a.b', ['c'],  # from a.b import c
+              'a.b', ['d'])  # from a.b import d
