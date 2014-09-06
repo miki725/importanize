@@ -67,7 +67,28 @@ def run(path, config):
     for i in imports:
         groups.add_statement_to_group(i)
 
-    print(groups.formatted())
+    formatted_imports = groups.formatted()
+    line_numbers = groups.all_line_numbers()
+
+    lines = text.splitlines()
+    for line_number in sorted(groups.all_line_numbers(), reverse=True):
+        lines.pop(line_number)
+
+    first_import_line_number = min(line_numbers)
+    i = first_import_line_number
+
+    while i:
+        if not lines[i]:
+            lines.pop(i)
+        else:
+            i = None
+
+    lines = (lines[:first_import_line_number]
+             + formatted_imports.splitlines()
+             + [''] * 2
+             + lines[first_import_line_number:])
+
+    print('\n'.join(lines))
 
 
 def main():
