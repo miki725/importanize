@@ -52,9 +52,16 @@ parser.add_argument(
          'will be used. Otherwise crude default pep8 '
          'config will be used.',
 )
+parser.add_argument(
+    '--print',
+    action='store_false',
+    default=True,
+    help='If provided, instead of changing files, modified '
+         'files will be printed to stdout.'
+)
 
 
-def run(path, config):
+def run(path, config, args):
     text = read(path)
 
     lines_iterator = enumerate(iter(text.splitlines()))
@@ -89,7 +96,13 @@ def run(path, config):
              + lines[first_import_line_number:]
              + [''])
 
-    print('\n'.join(lines))
+    lines = '\n'.join(lines)
+
+    if args.print:
+        print(lines)
+    else:
+        with open(path, 'wb') as fid:
+            fid.write(lines.encode('utf-8'))
 
 
 def main():
@@ -102,7 +115,7 @@ def main():
         config = json.loads(read(args.config))
 
     if not os.path.isdir(path):
-        run(path, config)
+        run(path, config, args)
 
     else:
         for dirpath, dirnames, filenames in os.walk(path):
@@ -112,7 +125,8 @@ def main():
             )
             for file in python_files:
                 path = os.path.join(dirpath, file)
-                print('=' * len(path))
-                print(path)
-                print('-' * len(path))
-                run(path, config)
+                if args.print:
+                    print('=' * len(path))
+                    print(path)
+                    print('-' * len(path))
+                run(path, config, args)
