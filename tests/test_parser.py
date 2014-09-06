@@ -4,6 +4,7 @@ import unittest
 
 import six
 
+from importanize.exceptions import MultipleImportsError
 from importanize.parser import find_imports_from_lines, parse_statements
 
 
@@ -127,6 +128,9 @@ class TestParsing(unittest.TestCase):
             'import ..a.b',
             'from ..a import b'
         )
+
+        with self.assertRaises(MultipleImportsError):
+            list(parse_statements([('import a, b', [1])]))
 
     def test_from_statements(self):
         """
