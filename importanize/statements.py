@@ -110,6 +110,10 @@ class ImportStatement(ComparatorMixin):
         self.leafs = leafs or []
 
     @property
+    def unique_leafs(self):
+        return sorted(list(set(self.leafs)))
+
+    @property
     def root_module(self):
         """
         Root module being imported.
@@ -127,7 +131,7 @@ class ImportStatement(ComparatorMixin):
                 'from {} import {}'
                 ''.format(self.stem,
                           ', '.join(map(operator.methodcaller('as_string'),
-                                        sorted(list(set(self.leafs))))))
+                                        self.unique_leafs)))
             )
 
     def __str__(self):
@@ -135,7 +139,7 @@ class ImportStatement(ComparatorMixin):
 
     def __eq__(self, other):
         return all((self.stem == other.stem,
-                    sorted(self.leafs) == sorted(other.leafs)))
+                    self.unique_leafs == other.unique_leafs))
 
     def __gt__(self, other):
         """
