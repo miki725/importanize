@@ -116,7 +116,10 @@ def main():
         config = json.loads(read(args.config))
 
     if not os.path.isdir(path):
-        run(path, config, args)
+        try:
+            run(path, config, args)
+        except Exception as e:
+            parser.error(e.message)
 
     else:
         for dirpath, dirnames, filenames in os.walk(path):
@@ -130,4 +133,8 @@ def main():
                     print('=' * len(path))
                     print(path)
                     print('-' * len(path))
-                run(path, config, args)
+                try:
+                    run(path, config, args)
+                except Exception as e:
+                    msg = '{} - {}'.format(path, e.message)
+                    parser.error(msg)
