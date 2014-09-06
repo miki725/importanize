@@ -55,8 +55,8 @@ parser.add_argument(
 )
 parser.add_argument(
     '--print',
-    action='store_false',
-    default=True,
+    action='store_true',
+    default=False,
     help='If provided, instead of changing files, modified '
          'files will be printed to stdout.'
 )
