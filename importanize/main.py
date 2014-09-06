@@ -82,7 +82,7 @@ def run(path, config, args):
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
         lines.pop(line_number)
 
-    first_import_line_number = min(line_numbers)
+    first_import_line_number = min(line_numbers) if line_numbers else 0
     i = first_import_line_number
 
     while i and len(lines) > i:
