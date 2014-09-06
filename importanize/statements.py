@@ -50,10 +50,7 @@ class ImportLeaf(ComparatorMixin):
                              self.as_string()))
 
     def __hash__(self):
-        if self.as_name:
-            return hash('{}+{}'.format(self.name, self.as_name))
-        else:
-            return hash(self.name)
+        return hash(self.as_string())
 
     def __eq__(self, other):
         return self.name == other.name

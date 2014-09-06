@@ -87,7 +87,7 @@ class TestImportLeaf(unittest.TestCase):
         )
         self.assertEqual(
             hash(ImportLeaf('a as b')),
-            hash('a+b')
+            hash('a as b')
         )
 
 
