@@ -90,6 +90,11 @@ class TestImportLeaf(unittest.TestCase):
             hash('a as b')
         )
 
+    @mock.patch.object(ImportLeaf, 'as_string')
+    def test_hash_mock(self, mock_as_string):
+        hash(ImportLeaf('a'))
+        mock_as_string.assert_called_once_with()
+
 
 class TestImportStatement(unittest.TestCase):
     def test_init(self):
@@ -233,3 +238,18 @@ class TestImportStatement(unittest.TestCase):
               '.a.b', ['c'])  # from .a.b import b
         _test('a.b', ['c'],  # from a.b import c
               'a.b', ['d'])  # from a.b import d
+
+    def test_hash(self):
+        self.assertEqual(
+            hash(ImportStatement([], 'a')),
+            hash('import a')
+        )
+        self.assertEqual(
+            hash(ImportStatement([], 'a', [ImportLeaf('b')])),
+            hash('from a import b')
+        )
+
+    @mock.patch.object(ImportStatement, 'as_string')
+    def test_hash_mock(self, mock_as_string):
+        hash(ImportStatement([], 'a'))
+        mock_as_string.assert_called_once_with()

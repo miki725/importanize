@@ -145,6 +145,9 @@ class ImportStatement(ComparatorMixin):
             )
         return string
 
+    def __hash__(self):
+        return hash(self.as_string())
+
     def __str__(self):
         return self.as_string()
 
