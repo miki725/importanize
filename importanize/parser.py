@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 import re
 
+from .exceptions import MultipleImportsError
 from .statements import DOTS, ImportLeaf, ImportStatement
 from .utils import list_strip
 
@@ -122,6 +123,11 @@ def parse_statements(iterable):
         if import_line.startswith('import '):
             stem = import_line.replace('import ', '').strip()
             leafs = []
+
+            if ',' in stem:
+                msg = ('There are multiple imports in a single line "{}" '
+                       'which violates PEP8 (http://bitly.com/pep8)')
+                raise MultipleImportsError(msg.format(import_line))
 
             if stem.startswith('.'):
                 stem, leafs_string = DOTS.findall(stem)[0]
