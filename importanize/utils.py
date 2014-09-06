@@ -9,16 +9,18 @@ from importlib import import_module
 
 @contextmanager
 def ignore_site_packages_paths():
-    paths = sys.path
+    paths = sys.path[:]
+    # remove working directory so that all
+    # local imports fail
+    if os.getcwd() in sys.path:
+        sys.path.remove(os.getcwd())
     # remove all third-party paths
     # so that only stdlib imports will succeed
     sys.path = list(set(filter(
         None,
         filter(lambda i: all(('site-packages' not in i,
-                              'python' in i)), sys.path)
+                              'python' in i or 'pypy' in i)), sys.path)
     )))
-    if os.getcwd() in sys.path:
-        sys.path.remove(os.getcwd())
     yield
     sys.path = paths
 
