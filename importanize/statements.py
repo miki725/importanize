@@ -43,10 +43,39 @@ class ImportLeaf(ComparatorMixin):
     def __str__(self):
         return self.as_string()
 
+    def __repr__(self):
+        return str('<{}.{} object - "{}">'
+                   ''.format(self.__class__.__module__,
+                             self.__class__.__name__,
+                             self.as_string()))
+
     def __eq__(self, other):
         return self.name == other.name
 
     def __gt__(self, other):
+        def _type(obj):
+            if obj.name.isupper():
+                return 'upper'
+            elif obj.name.islower():
+                return 'lower'
+            elif obj.name[:1].isupper():
+                return 'mixed'
+            else:
+                return 'none'
+
+        self_type = _type(self)
+        other_type = _type(other)
+
+        priority = (
+            'upper',
+            'mixed',
+            'lower',
+            'none',
+        )
+
+        if self_type != other_type:
+            return priority.index(self_type) > priority.index(other_type)
+
         return self.name > other.name
 
 
