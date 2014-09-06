@@ -135,6 +135,19 @@ class ImportStatement(ComparatorMixin):
                                         self.unique_leafs)))
             )
 
+    def formatted(self):
+        string = self.as_string()
+        if len(string) > 80 and len(self.leafs) > 1:
+            sep = '\n    '
+            string = (
+                'from {} import ({}{},\n)'
+                ''.format(self.stem, sep,
+                          (',{}'.format(sep)
+                           .join(map(operator.methodcaller('as_string'),
+                                     self.unique_leafs))))
+            )
+        return string
+
     def __str__(self):
         return self.as_string()
 

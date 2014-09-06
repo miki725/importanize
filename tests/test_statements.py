@@ -136,6 +136,26 @@ class TestImportStatement(unittest.TestCase):
         _test('a.b', ['c as d', 'e'], 'from a.b import c as d, e')
         _test('a.b', ['e', 'c as d', 'e'], 'from a.b import c as d, e')
 
+    def test_formatted(self):
+        def _test(stem, leafs, expected):
+            statement = ImportStatement(
+                list(),
+                stem,
+                list(map(ImportLeaf, leafs))
+            )
+            self.assertEqual(statement.formatted(),
+                             '\n'.join(expected))
+
+        _test('a', [], ['import a'])
+        _test('a', ['b'], ['from a import b'])
+        _test('a' * 40, ['b' * 40],
+              ['from {} import {}'.format('a' * 40, 'b' * 40)])
+        _test('a' * 40, ['b' * 20, 'c' * 20],
+              ['from {} import ('.format('a' * 40),
+               '    {},'.format('b' * 20),
+               '    {},'.format('c' * 20),
+               ')'])
+
     def test_str(self):
         statement = ImportStatement([], 'a')
         self.assertEqual(
