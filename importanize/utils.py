@@ -53,4 +53,5 @@ def list_strip(data):
 
 
 def read(path):
-    return open(path, 'rb').read().decode('utf-8')
+    with open(path, 'rb') as fid:
+        return fid.read().decode('utf-8')

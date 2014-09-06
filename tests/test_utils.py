@@ -103,14 +103,17 @@ class TestUtils(unittest.TestCase):
             'rb'
         )
         mock_open.return_value \
+            .__enter__.return_value \
             .read.assert_called_once_with()
         mock_open.return_value \
+            .__enter__.return_value \
             .read.return_value \
             .decode.assert_called_once_with('utf-8')
 
         self.assertEqual(
             actual,
             (mock_open.return_value
+             .__enter__.return_value
              .read.return_value
              .decode.return_value)
         )
