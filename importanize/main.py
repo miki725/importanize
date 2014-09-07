@@ -85,7 +85,7 @@ def run(path, config, args):
     first_import_line_number = min(line_numbers) if line_numbers else 0
     i = first_import_line_number
 
-    while i and len(lines) > i:
+    while i is not None and len(lines) > i:
         if not lines[i]:
             lines.pop(i)
         else:
@@ -93,7 +93,9 @@ def run(path, config, args):
 
     lines = (lines[:first_import_line_number]
              + formatted_imports.splitlines()
-             + ([''] * 2 if lines[first_import_line_number:] else [])
+             + ([''] * 2
+                if lines[first_import_line_number:] and formatted_imports
+                else [])
              + lines[first_import_line_number:]
              + [''])
 
