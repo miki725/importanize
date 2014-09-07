@@ -103,6 +103,51 @@ Finally, you can see all other available ``importanize`` options::
 
     $ importanize --help
 
+Example
+-------
+
+Here is a before and after (on hypothetical file):
+
+Before
+~~~~~~
+
+::
+
+    from __future__ import unicode_literals, print_function
+    import os.path as ospath
+    import datetime
+    from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+    from .module import foo, bar
+    from ..othermodule import rainbows
+
+After
+~~~~~
+
+::
+
+    from __future__ import print_function, unicode_literals
+    import datetime
+    from os import path as ospath
+
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
+
+    from ..othermodule import rainbows
+    from .module import bar, foo
+
+Here is what ``importanize`` did:
+
+* alphabetical sort, even inside import line (look at ``__future``)
+* normalized ``import .. as ..`` into ``from .. import .. as ..``
+* broke long import (>80 chars) which has more than one import
+  into multiple lines
+* reordered some imports (e.g. local imports ``..`` should be before ``.``)
+
 Testing
 -------
 
