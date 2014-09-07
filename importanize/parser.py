@@ -54,7 +54,22 @@ def find_imports_from_lines(iterator):
         try:
             line_number, line = next(iterator)
         except StopIteration:
-            break
+            return
+
+        # ignore comment blocks
+        if '"""' in line:
+            inside_comment = True
+            while inside_comment:
+                try:
+                    line_number, line = next(iterator)
+                except StopIteration:
+                    return
+                inside_comment = not line.endswith('"""')
+            # get the next line since previous is an end of a comment
+            try:
+                line_number, line = next(iterator)
+            except StopIteration:
+                return
 
         # if no imports found on line, ignore
         if not any([line.startswith('from '),
