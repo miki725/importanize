@@ -142,7 +142,7 @@ After
 
 Here is what ``importanize`` did:
 
-* alphabetical sort, even inside import line (look at ``__future``)
+* alphabetical sort, even inside import line (look at ``__future__``)
 * normalized ``import .. as ..`` into ``from .. import .. as ..``
 * broke long import (>80 chars) which has more than one import
   into multiple lines
