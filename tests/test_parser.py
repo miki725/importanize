@@ -10,9 +10,9 @@ from importanize.parser import find_imports_from_lines, parse_statements
 
 class TestParsing(unittest.TestCase):
     def _test_import_parsing(self, lines, expected):
-        self.assertEqual(
-            list(find_imports_from_lines(enumerate(iter(lines))))[0],
-            expected,
+        self.assertListEqual(
+            list(find_imports_from_lines(enumerate(iter(lines)))),
+            [expected] if expected else [],
         )
 
     def test_parsing(self):
@@ -70,6 +70,28 @@ class TestParsing(unittest.TestCase):
              ')',
              'foo'),
             ('from a.b import c,d', [0, 1, 2, 3]),
+        )
+        self._test_import_parsing(
+            ('"""',
+             'from this shall not import',
+             '"""',
+             'from a.b import (',
+             '    c,',
+             '    d,',
+             ')',
+             'foo'),
+            ('from a.b import c,d', [3, 4, 5, 6]),
+        )
+        self._test_import_parsing(
+            ('"""',
+             'from this shall not import'),
+            tuple(),
+        )
+        self._test_import_parsing(
+            ('"""',
+             'from this shall not import'
+             '"""'),
+            tuple(),
         )
 
     def _test_import_string_matches(self, string, expected):
