@@ -62,10 +62,8 @@ class ImportLeaf(ComparatorMixin):
                 return 'upper'
             elif obj.name.islower():
                 return 'lower'
-            elif obj.name[:1].isupper():
-                return 'mixed'
             else:
-                return 'none'
+                return 'mixed'
 
         self_type = _type(self)
         other_type = _type(other)
@@ -74,7 +72,6 @@ class ImportLeaf(ComparatorMixin):
             'upper',
             'mixed',
             'lower',
-            'none',
         )
 
         if self_type != other_type:

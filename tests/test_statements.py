@@ -73,6 +73,10 @@ class TestImportLeaf(unittest.TestCase):
             ImportLeaf('aKlassName'),
             ImportLeaf('CONSTANT')
         )
+        self.assertGreater(
+            ImportLeaf('a_variable'),
+            ImportLeaf('aKlassName')
+        )
 
     def test_repr(self):
         self.assertEqual(
