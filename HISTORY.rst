@@ -3,6 +3,12 @@
 History
 -------
 
+0.1.2 (2014-09-15)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed where import leafs were not properly sorted for
+  mixed case (aka CamelCase)
+
 0.1.1 (2014-09-07)
 ~~~~~~~~~~~~~~~~~~
 
