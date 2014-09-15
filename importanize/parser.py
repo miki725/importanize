@@ -57,7 +57,8 @@ def find_imports_from_lines(iterator):
             return
 
         # ignore comment blocks
-        if '"""' in line:
+        triple_quote = line.find('"""')
+        if triple_quote >= 0 and line.find('"""', triple_quote + 3) < 0:
             inside_comment = True
             while inside_comment:
                 try:

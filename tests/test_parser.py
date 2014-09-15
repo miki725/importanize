@@ -83,6 +83,15 @@ class TestParsing(unittest.TestCase):
             ('from a.b import c,d', [3, 4, 5, 6]),
         )
         self._test_import_parsing(
+            ('""" from this shall not import """',
+             'from a.b import (',
+             '    c,',
+             '    d,',
+             ')',
+             'foo'),
+            ('from a.b import c,d', [1, 2, 3, 4]),
+        )
+        self._test_import_parsing(
             ('"""',
              'from this shall not import'),
             tuple(),
@@ -91,6 +100,10 @@ class TestParsing(unittest.TestCase):
             ('"""',
              'from this shall not import'
              '"""'),
+            tuple(),
+        )
+        self._test_import_parsing(
+            ('""" from this shall not import """'),
             tuple(),
         )
 
