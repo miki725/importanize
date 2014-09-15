@@ -3,6 +3,12 @@
 History
 -------
 
+0.1.3 (2014-09-15)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed where single line triple-quote docstrings would cause
+  none of the imports to be recognized
+
 0.1.2 (2014-09-15)
 ~~~~~~~~~~~~~~~~~~
 
