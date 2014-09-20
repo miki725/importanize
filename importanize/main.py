@@ -4,9 +4,11 @@ import argparse
 import json
 import operator
 import os
+import sys
 
 import six
 
+from . import __version__
 from .groups import ImportGroups
 from .parser import find_imports_from_lines, parse_statements
 from .utils import read
@@ -60,6 +62,12 @@ parser.add_argument(
     help='If provided, instead of changing files, modified '
          'files will be printed to stdout.'
 )
+parser.add_argument(
+    '--version',
+    action='store_true',
+    default=False,
+    help='Show the version number of importanize'
+)
 
 
 def run(path, config, args):
@@ -110,6 +118,11 @@ def run(path, config, args):
 
 def main():
     args = parser.parse_args()
+
+    if args.version:
+        msg = 'importanize version: {}'
+        print(msg.format(__version__))
+        sys.exit(0)
 
     path = os.path.abspath(args.path)
     if args.config is None:

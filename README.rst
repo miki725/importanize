@@ -59,15 +59,15 @@ cases it would be recommended to use custom config file::
 Config file is simply a ``json`` file. Default config looks something like::
 
     {
-        'groups': [
+        "groups": [
             {
-                'type': 'stdlib',
+                "type": "stdlib",
             },
             {
-                'type': 'remainder',
+                "type": "remainder",
             },
             {
-                'type': 'local',
+                "type": "local",
             }
         ],
     }
