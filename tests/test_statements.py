@@ -188,6 +188,17 @@ class TestImportStatement(unittest.TestCase):
                                                  ImportStatement.__name__)
         )
 
+    def test_add(self):
+        with self.assertRaises(AssertionError):
+            ImportStatement([], 'a') + ImportStatement([], 'b')
+
+        self.assertEqual(
+            ImportStatement([], 'a', [ImportLeaf('b')])
+            + ImportStatement([], 'a', [ImportLeaf('c')]),
+            ImportStatement([], 'a', [ImportLeaf('b'),
+                                      ImportLeaf('c')])
+        )
+
     def test_eq(self):
         self.assertTrue(
             ImportStatement([], 'a', [ImportLeaf('a')])

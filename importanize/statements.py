@@ -155,6 +155,19 @@ class ImportStatement(ComparatorMixin):
                              self.__class__.__name__,
                              self.as_string()))
 
+    def __add__(self, other):
+        """
+        Combined two import statements into a single statement.
+        This requires both import statements to have the same stem.
+        """
+        assert self.stem == other.stem
+
+        return ImportStatement(
+            line_numbers=list(set(self.line_numbers + other.line_numbers)),
+            stem=self.stem,
+            leafs=self.leafs + other.leafs,
+        )
+
     def __eq__(self, other):
         return all((self.stem == other.stem,
                     self.unique_leafs == other.unique_leafs))
