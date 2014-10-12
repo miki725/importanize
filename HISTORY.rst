@@ -3,6 +3,15 @@
 History
 -------
 
+0.1.4 (2014-10-12)
+~~~~~~~~~~~~~~~~~~
+
+* Multiple imports (e.g. ``import a, b``) are normalized
+  instead of exiting
+* Multiple imports with the same stem are combined into
+  single import statement
+  (see `#17 <https://github.com/miki725/importanize/issues/17>`_ for example)
+
 0.1.3 (2014-09-15)
 ~~~~~~~~~~~~~~~~~~
 
