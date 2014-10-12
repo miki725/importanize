@@ -2,7 +2,6 @@
 from __future__ import print_function, unicode_literals
 import re
 
-from .exceptions import MultipleImportsError
 from .statements import DOTS, ImportLeaf, ImportStatement
 from .utils import list_strip
 
@@ -120,6 +119,57 @@ def find_imports_from_lines(iterator):
         yield import_line, line_numbers
 
 
+def parse_import_statement(stem, line_numbers):
+    """
+    Parse single import statement into ``ImportStatement`` instances.
+
+    Parameters
+    ----------
+    stem : str
+        Import line stem which excludes ``"import"``.
+        For example for ``import a`` import, simply ``a``
+        should be passed.
+    line_numbers : list
+        List of line numbers which normalized to import stem.
+
+    Returns
+    -------
+    statement : ImportStatement
+        ``ImportStatement`` instances.
+    """
+    leafs = []
+
+    if stem.startswith('.'):
+        stem, leafs_string = DOTS.findall(stem)[0]
+
+        # handle ``import .foo.bar``
+        leafs_split = leafs_string.rsplit('.', 1)
+        if len(leafs_split) == 2:
+            stem += leafs_split[0]
+            leafs_string = leafs_split[1]
+
+        leafs.append(ImportLeaf(leafs_string))
+
+    else:
+        # handle ``import a.b as c``
+        stem_split = stem.rsplit('.', 1)
+        if len(stem_split) == 2 and ' as ' in stem:
+            stem = stem_split[0]
+            leafs_string = stem_split[1]
+            leafs.append(ImportLeaf(leafs_string))
+
+    # handle when ``as`` is present and is unnecessary
+    # in import without leafs
+    # e.g. ``import foo as foo``
+    # if leaf is present, leaf will take care of normalization
+    if ' as ' in stem and not leafs:
+        name, as_name = stem.split(' as ')
+        if name == as_name:
+            stem = name
+
+    return ImportStatement(line_numbers, stem, leafs)
+
+
 def parse_statements(iterable):
     """
     Parse iterable into ``ImportStatement`` instances.
@@ -137,43 +187,10 @@ def parse_statements(iterable):
     for import_line, line_numbers in iterable:
 
         if import_line.startswith('import '):
-            stem = import_line.replace('import ', '').strip()
-            leafs = []
+            stems = import_line.replace('import ', '').strip().split(',')
 
-            if ',' in stem:
-                msg = ('There are multiple imports in a single line "{}" '
-                       'which violates PEP8 (http://bitly.com/pep8)')
-                raise MultipleImportsError(msg.format(import_line))
-
-            if stem.startswith('.'):
-                stem, leafs_string = DOTS.findall(stem)[0]
-
-                # handle ``import .foo.bar``
-                leafs_split = leafs_string.rsplit('.', 1)
-                if len(leafs_split) == 2:
-                    stem += leafs_split[0]
-                    leafs_string = leafs_split[1]
-
-                leafs.append(ImportLeaf(leafs_string))
-
-            else:
-                # handle ``import a.b as c``
-                stem_split = stem.rsplit('.', 1)
-                if len(stem_split) == 2 and ' as ' in stem:
-                    stem = stem_split[0]
-                    leafs_string = stem_split[1]
-                    leafs.append(ImportLeaf(leafs_string))
-
-            # handle when ``as`` is present and is unnecessary
-            # in import without leafs
-            # e.g. ``import foo as foo``
-            # if leaf is present, leaf will take care of normalization
-            if ' as ' in stem and not leafs:
-                name, as_name = stem.split(' as ')
-                if name == as_name:
-                    stem = name
-
-            statement = ImportStatement(line_numbers, stem, leafs)
+            for stem in stems:
+                yield parse_import_statement(stem.strip(), line_numbers)
 
         else:
             stem, leafs_string = list_strip(
@@ -182,6 +199,4 @@ def parse_statements(iterable):
             leafs = filter(None, list_strip(leafs_string.split(',')))
             leafs = list(map(ImportLeaf, leafs))
 
-            statement = ImportStatement(line_numbers, stem, leafs)
-
-        yield statement
+            yield ImportStatement(line_numbers, stem, leafs)
