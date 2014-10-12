@@ -163,7 +163,7 @@ class ImportStatement(ComparatorMixin):
         assert self.stem == other.stem
 
         return ImportStatement(
-            line_numbers=list(set(self.line_numbers + other.line_numbers)),
+            line_numbers=self.line_numbers + other.line_numbers,
             stem=self.stem,
             leafs=self.leafs + other.leafs,
         )

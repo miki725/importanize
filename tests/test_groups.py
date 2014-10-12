@@ -25,20 +25,35 @@ class TestBaseImportGroup(unittest.TestCase):
     @mock.patch('importanize.groups.sorted', create=True)
     @mock.patch('importanize.groups.list', create=True)
     @mock.patch('importanize.groups.set', create=True)
+    @mock.patch.object(BaseImportGroup, 'merged_statements')
     def test_unique_statements(self,
+                               mock_merged_statements,
                                mock_set,
                                mock_list,
                                mock_sorted):
         group = BaseImportGroup()
-        group.statements = mock.sentinel.statements
 
         actual = group.unique_statements
 
         self.assertEqual(actual, mock_sorted.return_value)
 
-        mock_set.assert_called_once_with(mock.sentinel.statements)
+        mock_set.assert_called_once_with(mock_merged_statements)
         mock_list.assert_called_once_with(mock_set.return_value)
         mock_sorted.assert_called_once_with(mock_list.return_value)
+
+    def test_merged_statements(self):
+        group = BaseImportGroup()
+        group.statements = [ImportStatement([], 'a', [ImportLeaf('b')]),
+                            ImportStatement([], 'a', [ImportLeaf('c')]),
+                            ImportStatement([], 'b', [ImportLeaf('c')])]
+
+        actual = group.merged_statements
+
+        self.assertListEqual(actual, [
+            ImportStatement([], 'a', [ImportLeaf('b'),
+                                      ImportLeaf('c')]),
+            ImportStatement([], 'b', [ImportLeaf('c')])
+        ])
 
     def test_all_line_numbers(self):
         s2 = ImportStatement([2, 7], 'b')

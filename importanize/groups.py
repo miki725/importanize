@@ -2,7 +2,7 @@
 from __future__ import print_function, unicode_literals
 import itertools
 import operator
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from future.utils import python_2_unicode_compatible
 
@@ -18,7 +18,22 @@ class BaseImportGroup(object):
 
     @property
     def unique_statements(self):
-        return sorted(list(set(self.statements)))
+        return sorted(list(set(self.merged_statements)))
+
+    @property
+    def merged_statements(self):
+        """
+        Merge statements with the same import stems
+        """
+        counter = defaultdict(list)
+        for statement in self.statements:
+            counter[statement.stem].append(statement)
+
+        merged_statements = []
+        for stem, statements in counter.items():
+            merged_statements.append(reduce(lambda a, b: a + b, statements))
+
+        return merged_statements
 
     def all_line_numbers(self):
         return sorted(list(set(list(

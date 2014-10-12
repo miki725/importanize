@@ -192,12 +192,15 @@ class TestImportStatement(unittest.TestCase):
         with self.assertRaises(AssertionError):
             ImportStatement([], 'a') + ImportStatement([], 'b')
 
+        actual = (ImportStatement([1, 2], 'a', [ImportLeaf('b')])
+                  + ImportStatement([3, 4], 'a', [ImportLeaf('c')]))
+
         self.assertEqual(
-            ImportStatement([], 'a', [ImportLeaf('b')])
-            + ImportStatement([], 'a', [ImportLeaf('c')]),
-            ImportStatement([], 'a', [ImportLeaf('b'),
-                                      ImportLeaf('c')])
+            actual,
+            ImportStatement([1, 2, 3, 4], 'a', [ImportLeaf('b'),
+                                                ImportLeaf('c')])
         )
+        self.assertListEqual(actual.line_numbers, [1, 2, 3, 4])
 
     def test_eq(self):
         self.assertTrue(
