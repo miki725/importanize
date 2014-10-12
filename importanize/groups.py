@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import itertools
 import operator
 from collections import OrderedDict, defaultdict
+from functools import reduce
 
 from future.utils import python_2_unicode_compatible
 

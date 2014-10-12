@@ -49,10 +49,10 @@ class TestBaseImportGroup(unittest.TestCase):
 
         actual = group.merged_statements
 
-        self.assertListEqual(actual, [
+        self.assertListEqual(sorted(actual), [
             ImportStatement([], 'a', [ImportLeaf('b'),
                                       ImportLeaf('c')]),
-            ImportStatement([], 'b', [ImportLeaf('c')])
+            ImportStatement([], 'b', [ImportLeaf('c')]),
         ])
 
     def test_all_line_numbers(self):
