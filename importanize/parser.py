@@ -128,15 +128,26 @@ def find_imports_from_lines(iterator):
         # strip each line
         line_imports = list_strip(line_imports)
 
+        # if line starts with "import "
+        # that will result in incorrect join
+        # so explicitly add space before "import"
+        # note this has to be after stripping each line
+        # e.g. from long.import.here \
+        #          import foo
+        line_imports = map(lambda i: (i if not i.startswith('import ')
+                                      else ' ' + i),
+                           line_imports)
         # if line ended with "import\"
         # that will result in incorrect join
         # so explicitly add space after "import"
         # note this has to be after stripping each line
+        # e.g. from long.import.here import \
+        #          foo, bar
         line_imports = map(lambda i: (i if not i.endswith(' import')
                                       else i + ' '),
                            line_imports)
 
-        import_line = ''.join(line_imports)
+        import_line = ''.join(line_imports).strip()
 
         # strip ending comma if there
         if import_line.endswith(','):
