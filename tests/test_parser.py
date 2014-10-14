@@ -2,12 +2,41 @@
 from __future__ import print_function, unicode_literals
 import unittest
 
+import mock
 import six
 
-from importanize.parser import find_imports_from_lines, parse_statements
+from importanize.parser import (
+    find_imports_from_lines,
+    get_artifacts,
+    parse_statements,
+)
+
+
+TESTING_MODULE = 'importanize.parser'
 
 
 class TestParsing(unittest.TestCase):
+    @mock.patch(TESTING_MODULE + '.read')
+    def test_get_artifacts(self, mock_read):
+        mock_read.return_value = 'Hello\nWorld\n'
+        actual = get_artifacts(mock.sentinel.path)
+        self.assertDictEqual(actual, {
+            'sep': '\n',
+        })
+        mock_read.assert_called_once_with(mock.sentinel.path)
+
+        mock_read.return_value = 'Hello\r\nWorld\n'
+        actual = get_artifacts(mock.sentinel.path)
+        self.assertDictEqual(actual, {
+            'sep': '\r\n',
+        })
+
+        mock_read.return_value = 'Hello'
+        actual = get_artifacts(mock.sentinel.path)
+        self.assertDictEqual(actual, {
+            'sep': '\n',
+        })
+
     def _test_import_parsing(self, lines, expected):
         self.assertListEqual(
             list(find_imports_from_lines(enumerate(iter(lines)))),

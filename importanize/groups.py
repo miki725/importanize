@@ -12,10 +12,11 @@ from .utils import is_std_lib
 
 @python_2_unicode_compatible
 class BaseImportGroup(object):
-    def __init__(self, config=None):
+    def __init__(self, config=None, **kwargs):
         self.config = config or {}
 
         self.statements = []
+        self.artifacts = kwargs.get('artifacts', {})
 
     @property
     def unique_statements(self):
@@ -52,12 +53,14 @@ class BaseImportGroup(object):
         return False
 
     def as_string(self):
-        return '\n'.join(map(operator.methodcaller('as_string'),
-                             self.unique_statements))
+        sep = self.artifacts.get('sep', '\n')
+        return sep.join(map(operator.methodcaller('as_string'),
+                            self.unique_statements))
 
     def formatted(self):
-        return '\n'.join(map(operator.methodcaller('formatted'),
-                             self.unique_statements))
+        sep = self.artifacts.get('sep', '\n')
+        return sep.join(map(operator.methodcaller('formatted'),
+                            self.unique_statements))
 
     def __str__(self):
         return self.as_string()
@@ -101,8 +104,9 @@ GROUP_MAPPING = OrderedDict((
 
 @python_2_unicode_compatible
 class ImportGroups(object):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.groups = []
+        self.artifacts = kwargs.get('artifacts', {})
 
     def all_line_numbers(self):
         return sorted(list(set(list(
@@ -142,13 +146,15 @@ class ImportGroups(object):
             raise ValueError(msg)
 
     def as_string(self):
-        return '\n\n'.join(filter(
+        sep = self.artifacts.get('sep', '\n') * 2
+        return sep.join(filter(
             None, map(operator.methodcaller('as_string'),
                       self.groups)
         ))
 
     def formatted(self):
-        return '\n\n'.join(filter(
+        sep = self.artifacts.get('sep', '\n') * 2
+        return sep.join(filter(
             None, map(operator.methodcaller('formatted'),
                       self.groups)
         ))

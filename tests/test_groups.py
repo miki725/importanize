@@ -101,6 +101,17 @@ class TestBaseImportGroup(unittest.TestCase):
             'import b'
         )
 
+    def test_as_string_with_artifacts(self):
+        group = BaseImportGroup(artifacts={'sep': '\r\n'})
+        group.statements = [ImportStatement([], 'b'),
+                            ImportStatement([], 'a')]
+
+        self.assertEqual(
+            group.as_string(),
+            'import a\r\n'
+            'import b'
+        )
+
     def test_formatted(self):
         group = BaseImportGroup()
         group.statements = [
@@ -115,6 +126,25 @@ class TestBaseImportGroup(unittest.TestCase):
             'from {} import (\n'.format('b' * 80) +
             '    c,\n' +
             '    d,\n' +
+            ')'
+        )
+
+    def test_formatted_with_artifacts(self):
+        artifacts = {'sep': '\r\n'}
+        group = BaseImportGroup(artifacts=artifacts)
+        group.statements = [
+            ImportStatement([], 'b' * 80, [ImportLeaf('c'),
+                                           ImportLeaf('d')],
+                            artifacts=artifacts),
+            ImportStatement([], 'a', artifacts=artifacts)
+        ]
+
+        self.assertEqual(
+            group.formatted(),
+            'import a\r\n' +
+            'from {} import (\r\n'.format('b' * 80) +
+            '    c,\r\n' +
+            '    d,\r\n' +
             ')'
         )
 
@@ -248,8 +278,31 @@ class TestImportGroups(unittest.TestCase):
     def test_as_string(self):
         self.assertEqual(ImportGroups().as_string(), '')
 
-    def test_formatted(self):
+    def test_formatted_empty(self):
         self.assertEqual(ImportGroups().formatted(), '')
+
+    def test_formatted_with_artifacts(self):
+        artifacts = {'sep': '\r\n'}
+
+        groups = ImportGroups(artifacts=artifacts)
+        groups.groups = [
+            RemainderGroup(artifacts=artifacts),
+            LocalGroup(artifacts=artifacts),
+        ]
+
+        groups.add_statement_to_group(
+            ImportStatement([], '.a', artifacts=artifacts)
+        )
+        groups.add_statement_to_group(
+            ImportStatement([], 'foo', artifacts=artifacts)
+        )
+
+        self.assertEqual(
+            groups.formatted(),
+            'import foo\r\n'
+            '\r\n'
+            'import .a'
+        )
 
     @mock.patch.object(ImportGroups, 'as_string')
     def test_str_mock(self, mock_as_string):

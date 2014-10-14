@@ -100,10 +100,11 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None):
+    def __init__(self, line_numbers, stem, leafs=None, **kwargs):
         self.line_numbers = line_numbers
         self.stem = stem
         self.leafs = leafs or []
+        self.artifacts = kwargs.get('artifacts', {})
 
     @property
     def unique_leafs(self):
@@ -133,13 +134,14 @@ class ImportStatement(ComparatorMixin):
     def formatted(self):
         string = self.as_string()
         if len(string) > 80 and len(self.leafs) > 1:
-            sep = '\n    '
+            sep = '{}    '.format(self.artifacts.get('sep', '\n'))
             string = (
-                'from {} import ({}{},\n)'
+                'from {} import ({}{},{})'
                 ''.format(self.stem, sep,
                           (',{}'.format(sep)
                            .join(map(operator.methodcaller('as_string'),
-                                     self.unique_leafs))))
+                                     self.unique_leafs))),
+                          self.artifacts.get('sep', '\n'))
             )
         return string
 

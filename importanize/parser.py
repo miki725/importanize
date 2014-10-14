@@ -3,10 +3,36 @@ from __future__ import print_function, unicode_literals
 import re
 
 from .statements import DOTS, ImportLeaf, ImportStatement
-from .utils import list_strip
+from .utils import list_strip, read
 
 
 CHARS = re.compile(r'[\\()]')
+
+
+def get_artifacts(path):
+    """
+    Get artifacts for the given file.
+
+    Parameters
+    ----------
+    path : str
+        Path to a file
+
+    Returns
+    -------
+    artifacts : dict
+        Dictionary of file artifacts which should be
+        considered while processing imports.
+    """
+    artifacts = {
+        'sep': '\n',
+    }
+
+    lines = read(path).splitlines(True)
+    if len(lines) > 1 and lines[0][-2:] == '\r\n':
+        artifacts['sep'] = '\r\n'
+
+    return artifacts
 
 
 def find_imports_from_lines(iterator):
@@ -119,7 +145,7 @@ def find_imports_from_lines(iterator):
         yield import_line, line_numbers
 
 
-def parse_import_statement(stem, line_numbers):
+def parse_import_statement(stem, line_numbers, **kwargs):
     """
     Parse single import statement into ``ImportStatement`` instances.
 
@@ -167,10 +193,13 @@ def parse_import_statement(stem, line_numbers):
         if name == as_name:
             stem = name
 
-    return ImportStatement(line_numbers, stem, leafs)
+    return ImportStatement(line_numbers,
+                           stem,
+                           leafs,
+                           **kwargs)
 
 
-def parse_statements(iterable):
+def parse_statements(iterable, **kwargs):
     """
     Parse iterable into ``ImportStatement`` instances.
 
@@ -190,7 +219,9 @@ def parse_statements(iterable):
             stems = import_line.replace('import ', '').strip().split(',')
 
             for stem in stems:
-                yield parse_import_statement(stem.strip(), line_numbers)
+                yield parse_import_statement(stem.strip(),
+                                             line_numbers,
+                                             **kwargs)
 
         else:
             stem, leafs_string = list_strip(
@@ -199,4 +230,7 @@ def parse_statements(iterable):
             leafs = filter(None, list_strip(leafs_string.split(',')))
             leafs = list(map(ImportLeaf, leafs))
 
-            yield ImportStatement(line_numbers, stem, leafs)
+            yield ImportStatement(line_numbers,
+                                  stem,
+                                  leafs,
+                                  **kwargs)

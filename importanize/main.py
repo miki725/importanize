@@ -10,7 +10,7 @@ import six
 
 from . import __version__
 from .groups import ImportGroups
-from .parser import find_imports_from_lines, parse_statements
+from .parser import find_imports_from_lines, get_artifacts, parse_statements
 from .utils import read
 
 
@@ -72,6 +72,7 @@ parser.add_argument(
 
 def run(path, config, args):
     text = read(path)
+    artifacts = get_artifacts(path)
 
     lines_iterator = enumerate(iter(text.splitlines()))
     imports = list(parse_statements(find_imports_from_lines(lines_iterator)))
@@ -107,7 +108,7 @@ def run(path, config, args):
              + lines[first_import_line_number:]
              + [''])
 
-    lines = '\n'.join(lines)
+    lines = artifacts.get('sep', '\n').join(lines)
 
     if args.print:
         print(lines)

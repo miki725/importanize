@@ -147,14 +147,15 @@ class TestImportStatement(unittest.TestCase):
         _test('a.b', ['e', 'c as d', 'e'], 'from a.b import c as d, e')
 
     def test_formatted(self):
-        def _test(stem, leafs, expected):
+        def _test(stem, leafs, expected, sep='\n', **kwargs):
             statement = ImportStatement(
                 list(),
                 stem,
-                list(map(ImportLeaf, leafs))
+                list(map(ImportLeaf, leafs)),
+                **kwargs
             )
             self.assertEqual(statement.formatted(),
-                             '\n'.join(expected))
+                             sep.join(expected))
 
         _test('a', [], ['import a'])
         _test('a', ['b'], ['from a import b'])
@@ -165,6 +166,13 @@ class TestImportStatement(unittest.TestCase):
                '    {},'.format('b' * 20),
                '    {},'.format('c' * 20),
                ')'])
+        _test('a' * 40, ['b' * 20, 'c' * 20],
+              ['from {} import ('.format('a' * 40),
+               '    {},'.format('b' * 20),
+               '    {},'.format('c' * 20),
+               ')'],
+              '\r\n',
+              artifacts={'sep': '\r\n'})
 
     def test_str(self):
         statement = ImportStatement([], 'a')
