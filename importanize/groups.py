@@ -35,8 +35,8 @@ class BaseImportGroup(object):
             else:
                 leafless_counter[statement.stem].append(statement)
 
-        merged_statements = map(operator.itemgetter(0),
-                                leafless_counter.values())
+        merged_statements = list(map(operator.itemgetter(0),
+                                     leafless_counter.values()))
         for stem, statements in counter.items():
             merged_statements.append(reduce(lambda a, b: a + b, statements))
 
