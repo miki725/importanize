@@ -148,12 +148,12 @@ def find_imports_from_lines(iterator):
                 }
             }
             for f, k in kwargs.items():
-                line_imports = map(
+                line_imports = list(map(
                     lambda i: (i if not getattr(i, f)('{pre}{word}{post}'
                                                       ''.format(**k))
                                else '{post}{i}{pre}'.format(i=i, **k)),
                     line_imports
-                )
+                ))
 
         import_line = ''.join(line_imports).strip()
 
