@@ -55,6 +55,20 @@ class TestBaseImportGroup(unittest.TestCase):
             ImportStatement([], 'b', [ImportLeaf('c')]),
         ])
 
+    def test_merged_statements_leafless(self):
+        group = BaseImportGroup()
+        group.statements = [ImportStatement([], 'a', [ImportLeaf('b')]),
+                            ImportStatement([], 'a', []),
+                            ImportStatement([], 'b', [ImportLeaf('c')])]
+
+        actual = group.merged_statements
+
+        self.assertListEqual(sorted(actual), [
+            ImportStatement([], 'a', []),
+            ImportStatement([], 'a', [ImportLeaf('b')]),
+            ImportStatement([], 'b', [ImportLeaf('c')]),
+        ])
+
     def test_all_line_numbers(self):
         s2 = ImportStatement([2, 7], 'b')
         s1 = ImportStatement([1, 2], 'a')
@@ -133,8 +147,8 @@ class TestBaseImportGroup(unittest.TestCase):
         artifacts = {'sep': '\r\n'}
         group = BaseImportGroup(artifacts=artifacts)
         group.statements = [
-            ImportStatement([], 'b' * 80, [ImportLeaf('c'),
-                                           ImportLeaf('d')],
+            ImportStatement(list(), 'b' * 80, [ImportLeaf('c'),
+                                               ImportLeaf('d')],
                             artifacts=artifacts),
             ImportStatement([], 'a', artifacts=artifacts)
         ]
