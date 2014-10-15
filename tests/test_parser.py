@@ -80,6 +80,11 @@ class TestParsing(unittest.TestCase):
             ('from a.b import c', [0, 1]),
         )
         self._test_import_parsing(
+            ('import a.b \\',
+             '    as c'),
+            ('import a.b as c', [0, 1]),
+        )
+        self._test_import_parsing(
             ('from a.b import \\',
              '    c,\\',
              '    d,'),

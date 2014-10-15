@@ -128,24 +128,32 @@ def find_imports_from_lines(iterator):
         # strip each line
         line_imports = list_strip(line_imports)
 
-        # if line starts with "import "
-        # that will result in incorrect join
-        # so explicitly add space before "import"
-        # note this has to be after stripping each line
-        # e.g. from long.import.here \
-        #          import foo
-        line_imports = map(lambda i: (i if not i.startswith('import ')
-                                      else ' ' + i),
-                           line_imports)
-        # if line ended with "import\"
-        # that will result in incorrect join
-        # so explicitly add space after "import"
-        # note this has to be after stripping each line
-        # e.g. from long.import.here import \
-        #          foo, bar
-        line_imports = map(lambda i: (i if not i.endswith(' import')
-                                      else i + ' '),
-                           line_imports)
+        # handle line breaks which can cause
+        # incorrect syntax when recombined
+        # mostly these are cases when line break
+        # happens around either "import" or "as"
+        # e.g. from long.import.here \n import foo
+        # e.g. import package \n as foo
+        for word in ('import', 'as'):
+            kwargs = {
+                'startswith': {
+                    'word': word,
+                    'pre': '',
+                    'post': ' ',
+                },
+                'endswith': {
+                    'word': word,
+                    'pre': ' ',
+                    'post': '',
+                }
+            }
+            for f, k in kwargs.items():
+                line_imports = map(
+                    lambda i: (i if not getattr(i, f)('{pre}{word}{post}'
+                                                      ''.format(**k))
+                               else '{post}{i}{pre}'.format(i=i, **k)),
+                    line_imports
+                )
 
         import_line = ''.join(line_imports).strip()
 
