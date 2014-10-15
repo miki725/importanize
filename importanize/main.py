@@ -29,10 +29,18 @@ PEP8_CONFIG = {
     ],
 }
 
-pwd = os.getcwd()
+path = os.getcwd()
 default_config = None
-if os.path.exists(os.path.join(pwd, IMPORTANIZE_CONFIG)):
-    default_config = IMPORTANIZE_CONFIG
+found_default = ''
+while path != os.sep:
+    config_path = os.path.join(path, IMPORTANIZE_CONFIG)
+    if os.path.exists(config_path):
+        default_config = config_path
+        found_default = (' Found configuration file at {}'
+                         ''.format(default_config))
+        break
+    else:
+        path = os.path.dirname(path)
 
 parser = argparse.ArgumentParser(
     description='Utility for organizing Python imports '
@@ -53,7 +61,7 @@ parser.add_argument(
     help='Path to importanize config json file. '
          'If importanize.json is present, that config '
          'will be used. Otherwise crude default pep8 '
-         'config will be used.',
+         'config will be used.{}'.format(found_default),
 )
 parser.add_argument(
     '--print',
