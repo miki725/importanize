@@ -1,4 +1,7 @@
 {
+    "exclude": [
+        "*/test_data/*.py"
+    ],
     "groups": [
         {
             "type": "stdlib"
