@@ -1,0 +1,17 @@
+"""Docstring here"""
+
+from __future__ import unicode_literals, print_function
+
+
+import os.path as ospath
+import datetime
+from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+from .module import foo, bar
+from ..othermodule import rainbows
+from a import b
+from a.b import c
+from a.b import d
+
+
+
+# stuff here
