@@ -2,9 +2,11 @@
 from __future__ import print_function, unicode_literals
 import argparse
 import json
+import logging
 import operator
 import os
 import sys
+from fnmatch import fnmatch
 
 import six
 
@@ -14,6 +16,7 @@ from .parser import find_imports_from_lines, get_artifacts, parse_statements
 from .utils import read
 
 
+LOGGING_FORMAT = '%(levelname)s %(name)s %(message)s'
 IMPORTANIZE_CONFIG = '.importanizerc'
 PEP8_CONFIG = {
     'groups': [
@@ -28,19 +31,37 @@ PEP8_CONFIG = {
         }
     ],
 }
+VERBOSITY_MAPPING = {
+    0: logging.ERROR,
+    1: logging.INFO,
+    2: logging.DEBUG,
+}
 
-path = os.getcwd()
-default_config = None
-found_default = ''
-while path != os.sep:
-    config_path = os.path.join(path, IMPORTANIZE_CONFIG)
-    if os.path.exists(config_path):
-        default_config = config_path
-        found_default = (' Found configuration file at {}'
-                         ''.format(default_config))
-        break
-    else:
-        path = os.path.dirname(path)
+# setup logging
+logging.basicConfig(format=LOGGING_FORMAT)
+logging.getLogger('').setLevel(logging.ERROR)
+log = logging.getLogger(__name__)
+
+
+def find_config():
+    path = os.getcwd()
+    default_config = None
+    found_default = ''
+
+    while path != os.sep:
+        config_path = os.path.join(path, IMPORTANIZE_CONFIG)
+        if os.path.exists(config_path):
+            default_config = config_path
+            found_default = (' Found configuration file at {}'
+                             ''.format(default_config))
+            break
+        else:
+            path = os.path.dirname(path)
+
+    return default_config, found_default
+
+
+default_config, found_default = find_config()
 
 parser = argparse.ArgumentParser(
     description='Utility for organizing Python imports '
@@ -49,8 +70,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     'path',
     type=six.text_type,
-    nargs='?',
-    default='.',
+    nargs='*',
+    default=['.'],
     help='Path either to a file or directory where '
          'all Python import will be organized. ',
 )
@@ -76,9 +97,21 @@ parser.add_argument(
     default=False,
     help='Show the version number of importanize'
 )
+parser.add_argument(
+    '-v', '--verbose',
+    action='count',
+    default=0,
+    help='Print out fascinated debugging information. '
+         'Can be supplied multiple times to increase verbosity level',
+)
 
 
-def run(path, config, args):
+def run_importanize(path, config, args):
+    if config.get('exclude'):
+        if any(map(lambda i: fnmatch(path, i), config.get('exclude'))):
+            log.info('Skipping {}'.format(path))
+            return False
+
     text = read(path)
     artifacts = get_artifacts(path)
 
@@ -119,31 +152,23 @@ def run(path, config, args):
     lines = artifacts.get('sep', '\n').join(lines)
 
     if args.print:
-        print(lines)
+        print(lines.encode('utf-8'))
     else:
         with open(path, 'wb') as fid:
             fid.write(lines.encode('utf-8'))
 
+    log.info('Successfully importanized {}'.format(path))
+    return True
 
-def main():
-    args = parser.parse_args()
 
-    if args.version:
-        msg = 'importanize version: {}'
-        print(msg.format(__version__))
-        sys.exit(0)
-
-    path = os.path.abspath(args.path)
-    if args.config is None:
-        config = PEP8_CONFIG
-    else:
-        config = json.loads(read(args.config))
-
+def run(path, config, args):
     if not os.path.isdir(path):
         try:
-            run(path, config, args)
+            run_importanize(path, config, args)
         except Exception as e:
-            parser.error(e.message)
+            log.exception('Error running importanize for {}'
+                          ''.format(path))
+            parser.error(six.text_type(e))
 
     else:
         for dirpath, dirnames, filenames in os.walk(path):
@@ -158,7 +183,32 @@ def main():
                     print(path)
                     print('-' * len(path))
                 try:
-                    run(path, config, args)
+                    run_importanize(path, config, args)
                 except Exception as e:
-                    msg = '{} - {}'.format(path, e.message)
-                    parser.error(msg)
+                    log.exception('Error running importanize for {}'
+                                  ''.format(path))
+                    parser.error(six.text_type(e))
+
+
+def main():
+    args = parser.parse_args()
+
+    # adjust logging level
+    (logging.getLogger('')
+     .setLevel(VERBOSITY_MAPPING.get(args.verbose, 0)))
+
+    log.debug('Running importanize with {}'.format(args))
+
+    if args.version:
+        msg = 'importanize version: {}'
+        print(msg.format(__version__))
+        sys.exit(0)
+
+    if args.config is None:
+        config = PEP8_CONFIG
+    else:
+        config = json.loads(read(args.config))
+
+    for p in args.path:
+        path = os.path.abspath(p)
+        run(path, config, args)
