@@ -31,7 +31,7 @@ class TestMain(unittest.TestCase):
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
                                      'normal_expected.txt')
-        expected = read(expected_file)
+        expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
             run_importanize(test_file,
@@ -48,7 +48,7 @@ class TestMain(unittest.TestCase):
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
                                      'normal_expected.txt')
-        expected = read(expected_file)
+        expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
             run_importanize(test_file,
