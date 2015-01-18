@@ -4,6 +4,7 @@ import os
 import unittest
 
 import mock
+import six
 
 from importanize.main import PEP8_CONFIG, run, run_importanize
 from importanize.utils import read
@@ -31,7 +32,9 @@ class TestMain(unittest.TestCase):
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
                                      'normal_expected.txt')
-        expected = read(expected_file).encode('utf-8')
+        expected = read(expected_file)
+        if not six.PY3:
+            expected = expected.encode('utf-8')
 
         self.assertTrue(
             run_importanize(test_file,

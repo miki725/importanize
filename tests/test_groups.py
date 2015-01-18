@@ -116,7 +116,7 @@ class TestBaseImportGroup(unittest.TestCase):
         )
 
     def test_as_string_with_artifacts(self):
-        group = BaseImportGroup(artifacts={'sep': '\r\n'})
+        group = BaseImportGroup(file_artifacts={'sep': '\r\n'})
         group.statements = [ImportStatement([], 'b'),
                             ImportStatement([], 'a')]
 
@@ -145,12 +145,12 @@ class TestBaseImportGroup(unittest.TestCase):
 
     def test_formatted_with_artifacts(self):
         artifacts = {'sep': '\r\n'}
-        group = BaseImportGroup(artifacts=artifacts)
+        group = BaseImportGroup(file_artifacts=artifacts)
         group.statements = [
             ImportStatement(list(), 'b' * 80, [ImportLeaf('c'),
                                                ImportLeaf('d')],
-                            artifacts=artifacts),
-            ImportStatement([], 'a', artifacts=artifacts)
+                            file_artifacts=artifacts),
+            ImportStatement([], 'a', file_artifacts=artifacts)
         ]
 
         self.assertEqual(
@@ -298,17 +298,17 @@ class TestImportGroups(unittest.TestCase):
     def test_formatted_with_artifacts(self):
         artifacts = {'sep': '\r\n'}
 
-        groups = ImportGroups(artifacts=artifacts)
+        groups = ImportGroups(file_artifacts=artifacts)
         groups.groups = [
-            RemainderGroup(artifacts=artifacts),
-            LocalGroup(artifacts=artifacts),
+            RemainderGroup(file_artifacts=artifacts),
+            LocalGroup(file_artifacts=artifacts),
         ]
 
         groups.add_statement_to_group(
-            ImportStatement([], '.a', artifacts=artifacts)
+            ImportStatement([], '.a', file_artifacts=artifacts)
         )
         groups.add_statement_to_group(
-            ImportStatement([], 'foo', artifacts=artifacts)
+            ImportStatement([], 'foo', file_artifacts=artifacts)
         )
 
         self.assertEqual(

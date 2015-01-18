@@ -172,7 +172,7 @@ class TestImportStatement(unittest.TestCase):
                '    {},'.format('c' * 20),
                ')'],
               '\r\n',
-              artifacts={'sep': '\r\n'})
+              file_artifacts={'sep': '\r\n'})
 
     def test_str(self):
         statement = ImportStatement([], 'a')
