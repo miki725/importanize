@@ -16,7 +16,7 @@ class BaseImportGroup(object):
         self.config = config or {}
 
         self.statements = []
-        self.artifacts = kwargs.get('artifacts', {})
+        self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
     def unique_statements(self):
@@ -58,12 +58,12 @@ class BaseImportGroup(object):
         return False
 
     def as_string(self):
-        sep = self.artifacts.get('sep', '\n')
+        sep = self.file_artifacts.get('sep', '\n')
         return sep.join(map(operator.methodcaller('as_string'),
                             self.unique_statements))
 
     def formatted(self):
-        sep = self.artifacts.get('sep', '\n')
+        sep = self.file_artifacts.get('sep', '\n')
         return sep.join(map(operator.methodcaller('formatted'),
                             self.unique_statements))
 
@@ -111,7 +111,7 @@ GROUP_MAPPING = OrderedDict((
 class ImportGroups(object):
     def __init__(self, **kwargs):
         self.groups = []
-        self.artifacts = kwargs.get('artifacts', {})
+        self.file_artifacts = kwargs.get('file_artifacts', {})
 
     def all_line_numbers(self):
         return sorted(list(set(list(
@@ -151,14 +151,14 @@ class ImportGroups(object):
             raise ValueError(msg)
 
     def as_string(self):
-        sep = self.artifacts.get('sep', '\n') * 2
+        sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
             None, map(operator.methodcaller('as_string'),
                       self.groups)
         ))
 
     def formatted(self):
-        sep = self.artifacts.get('sep', '\n') * 2
+        sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
             None, map(operator.methodcaller('formatted'),
                       self.groups)

@@ -104,7 +104,7 @@ class ImportStatement(ComparatorMixin):
         self.line_numbers = line_numbers
         self.stem = stem
         self.leafs = leafs or []
-        self.artifacts = kwargs.get('artifacts', {})
+        self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
     def unique_leafs(self):
@@ -134,14 +134,14 @@ class ImportStatement(ComparatorMixin):
     def formatted(self):
         string = self.as_string()
         if len(string) > 80 and len(self.leafs) > 1:
-            sep = '{}    '.format(self.artifacts.get('sep', '\n'))
+            sep = '{}    '.format(self.file_artifacts.get('sep', '\n'))
             string = (
                 'from {} import ({}{},{})'
                 ''.format(self.stem, sep,
                           (',{}'.format(sep)
                            .join(map(operator.methodcaller('as_string'),
                                      self.unique_leafs))),
-                          self.artifacts.get('sep', '\n'))
+                          self.file_artifacts.get('sep', '\n'))
             )
         return string
 

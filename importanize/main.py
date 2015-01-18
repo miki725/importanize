@@ -12,7 +12,7 @@ import six
 
 from . import __version__
 from .groups import ImportGroups
-from .parser import find_imports_from_lines, get_artifacts, parse_statements
+from .parser import find_imports_from_lines, get_file_artifacts, parse_statements
 from .utils import read
 
 
@@ -113,7 +113,7 @@ def run_importanize(path, config, args):
             return False
 
     text = read(path)
-    artifacts = get_artifacts(path)
+    file_artifacts = get_file_artifacts(path)
 
     lines_iterator = enumerate(iter(text.splitlines()))
     imports = list(parse_statements(find_imports_from_lines(lines_iterator)))
@@ -149,10 +149,10 @@ def run_importanize(path, config, args):
              + lines[first_import_line_number:]
              + [''])
 
-    lines = artifacts.get('sep', '\n').join(lines)
+    lines = file_artifacts.get('sep', '\n').join(lines)
 
     if args.print:
-        print(lines.encode('utf-8'))
+        print(lines.encode('utf-8') if not six.PY3 else lines)
     else:
         with open(path, 'wb') as fid:
             fid.write(lines.encode('utf-8'))

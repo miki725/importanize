@@ -9,7 +9,7 @@ from .utils import list_strip, read
 CHARS = re.compile(r'[\\()]')
 
 
-def get_artifacts(path):
+def get_file_artifacts(path):
     """
     Get artifacts for the given file.
 
