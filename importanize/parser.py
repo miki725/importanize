@@ -6,10 +6,24 @@ from .statements import DOTS, ImportLeaf, ImportStatement
 from .utils import list_split, read
 
 
+STATEMENT_COMMENTS = ('noqa',)
+TOKEN_REGEX = re.compile(r' +|[\(\)]|([,\\])|(#.*)')
+
+
 class Token(str):
     @property
     def is_comment(self):
         return self.startswith('#')
+
+    @property
+    def normalized(self):
+        if not self.is_comment:
+            return self
+        else:
+            if self.startswith('# '):
+                return self[2:]
+            else:
+                return self[1:]
 
 
 def get_file_artifacts(path):
@@ -110,7 +124,7 @@ def tokenize_import_lines(import_lines):
 
     for n, line in enumerate(import_lines):
         _tokens = []
-        words = filter(None, re.split(r' +|[\(\)]|([,\\])|(#.*)', line))
+        words = filter(None, TOKEN_REGEX.split(line))
 
         for i, word in enumerate(words):
             token = Token(word)
@@ -210,6 +224,9 @@ def parse_statements(iterable, **kwargs):
     """
     get_comments = lambda j: filter(lambda i: i.is_comment, j)
     get_not_comments = lambda j: filter(lambda i: not i.is_comment, j)
+    get_first_not_comment = lambda j: next(
+        filter(lambda i: not i.is_comment, j)
+    )
 
     for import_lines, line_numbers in iterable:
         tokens = tokenize_import_lines(import_lines)
@@ -226,19 +243,35 @@ def parse_statements(iterable, **kwargs):
                 )
 
         else:
-            stem, _leafs = list_split(tokens[1:], 'import')
-            stem = ' '.join(get_not_comments(stem))
-            _leafs = list(list_split(_leafs, ','))
-
+            stem_tokens, leafs_tokens = list_split(tokens[1:], 'import')
+            stem = ' '.join(get_not_comments(stem_tokens))
+            list_of_leafs = list(list_split(leafs_tokens, ','))
+            statement_comments = set()
             leafs = []
-            for leaf in _leafs:
-                _leaf = ' '.join(get_not_comments(leaf))
-                comments = filter(lambda i: i.is_comment, leaf)
-                leafs.append(ImportLeaf(_leaf, comments=comments))
+
+            for leaf_list in list_of_leafs:
+                first_non_leaf_index = leaf_list.index(
+                    get_first_not_comment(leaf_list)
+                )
+                leaf_stem = ' '.join(get_not_comments(leaf_list))
+                comments = []
+                all_leaf_comments = filter(lambda i: i.is_comment, leaf_list)
+
+                for comment in all_leaf_comments:
+                    if comment.normalized in STATEMENT_COMMENTS:
+                        statement_comments.add(comment)
+                    else:
+                        comment.is_comment_first = (
+                            leaf_list.index(comment) < first_non_leaf_index
+                        )
+                        comments.append(comment)
+
+                leafs.append(ImportLeaf(leaf_stem, comments=comments))
 
             yield ImportStatement(
                 line_numbers=line_numbers,
                 stem=stem,
                 leafs=leafs,
+                comments=list(statement_comments),
                 **kwargs
             )
