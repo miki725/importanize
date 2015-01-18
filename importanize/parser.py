@@ -130,7 +130,11 @@ def tokenize_import_lines(import_lines):
     segments = list_split(tokens, '\\')
     tokens = [Token('')]
     for segment in segments:
-        tokens[-1] += segment[0]
+        # don't add to previous token if it is a ","
+        if tokens[-1] != ',':
+            tokens[-1] += segment[0]
+        else:
+            tokens.append(segment[0])
         tokens += segment[1:]
 
     return [Token(i) for i in tokens]
@@ -204,15 +208,16 @@ def parse_statements(iterable, **kwargs):
     statements : generator
         Generator which yields ``ImportStatement`` instances.
     """
-    not_comment = lambda j: next(filter(lambda i: not i.is_comment, j))
+    get_comments = lambda j: filter(lambda i: i.is_comment, j)
+    get_not_comments = lambda j: filter(lambda i: not i.is_comment, j)
 
     for import_lines, line_numbers in iterable:
         tokens = tokenize_import_lines(import_lines)
 
         if tokens[0] == 'import':
             for _tokens in list_split(tokens[1:], ','):
-                stem = not_comment(_tokens)
-                comments = filter(lambda i: i.is_comment, _tokens)
+                stem = ' '.join(get_not_comments(_tokens))
+                comments = get_comments(_tokens)
                 yield parse_import_statement(
                     stem=stem,
                     line_numbers=line_numbers,
@@ -222,12 +227,12 @@ def parse_statements(iterable, **kwargs):
 
         else:
             stem, _leafs = list_split(tokens[1:], 'import')
-            stem = not_comment(stem)
+            stem = ' '.join(get_not_comments(stem))
             _leafs = list(list_split(_leafs, ','))
 
             leafs = []
             for leaf in _leafs:
-                _leaf = not_comment(leaf)
+                _leaf = ' '.join(get_not_comments(leaf))
                 comments = filter(lambda i: i.is_comment, leaf)
                 leafs.append(ImportLeaf(_leaf, comments=comments))
 

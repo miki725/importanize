@@ -12,7 +12,11 @@ import six
 
 from . import __version__
 from .groups import ImportGroups
-from .parser import find_imports_from_lines, get_file_artifacts, parse_statements
+from .parser import (
+    find_imports_from_lines,
+    get_file_artifacts,
+    parse_statements,
+)
 from .utils import read
 
 

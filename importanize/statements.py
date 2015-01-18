@@ -100,7 +100,8 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None, comments=None, **kwargs):
+    def __init__(self, line_numbers, stem, leafs=None,
+                 comments=None, **kwargs):
         self.line_numbers = line_numbers
         self.stem = stem
         self.leafs = leafs or []
