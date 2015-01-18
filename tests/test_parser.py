@@ -6,13 +6,27 @@ import mock
 import six
 
 from importanize.parser import (
+    Token,
     find_imports_from_lines,
     get_file_artifacts,
     parse_statements,
+    tokenize_import_lines,
 )
 
 
 TESTING_MODULE = 'importanize.parser'
+
+
+class TestToken(unittest.TestCase):
+    def test_is_comment(self):
+        self.assertTrue(Token('# noqa').is_comment)
+        self.assertFalse(Token('foo').is_comment)
+
+    def test_normalized(self):
+        self.assertEqual(Token('foo').normalized, 'foo')
+        self.assertEqual(Token('#noqa').normalized, 'noqa')
+        self.assertEqual(Token('# noqa').normalized, 'noqa')
+        self.assertEqual(Token('#  noqa').normalized, ' noqa')
 
 
 class TestParsing(unittest.TestCase):
@@ -43,72 +57,72 @@ class TestParsing(unittest.TestCase):
             [expected] if expected else [],
         )
 
-    @unittest.skip('TODO: remove due to tokens')
     def test_parsing(self):
         self._test_import_parsing(
             ('import a',),
-            ('import a', [0]),
+            (['import a'], [0]),
         )
         self._test_import_parsing(
             ('import a, b',),
-            ('import a, b', [0]),
+            (['import a, b'], [0]),
         )
         self._test_import_parsing(
             ('import a, b as c',),
-            ('import a, b as c', [0]),
+            (['import a, b as c'], [0]),
         )
         self._test_import_parsing(
             ('from a import b',),
-            ('from a import b', [0]),
+            (['from a import b'], [0]),
         )
         self._test_import_parsing(
             ('from a.b import c',),
-            ('from a.b import c', [0]),
+            (['from a.b import c'], [0]),
         )
         self._test_import_parsing(
             ('from a.b import c,\\',
              '    d'),
-            ('from a.b import c,d', [0, 1]),
+            (['from a.b import c,\\',
+              '    d'], [0, 1]),
         )
         self._test_import_parsing(
             ('from a.b import c, \\',
              '    d'),
-            ('from a.b import c,d', [0, 1]),
+            (['from a.b import c, \\',
+              '    d'], [0, 1]),
         )
         self._test_import_parsing(
             ('from a.b \\',
              '    import c'),
-            ('from a.b import c', [0, 1]),
+            (['from a.b \\',
+              '    import c'], [0, 1]),
         )
         self._test_import_parsing(
             ('import a.b \\',
              '    as c'),
-            ('import a.b as c', [0, 1]),
+            (['import a.b \\',
+              '    as c'], [0, 1]),
         )
         self._test_import_parsing(
             ('from a.b import \\',
              '    c,\\',
              '    d,'),
-            ('from a.b import c,d', [0, 1, 2]),
+            (['from a.b import \\',
+              '    c,\\',
+              '    d,'], [0, 1, 2]),
         )
         self._test_import_parsing(
             ('from a.b import (c,',
              '    d)'),
-            ('from a.b import c,d', [0, 1]),
+            (['from a.b import (c,',
+              '    d)'], [0, 1]),
         )
         self._test_import_parsing(
             ('from a.b import (c, ',
              '    d',
              ')'),
-            ('from a.b import c,d', [0, 1, 2]),
-        )
-        self._test_import_parsing(
-            ('from a.b import (',
-             '    c,',
-             '    d,',
-             ')',
-             'foo'),
-            ('from a.b import c,d', [0, 1, 2, 3]),
+            (['from a.b import (c, ',
+              '    d',
+              ')'], [0, 1, 2]),
         )
         self._test_import_parsing(
             ('"""',
@@ -119,7 +133,10 @@ class TestParsing(unittest.TestCase):
              '    d,',
              ')',
              'foo'),
-            ('from a.b import c,d', [3, 4, 5, 6]),
+            (['from a.b import (',
+              '    c,',
+              '    d,',
+              ')'], [3, 4, 5, 6]),
         )
         self._test_import_parsing(
             ('""" from this shall not import """',
@@ -128,7 +145,10 @@ class TestParsing(unittest.TestCase):
              '    d,',
              ')',
              'foo'),
-            ('from a.b import c,d', [1, 2, 3, 4]),
+            (['from a.b import (',
+              '    c,',
+              '    d,',
+              ')'], [1, 2, 3, 4]),
         )
         self._test_import_parsing(
             ('"""',
@@ -146,10 +166,55 @@ class TestParsing(unittest.TestCase):
             tuple(),
         )
 
+    def test_tokenize_import_lines(self):
+        data = (
+            (
+                ['import a.\\',
+                 '    b'],
+                ['import',
+                 'a.b']
+            ),
+            (
+                ['from __future__ import unicode_literals,\\',
+                 '    print_function'],
+                ['from',
+                 '__future__',
+                 'import',
+                 'unicode_literals',
+                 ',',
+                 'print_function']
+            ),
+            (
+                ['from a import b,  # noqa',
+                 '    c'],
+                ['from',
+                 'a',
+                 'import',
+                 'b',
+                 '# noqa',
+                 ',',
+                 'c']
+            ),
+            (
+                ['import a,\\',
+                 '    b'],
+                ['import',
+                 'a',
+                 ',',
+                 'b']
+            )
+        )
+        for _data, expected in data:
+            self.assertListEqual(
+                tokenize_import_lines(iter(_data)),
+                expected
+            )
+
     def _test_import_string_matches(self, string, expected):
+        data = string if isinstance(string, (list, tuple)) else [string]
         self.assertEqual(
             six.text_type(
-                list(parse_statements([([string], [1])]))[0]
+                next(parse_statements([(data, [1])]))
             ),
             expected
         )
@@ -238,4 +303,11 @@ class TestParsing(unittest.TestCase):
         self._test_import_string_matches(
             'from a import b as e,d as g, c as c',
             'from a import b as e, c, d as g',
+        )
+        self._test_import_string_matches(
+            ['from a import (',
+             '    b as e,  # foo',
+             '    d as g  # noqa',
+             ')'],
+            'from a import b as e, d as g',
         )
