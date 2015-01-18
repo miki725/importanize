@@ -23,7 +23,7 @@ class ImportLeaf(ComparatorMixin):
     Also aliased modules are supported (e.g. using ``as``).
     """
 
-    def __init__(self, name):
+    def __init__(self, name, comments=None):
         as_name = None
 
         if ' as ' in name:
@@ -100,10 +100,11 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None, **kwargs):
+    def __init__(self, line_numbers, stem, leafs=None, comments=None, **kwargs):
         self.line_numbers = line_numbers
         self.stem = stem
         self.leafs = leafs or []
+        self.comments = comments
         self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
