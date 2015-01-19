@@ -10,6 +10,7 @@ from .utils import list_split, read
 
 STATEMENT_COMMENTS = ('noqa',)
 TOKEN_REGEX = re.compile(r' +|[\(\)]|([,\\])|(#.*)')
+SPECIAL_TOKENS = (',', 'import', 'from')
 
 
 class Token(six.text_type):
@@ -152,9 +153,10 @@ def tokenize_import_lines(import_lines):
     # combine tokens between \\ newline escape
     segments = list_split(tokens, '\\')
     tokens = [Token('')]
-    for segment in segments:
+    for i, segment in enumerate(segments):
         # don't add to previous token if it is a ","
-        if tokens[-1] not in (',', 'import'):
+        if all((tokens[-1] not in SPECIAL_TOKENS,
+                not i or segment[0] not in SPECIAL_TOKENS)):
             tokens[-1] += segment[0]
         else:
             tokens.append(segment[0])

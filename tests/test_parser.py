@@ -211,6 +211,14 @@ class TestParsing(unittest.TestCase):
                  'import',
                  'b']
             ),
+            (
+                ['from a\\',
+                 '    import b'],
+                ['from',
+                 'a',
+                 'import',
+                 'b']
+            ),
         )
         for _data, expected in data:
             self.assertListEqual(
