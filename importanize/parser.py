@@ -2,6 +2,8 @@
 from __future__ import print_function, unicode_literals
 import re
 
+import six
+
 from .statements import DOTS, ImportLeaf, ImportStatement
 from .utils import list_split, read
 
@@ -10,7 +12,14 @@ STATEMENT_COMMENTS = ('noqa',)
 TOKEN_REGEX = re.compile(r' +|[\(\)]|([,\\])|(#.*)')
 
 
-class Token(str):
+class Token(six.text_type):
+    def __new__(cls, value, **kwargs):
+        obj = six.text_type.__new__(cls, value)
+        obj.is_comment_first = False
+        for k, v in kwargs.items():
+            setattr(obj, k, v)
+        return obj
+
     @property
     def is_comment(self):
         return self.startswith('#')
