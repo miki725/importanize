@@ -234,7 +234,7 @@ def parse_statements(iterable, **kwargs):
     get_comments = lambda j: filter(lambda i: i.is_comment, j)
     get_not_comments = lambda j: filter(lambda i: not i.is_comment, j)
     get_first_not_comment = lambda j: next(
-        filter(lambda i: not i.is_comment, j)
+        iter(filter(lambda i: not i.is_comment, j))
     )
 
     for import_lines, line_numbers in iterable:
