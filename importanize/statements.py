@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+import itertools
 import operator
 import re
 
@@ -34,6 +35,7 @@ class ImportLeaf(ComparatorMixin):
 
         self.name = name
         self.as_name = as_name
+        self.comments = comments or []
 
     def as_string(self):
         string = self.name
@@ -105,7 +107,7 @@ class ImportStatement(ComparatorMixin):
         self.line_numbers = line_numbers
         self.stem = stem
         self.leafs = leafs or []
-        self.comments = comments
+        self.comments = comments or []
         self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
@@ -134,17 +136,58 @@ class ImportStatement(ComparatorMixin):
             )
 
     def formatted(self):
+        leafs = self.unique_leafs
         string = self.as_string()
-        if len(string) > 80 and len(self.leafs) > 1:
+        get_normalized = lambda i: map(
+            operator.attrgetter('normalized'), i
+        )
+
+        all_comments = (
+            self.comments + list(itertools.chain(
+                *list(map(operator.attrgetter('comments'), leafs))
+            ))
+        )
+
+        if len(leafs) <= 1 and len(all_comments) == 1:
+            string += '  # {}'.format(' '.join(get_normalized(all_comments)))
+
+        elif any((len(string) > 80 and len(leafs) > 1,
+                  len(all_comments) > 1)):
             sep = '{}    '.format(self.file_artifacts.get('sep', '\n'))
-            string = (
-                'from {} import ({}{},{})'
-                ''.format(self.stem, sep,
-                          (',{}'.format(sep)
-                           .join(map(operator.methodcaller('as_string'),
-                                     self.unique_leafs))),
-                          self.file_artifacts.get('sep', '\n'))
-            )
+
+            string = 'from {} import ('.format(self.stem)
+
+            if self.comments:
+                string += '  # {}'.format(' '.join(
+                    get_normalized(self.comments)
+                ))
+
+            for leaf in leafs:
+                string += sep
+
+                first_comments = list(filter(
+                    lambda i: i.is_comment_first,
+                    leaf.comments
+                ))
+                if first_comments:
+                    string += sep.join(
+                        '# {}'.format(i)
+                        for i in get_normalized(first_comments)
+                    ) + sep
+
+                string += '{},'.format(leaf.as_string())
+
+                inline_comments = list(filter(
+                    lambda i: not i.is_comment_first,
+                    leaf.comments
+                ))
+                if inline_comments:
+                    string += '  # {}'.format(
+                        ' '.join(get_normalized(inline_comments))
+                    )
+
+            string += '{})'.format(self.file_artifacts.get('sep', '\n'))
+
         return string
 
     def __hash__(self):
