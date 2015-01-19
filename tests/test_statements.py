@@ -183,6 +183,10 @@ class TestImportStatement(unittest.TestCase):
               comments=[Token('# comment')])
         _test('foo', [ImportLeaf('bar', comments=[Token('#comment')])],
               ['from foo import bar  # comment'])
+        _test('something', [ImportLeaf('foo'),
+                            ImportLeaf('bar')],
+              ['from something import bar, foo  # noqa'],
+              comments=[Token('# noqa')])
         _test('foo',
               [ImportLeaf('bar', comments=[Token('#hello')]),
                ImportLeaf('rainbows', comments=[Token('#world')]),

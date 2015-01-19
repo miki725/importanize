@@ -148,11 +148,11 @@ class ImportStatement(ComparatorMixin):
             ))
         )
 
-        if len(leafs) <= 1 and len(all_comments) == 1:
+        if len(all_comments) == 1:
             string += '  # {}'.format(' '.join(get_normalized(all_comments)))
 
-        elif any((len(string) > 80 and len(leafs) > 1,
-                  len(all_comments) > 1)):
+        if any((len(string) > 80 and len(leafs) > 1,
+                len(all_comments) > 1)):
             sep = '{}    '.format(self.file_artifacts.get('sep', '\n'))
 
             string = 'from {} import ('.format(self.stem)
