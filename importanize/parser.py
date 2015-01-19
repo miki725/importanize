@@ -145,7 +145,7 @@ def tokenize_import_lines(import_lines):
     tokens = [Token('')]
     for segment in segments:
         # don't add to previous token if it is a ","
-        if tokens[-1] != ',':
+        if tokens[-1] not in (',', 'import'):
             tokens[-1] += segment[0]
         else:
             tokens.append(segment[0])
@@ -238,7 +238,7 @@ def parse_statements(iterable, **kwargs):
                 yield parse_import_statement(
                     stem=stem,
                     line_numbers=line_numbers,
-                    comments=comments,
+                    comments=list(comments),
                     **kwargs
                 )
 
