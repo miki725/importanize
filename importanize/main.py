@@ -77,16 +77,19 @@ parser.add_argument(
     nargs='*',
     default=['.'],
     help='Path either to a file or directory where '
-         'all Python import will be organized. ',
+         'all Python files imports will be organized.',
 )
 parser.add_argument(
     '-c', '--config',
     type=six.text_type,
     default=default_config,
     help='Path to importanize config json file. '
-         'If importanize.json is present, that config '
+         'If "{}" is present in either current folder '
+         'or any parent folder, that config '
          'will be used. Otherwise crude default pep8 '
-         'config will be used.{}'.format(found_default),
+         'config will be used.{}'
+         ''.format(IMPORTANIZE_CONFIG,
+                   found_default),
 )
 parser.add_argument(
     '--print',
