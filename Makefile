@@ -1,7 +1,7 @@
 .PHONY: clean-pyc clean-build docs clean
 
 NOSE_FLAGS=-sv --with-doctest --rednose
-COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tests
+COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tests --cover-erase
 COVER_REPORT_FLAGS=--cover-html --cover-html-dir=htmlcov
 COVER_FLAGS=${COVER_CONFIG_FLAGS} ${COVER_REPORT_FLAGS}
 
