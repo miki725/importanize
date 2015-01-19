@@ -28,10 +28,10 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_print(self, mock_print):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
-                                 'normal.txt')
+                                 'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'normal_expected.txt')
+                                     'output.txt')
         expected = (
             read(expected_file)
             if six.PY3
@@ -49,10 +49,10 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_write(self, mock_open):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
-                                 'normal.txt')
+                                 'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'normal_expected.txt')
+                                     'output.txt')
         expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
