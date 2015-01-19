@@ -10,7 +10,7 @@ from .utils import list_split, read
 
 STATEMENT_COMMENTS = ('noqa',)
 TOKEN_REGEX = re.compile(r' +|[\(\)]|([,\\])|(#.*)')
-SPECIAL_TOKENS = (',', 'import', 'from')
+SPECIAL_TOKENS = (',', 'import', 'from', 'as')
 
 
 class Token(six.text_type):

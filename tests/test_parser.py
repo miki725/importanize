@@ -220,6 +220,14 @@ class TestParsing(unittest.TestCase):
                  'b']
             ),
             (
+                ['import a\\',
+                 '    as b'],
+                ['import',
+                 'a',
+                 'as',
+                 'b']
+            ),
+            (
                 ['from something import foo, bar  # noqa'],
                 ['from',
                  'something',
