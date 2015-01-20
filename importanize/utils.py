@@ -55,3 +55,17 @@ def list_strip(data):
 def read(path):
     with open(path, 'rb') as fid:
         return fid.read().decode('utf-8')
+
+
+def list_split(iterable, split):
+    segment = []
+
+    for i in iterable:
+        if i == split:
+            yield segment
+            segment = []
+        else:
+            segment.append(i)
+
+    if segment:
+        yield segment

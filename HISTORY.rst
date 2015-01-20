@@ -3,6 +3,13 @@
 History
 -------
 
+0.3 (2015-01-18)
+~~~~~~~~~~~~~~~~
+
+* Using tokens to parse Python files. As a result this allows to
+  fix how comments are handled
+  (see `#21 <https://github.com/miki725/importanize/issues/21>`_ for example)
+
 0.2 (2014-10-30)
 ~~~~~~~~~~~~~~~~
 

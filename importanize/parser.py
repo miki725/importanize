@@ -2,14 +2,41 @@
 from __future__ import print_function, unicode_literals
 import re
 
+import six
+
 from .statements import DOTS, ImportLeaf, ImportStatement
-from .utils import list_strip, read
+from .utils import list_split, read
 
 
-CHARS = re.compile(r'[\\()]')
+STATEMENT_COMMENTS = ('noqa',)
+TOKEN_REGEX = re.compile(r' +|[\(\)]|([,\\])|(#.*)')
+SPECIAL_TOKENS = (',', 'import', 'from', 'as')
 
 
-def get_artifacts(path):
+class Token(six.text_type):
+    def __new__(cls, value, **kwargs):
+        obj = six.text_type.__new__(cls, value)
+        obj.is_comment_first = False
+        for k, v in kwargs.items():
+            setattr(obj, k, v)
+        return obj
+
+    @property
+    def is_comment(self):
+        return self.startswith('#')
+
+    @property
+    def normalized(self):
+        if not self.is_comment:
+            return self
+        else:
+            if self.startswith('# '):
+                return self[2:]
+            else:
+                return self[1:]
+
+
+def get_file_artifacts(path):
     """
     Get artifacts for the given file.
 
@@ -37,10 +64,7 @@ def get_artifacts(path):
 
 def find_imports_from_lines(iterator):
     """
-    Find import statements as strings from
-    enumerated iterator of lines.
-
-    Usually the iterator will of file lines.
+    Find only import statements from enumerated iterator of file files.
 
     Parameters
     ----------
@@ -51,28 +75,9 @@ def find_imports_from_lines(iterator):
     Returns
     -------
     imports : generator
-        Iterator which yields normalized import
-        strings with line numbers from which the
-        import statement has been parsed from.
-
-    Example
-    -------
-
-    ::
-
-        >>> parsed = list(find_imports_from_lines(iter([
-        ...     (1, 'from __future__ import unicode_literals'),
-        ...     (2, 'import os.path'),
-        ...     (3, 'from datetime import ('),
-        ...     (4, '   date,'),
-        ...     (5, '   datetime,'),
-        ...     (6, ')'),
-        ... ])))
-        >>> assert parsed == [
-        ...     ('from __future__ import unicode_literals', [1]),
-        ...     ('import os.path', [2]),
-        ...     ('from datetime import date,datetime', [3, 4, 5, 6])
-        ... ]
+        Iterator which yields tuple of lines strings composing
+        a single import statement as well as teh line numbers
+        on which the import statement was found.
     """
     while True:
 
@@ -121,47 +126,43 @@ def find_imports_from_lines(iterator):
                 line_numbers.append(line_number)
                 line_imports.append(line)
 
-        # remove unneeded characters
-        line_imports = map(lambda i: CHARS.sub('', i), line_imports)
+        yield line_imports, line_numbers
 
-        # now that extra characters are removed
-        # strip each line
-        line_imports = list_strip(line_imports)
 
-        # handle line breaks which can cause
-        # incorrect syntax when recombined
-        # mostly these are cases when line break
-        # happens around either "import" or "as"
-        # e.g. from long.import.here \n import foo
-        # e.g. import package \n as foo
-        for word in ('import', 'as'):
-            kwargs = {
-                'startswith': {
-                    'word': word,
-                    'pre': '',
-                    'post': ' ',
-                },
-                'endswith': {
-                    'word': word,
-                    'pre': ' ',
-                    'post': '',
-                }
-            }
-            for f, k in kwargs.items():
-                line_imports = list(map(
-                    lambda i: (i if not getattr(i, f)('{pre}{word}{post}'
-                                                      ''.format(**k))
-                               else '{post}{i}{pre}'.format(i=i, **k)),
-                    line_imports
-                ))
+def tokenize_import_lines(import_lines):
+    tokens = []
 
-        import_line = ''.join(line_imports).strip()
+    for n, line in enumerate(import_lines):
+        _tokens = []
+        words = filter(None, TOKEN_REGEX.split(line))
 
-        # strip ending comma if there
-        if import_line.endswith(','):
-            import_line = import_line[:-1]
+        for i, word in enumerate(words):
+            token = Token(word)
+            # tokenize same-line comments before "," to allow to associate
+            # a comment with specific import since pure Python
+            # syntax does not do that because # has to be after ","
+            # hence when tokenizing, comment will be associated
+            # with next import which is not desired
+            if token.is_comment and _tokens and _tokens[max(i - 1, 0)] == ',':
+                _tokens.insert(i - 1, token)
+            else:
+                _tokens.append(token)
 
-        yield import_line, line_numbers
+        tokens.extend(_tokens)
+
+    # combine tokens between \\ newline escape
+    segments = list_split(tokens, '\\')
+    tokens = [Token('')]
+    for i, segment in enumerate(segments):
+        # don't add to previous token if it is a ","
+        if all((tokens[-1] not in SPECIAL_TOKENS,
+                not i or segment[0] not in SPECIAL_TOKENS)):
+            tokens[-1] += segment[0]
+        else:
+            tokens.append(segment[0])
+        tokens += segment[1:]
+
+    return [Token(i) for i in tokens]
 
 
 def parse_import_statement(stem, line_numbers, **kwargs):
@@ -232,24 +233,56 @@ def parse_statements(iterable, **kwargs):
     statements : generator
         Generator which yields ``ImportStatement`` instances.
     """
-    for import_line, line_numbers in iterable:
+    get_comments = lambda j: filter(lambda i: i.is_comment, j)
+    get_not_comments = lambda j: filter(lambda i: not i.is_comment, j)
+    get_first_not_comment = lambda j: next(
+        iter(filter(lambda i: not i.is_comment, j))
+    )
 
-        if import_line.startswith('import '):
-            stems = import_line.replace('import ', '').strip().split(',')
+    for import_lines, line_numbers in iterable:
+        tokens = tokenize_import_lines(import_lines)
 
-            for stem in stems:
-                yield parse_import_statement(stem.strip(),
-                                             line_numbers,
-                                             **kwargs)
+        if tokens[0] == 'import':
+            for _tokens in list_split(tokens[1:], ','):
+                stem = ' '.join(get_not_comments(_tokens))
+                comments = get_comments(_tokens)
+                yield parse_import_statement(
+                    stem=stem,
+                    line_numbers=line_numbers,
+                    comments=list(comments),
+                    **kwargs
+                )
 
         else:
-            stem, leafs_string = list_strip(
-                import_line.replace('from ', '').split(' import ')
-            )
-            leafs = filter(None, list_strip(leafs_string.split(',')))
-            leafs = list(map(ImportLeaf, leafs))
+            stem_tokens, leafs_tokens = list_split(tokens[1:], 'import')
+            stem = ' '.join(get_not_comments(stem_tokens))
+            list_of_leafs = list(list_split(leafs_tokens, ','))
+            statement_comments = set()
+            leafs = []
 
-            yield ImportStatement(line_numbers,
-                                  stem,
-                                  leafs,
-                                  **kwargs)
+            for leaf_list in list_of_leafs:
+                first_non_leaf_index = leaf_list.index(
+                    get_first_not_comment(leaf_list)
+                )
+                leaf_stem = ' '.join(get_not_comments(leaf_list))
+                comments = []
+                all_leaf_comments = filter(lambda i: i.is_comment, leaf_list)
+
+                for comment in all_leaf_comments:
+                    if comment.normalized in STATEMENT_COMMENTS:
+                        statement_comments.add(comment)
+                    else:
+                        comment.is_comment_first = (
+                            leaf_list.index(comment) < first_non_leaf_index
+                        )
+                        comments.append(comment)
+
+                leafs.append(ImportLeaf(leaf_stem, comments=comments))
+
+            yield ImportStatement(
+                line_numbers=line_numbers,
+                stem=stem,
+                leafs=leafs,
+                comments=list(statement_comments),
+                **kwargs
+            )

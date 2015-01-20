@@ -5,6 +5,7 @@ import unittest
 import mock
 import six
 
+from importanize.parser import Token
 from importanize.statements import ImportLeaf, ImportStatement
 
 
@@ -147,11 +148,15 @@ class TestImportStatement(unittest.TestCase):
         _test('a.b', ['e', 'c as d', 'e'], 'from a.b import c as d, e')
 
     def test_formatted(self):
-        def _test(stem, leafs, expected, sep='\n', **kwargs):
+        def _test(stem, leafs, expected, sep='\n', comments=None, **kwargs):
             statement = ImportStatement(
                 list(),
                 stem,
-                list(map(ImportLeaf, leafs)),
+                list(map((lambda i:
+                          i if isinstance(i, ImportLeaf)
+                          else ImportLeaf(i)),
+                         leafs)),
+                comments=comments,
                 **kwargs
             )
             self.assertEqual(statement.formatted(),
@@ -171,8 +176,29 @@ class TestImportStatement(unittest.TestCase):
                '    {},'.format('b' * 20),
                '    {},'.format('c' * 20),
                ')'],
-              '\r\n',
-              artifacts={'sep': '\r\n'})
+              sep='\r\n',
+              file_artifacts={'sep': '\r\n'})
+        _test('foo', [],
+              ['import foo  # comment'],
+              comments=[Token('# comment')])
+        _test('foo', [ImportLeaf('bar', comments=[Token('#comment')])],
+              ['from foo import bar  # comment'])
+        _test('something', [ImportLeaf('foo'),
+                            ImportLeaf('bar')],
+              ['from something import bar, foo  # noqa'],
+              comments=[Token('# noqa')])
+        _test('foo',
+              [ImportLeaf('bar', comments=[Token('#hello')]),
+               ImportLeaf('rainbows', comments=[Token('#world')]),
+               ImportLeaf('zzz', comments=[Token('#and lots of sleep',
+                                                 is_comment_first=True)])],
+              ['from foo import (  # noqa',
+               '    bar,  # hello',
+               '    rainbows,  # world',
+               '    # and lots of sleep',
+               '    zzz,',
+               ')'],
+              comments=[Token('#noqa')])
 
     def test_str(self):
         statement = ImportStatement([], 'a')

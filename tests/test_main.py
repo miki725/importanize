@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+import logging
 import os
 import unittest
 
 import mock
+import six
 
-from importanize.main import PEP8_CONFIG, run, run_importanize
+from importanize.main import (
+    PEP8_CONFIG,
+    find_config,
+    main,
+    parser,
+    run,
+    run_importanize,
+)
 from importanize.utils import read
 
 
@@ -27,11 +36,15 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_print(self, mock_print):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
-                                 'normal.txt')
+                                 'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'normal_expected.txt')
-        expected = read(expected_file).encode('utf-8')
+                                     'output.txt')
+        expected = (
+            read(expected_file)
+            if six.PY3
+            else read(expected_file).encode('utf-8')
+        )
 
         self.assertTrue(
             run_importanize(test_file,
@@ -44,10 +57,10 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_write(self, mock_open):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
-                                 'normal.txt')
+                                 'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'normal_expected.txt')
+                                     'output.txt')
         expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
@@ -157,3 +170,81 @@ class TestMain(unittest.TestCase):
             conf,
         )
         mock_parser.error.assert_called_once_with(mock.ANY)
+
+    @mock.patch('os.path.exists')
+    @mock.patch('os.getcwd')
+    def test_find_config(self, mock_getcwd, mock_exists):
+        mock_getcwd.return_value = '/path/to/importanize'
+        mock_exists.side_effect = False, True
+
+        config, found = find_config()
+
+        self.assertEqual(config, '/path/to/.importanizerc')
+        self.assertTrue(bool(found))
+
+    @mock.patch(TESTING_MODULE + '.run')
+    @mock.patch('logging.getLogger')
+    @mock.patch.object(parser, 'parse_args')
+    def test_main_without_config(self,
+                                 mock_parse_args,
+                                 mock_get_logger,
+                                 mock_run):
+        args = mock.MagicMock(
+            verbose=1,
+            version=False,
+            path=['/path/../'],
+            config=None,
+        )
+        mock_parse_args.return_value = args
+
+        main()
+
+        mock_parse_args.assert_called_once_with()
+        mock_get_logger.assert_called_once_with('')
+        mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
+        mock_run.assert_called_once_with('/', PEP8_CONFIG, args)
+
+    @mock.patch(TESTING_MODULE + '.read')
+    @mock.patch(TESTING_MODULE + '.run')
+    @mock.patch('json.loads')
+    @mock.patch('logging.getLogger')
+    @mock.patch.object(parser, 'parse_args')
+    def test_main_with_config(self,
+                              mock_parse_args,
+                              mock_get_logger,
+                              mock_loads,
+                              mock_run,
+                              mock_read):
+        args = mock.MagicMock(
+            verbose=1,
+            version=False,
+            path=['/path/../'],
+            config=mock.sentinel.config,
+        )
+        mock_parse_args.return_value = args
+
+        main()
+
+        mock_parse_args.assert_called_once_with()
+        mock_get_logger.assert_called_once_with('')
+        mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
+        mock_read.assert_called_once_with(mock.sentinel.config)
+        mock_loads.assert_called_once_with(mock_read.return_value)
+        mock_run.assert_called_once_with('/', mock_loads.return_value, args)
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    @mock.patch('sys.exit')
+    @mock.patch.object(parser, 'parse_args')
+    def test_main_version(self, mock_parse_args, mock_exit, mock_print):
+        mock_exit.side_effect = SystemExit
+        mock_parse_args.return_value = mock.MagicMock(
+            verbose=1,
+            version=True,
+        )
+
+        with self.assertRaises(SystemExit):
+            main()
+
+        mock_parse_args.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+        mock_print.assert_called_once_with(mock.ANY)

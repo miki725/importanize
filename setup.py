@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 from importanize import __author__, __version__
 
