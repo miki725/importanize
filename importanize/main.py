@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 import argparse
+import importlib
 import json
 import logging
 import operator
@@ -92,6 +93,12 @@ parser.add_argument(
                    found_default),
 )
 parser.add_argument(
+    '-f', '--formatter',
+    type=six.text_type,
+    default=None,
+    help='Formatter used.'
+)
+parser.add_argument(
     '--print',
     action='store_true',
     default=False,
@@ -122,6 +129,23 @@ def run_importanize(path, config, args):
     text = read(path)
     file_artifacts = get_file_artifacts(path)
 
+    # Get formatter from args or importanizerc
+    if args.formatter:
+        config['formatter'] = args.formatter
+    elif config.get('formatter'):
+        pass
+    else:
+        config['formatter'] = 'IndentWithTabsFormatter'
+    # Check formatter availibility or exit
+    try:
+        f = importlib.import_module("importanize.formatters")
+        getattr(f, config['formatter'])
+    except AttributeError as e:
+        log.error('{}\n{} formatter is not available'
+                  .format(e, config['formatter']))
+        sys.exit(1)
+    log.info('Using {} formatter'.format(config['formatter']))
+
     lines_iterator = enumerate(iter(text.splitlines()))
     imports = list(parse_statements(find_imports_from_lines(lines_iterator)))
 
@@ -132,7 +156,7 @@ def run_importanize(path, config, args):
     for i in imports:
         groups.add_statement_to_group(i)
 
-    formatted_imports = groups.formatted()
+    formatted_imports = groups.formatted(config['formatter'])
     line_numbers = groups.all_line_numbers()
 
     lines = text.splitlines()

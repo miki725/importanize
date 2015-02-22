@@ -62,9 +62,10 @@ class BaseImportGroup(object):
         return sep.join(map(operator.methodcaller('as_string'),
                             self.unique_statements))
 
-    def formatted(self):
+    def formatted(self, formatter=None):
         sep = self.file_artifacts.get('sep', '\n')
-        return sep.join(map(operator.methodcaller('formatted'),
+        return sep.join(map(operator.methodcaller('formatted',
+                                                  formatter=formatter),
                             self.unique_statements))
 
     def __str__(self):
@@ -157,10 +158,10 @@ class ImportGroups(object):
                       self.groups)
         ))
 
-    def formatted(self):
+    def formatted(self, formatter=None):
         sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
-            None, map(operator.methodcaller('formatted'),
+            None, map(operator.methodcaller('formatted', formatter=formatter),
                       self.groups)
         ))
 
