@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
-import operator
 import itertools
+import operator
+import re
 
 
 class Formatter(object):
@@ -29,7 +30,8 @@ class IndentWithTabsFormatter(Formatter):
 
         if any((len(string) > 80 and len(leafs) > 1,
                 len(all_comments) > 1)):
-            sep = '{}    '.format(self.statement.file_artifacts.get('sep', '\n'))
+            sep = '{}    '.format(self.statement.file_artifacts.get('sep',
+                                                                    '\n'))
 
             string = 'from {} import ('.format(self.statement.stem)
 
@@ -62,7 +64,8 @@ class IndentWithTabsFormatter(Formatter):
                         ' '.join(get_normalized(inline_comments))
                     )
 
-            string += '{})'.format(self.statement.file_artifacts.get('sep', '\n'))
+            string += '{})'.format(self.statement.file_artifacts.get('sep',
+                                                                     '\n'))
 
         return string
 
@@ -90,7 +93,7 @@ class VerticalHangingFormatter(Formatter):
             string = 'from {} import ('.format(self.stem)
 
             sep = '{0}{1}'.format(self.file_artifacts.get('sep', '\n'),
-                                  ' '*len(string))
+                                  ' ' * len(string))
 
             if self.comments:
                 string += '  # {}'.format(' '.join(
