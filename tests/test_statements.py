@@ -5,6 +5,7 @@ import unittest
 import mock
 import six
 
+from importanize.formatters import IndentWithTabsFormatter
 from importanize.parser import Token
 from importanize.statements import ImportLeaf, ImportStatement
 
@@ -109,6 +110,7 @@ class TestImportStatement(unittest.TestCase):
         self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
         self.assertEqual(actual.stem, mock.sentinel.stem)
         self.assertEqual(actual.leafs, [])
+        self.assertIsInstance(actual.formatter, IndentWithTabsFormatter)
 
         actual = ImportStatement(mock.sentinel.line_numbers,
                                  mock.sentinel.stem,
