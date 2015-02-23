@@ -5,8 +5,10 @@ import unittest
 import mock
 import six
 
-from importanize.formatters import IndentWithTabsFormatter
-from importanize.parser import Token
+from importanize.formatters import (
+    IndentWithTabsFormatter,
+    VerticalHangingFormatter,
+)
 from importanize.statements import ImportLeaf, ImportStatement
 
 
@@ -118,6 +120,16 @@ class TestImportStatement(unittest.TestCase):
         self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
         self.assertEqual(actual.stem, mock.sentinel.stem)
         self.assertEqual(actual.leafs, mock.sentinel.leafs)
+        self.assertIsInstance(actual.formatter, IndentWithTabsFormatter)
+
+        actual = ImportStatement(mock.sentinel.line_numbers,
+                                 mock.sentinel.stem,
+                                 mock.sentinel.leafs,
+                                 formatter=VerticalHangingFormatter)
+        self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
+        self.assertEqual(actual.stem, mock.sentinel.stem)
+        self.assertEqual(actual.leafs, mock.sentinel.leafs)
+        self.assertIsInstance(actual.formatter, VerticalHangingFormatter)
 
     def test_root_module(self):
         self.assertEqual(
@@ -148,59 +160,6 @@ class TestImportStatement(unittest.TestCase):
         _test('a.b', ['c', 'd'], 'from a.b import c, d')
         _test('a.b', ['c as d', 'e'], 'from a.b import c as d, e')
         _test('a.b', ['e', 'c as d', 'e'], 'from a.b import c as d, e')
-
-    def test_formatted(self):
-        def _test(stem, leafs, expected, sep='\n', comments=None, **kwargs):
-            statement = ImportStatement(
-                list(),
-                stem,
-                list(map((lambda i:
-                          i if isinstance(i, ImportLeaf)
-                          else ImportLeaf(i)),
-                         leafs)),
-                comments=comments,
-                **kwargs
-            )
-            self.assertEqual(statement.formatted(),
-                             sep.join(expected))
-
-        _test('a', [], ['import a'])
-        _test('a', ['b'], ['from a import b'])
-        _test('a' * 40, ['b' * 40],
-              ['from {} import {}'.format('a' * 40, 'b' * 40)])
-        _test('a' * 40, ['b' * 20, 'c' * 20],
-              ['from {} import ('.format('a' * 40),
-               '    {},'.format('b' * 20),
-               '    {},'.format('c' * 20),
-               ')'])
-        _test('a' * 40, ['b' * 20, 'c' * 20],
-              ['from {} import ('.format('a' * 40),
-               '    {},'.format('b' * 20),
-               '    {},'.format('c' * 20),
-               ')'],
-              sep='\r\n',
-              file_artifacts={'sep': '\r\n'})
-        _test('foo', [],
-              ['import foo  # comment'],
-              comments=[Token('# comment')])
-        _test('foo', [ImportLeaf('bar', comments=[Token('#comment')])],
-              ['from foo import bar  # comment'])
-        _test('something', [ImportLeaf('foo'),
-                            ImportLeaf('bar')],
-              ['from something import bar, foo  # noqa'],
-              comments=[Token('# noqa')])
-        _test('foo',
-              [ImportLeaf('bar', comments=[Token('#hello')]),
-               ImportLeaf('rainbows', comments=[Token('#world')]),
-               ImportLeaf('zzz', comments=[Token('#and lots of sleep',
-                                                 is_comment_first=True)])],
-              ['from foo import (  # noqa',
-               '    bar,  # hello',
-               '    rainbows,  # world',
-               '    # and lots of sleep',
-               '    zzz,',
-               ')'],
-              comments=[Token('#noqa')])
 
     def test_str(self):
         statement = ImportStatement([], 'a')
