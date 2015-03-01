@@ -58,7 +58,11 @@ cases it would be recommended to use custom config file::
 
 Config file is simply a ``json`` file like this::
 
-    {   "exclude": [path/to/file, path/to/other/files],
+    {
+        "exclude": [
+            "path/to/file",
+            "path/to/files/ignore_*.py
+        ],
         "formatter": 'MyFavoriteFormatter',
         "groups": [
             {

@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 import argparse
-import importlib
+import inspect
 import json
 import logging
 import operator
 import os
+import six
 import sys
 from fnmatch import fnmatch
 
-import six
-
-from . import __version__
+from . import __version__, formatters
 from .groups import ImportGroups
 from .parser import (
     find_imports_from_lines,
@@ -41,6 +40,16 @@ VERBOSITY_MAPPING = {
     1: logging.INFO,
     2: logging.DEBUG,
 }
+
+# initialize FORMATTERS dict
+FORMATTERS = {
+    formatter.name: formatter
+    for formatter in vars(formatters).values()
+    if (inspect.isclass(formatter)
+        and formatter is not formatters.Formatter
+        and issubclass(formatter, formatters.Formatter))
+}
+DEFAULT_FORMATTER = FORMATTERS['grouped']
 
 # setup logging
 logging.basicConfig(format=LOGGING_FORMAT)
@@ -96,6 +105,7 @@ parser.add_argument(
     '-f', '--formatter',
     type=six.text_type,
     default=None,
+    choices=sorted(FORMATTERS.keys()),
     help='Formatter used.'
 )
 parser.add_argument(
@@ -129,34 +139,23 @@ def run_importanize(path, config, args):
     text = read(path)
     file_artifacts = get_file_artifacts(path)
 
-    # Get formatter from args or importanizerc
-    if args.formatter:
-        config['formatter'] = args.formatter
-    elif config.get('formatter'):
-        pass
-    else:
-        config['formatter'] = 'IndentWithTabsFormatter'
-    # Check formatter availibility or exit
-    try:
-        f = importlib.import_module("importanize.formatters")
-        getattr(f, config['formatter'])
-    except AttributeError as e:
-        log.error('{}\n{} formatter is not available'
-                  .format(e, config['formatter']))
-        sys.exit(1)
-    log.info('Using {} formatter'.format(config['formatter']))
+    # Get formatter from args or config
+    formatter = FORMATTERS.get(args.formatter or config.get('formatter'),
+                               DEFAULT_FORMATTER)
+    log.info('Using {} formatter'.format(formatter))
 
     lines_iterator = enumerate(iter(text.splitlines()))
     imports = list(parse_statements(find_imports_from_lines(lines_iterator)))
 
     groups = ImportGroups()
+
     for c in config['groups']:
         groups.add_group(c)
 
     for i in imports:
         groups.add_statement_to_group(i)
 
-    formatted_imports = groups.formatted(config['formatter'])
+    formatted_imports = groups.formatted(formatter=formatter)
     line_numbers = groups.all_line_numbers()
 
     lines = text.splitlines()

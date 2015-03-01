@@ -134,10 +134,8 @@ class ImportStatement(ComparatorMixin):
                                         self.unique_leafs)))
             )
 
-    def formatted(self, formatter='IndentWithTabsFormatter'):
-        f = importlib.import_module("importanize.formatters")
-        formatter = getattr(f, formatter)
-        return formatter(self).format()
+    def formatted(self):
+        return self.formatter.format(self)
 
     def __hash__(self):
         return hash(self.as_string())

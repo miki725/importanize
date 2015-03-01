@@ -22,7 +22,7 @@ class Formatter(object):
         self.statement = statement
 
 
-class IndentWithTabsFormatter(Formatter):
+class GroupedFormatter(Formatter):
     """Default formatter used to organize long imports
 
     Imports are added one by line preceded by 4 spaces, here's a sample output:
@@ -35,6 +35,7 @@ class IndentWithTabsFormatter(Formatter):
         rainbows,
     )
     """
+    name='grouped'
     def format(self):
         leafs = self.statement.unique_leafs
         stem = self.statement.stem
@@ -92,7 +93,7 @@ class IndentWithTabsFormatter(Formatter):
         return string
 
 
-class VerticalHangingFormatter(Formatter):
+class GroupedInlineAlignedFormatter(Formatter):
     """Alternative formatter used to organize long imports
 
     Imports are added one by line and aligned with the opening parenthesis,
@@ -104,6 +105,7 @@ class VerticalHangingFormatter(Formatter):
                                                      foo,
                                                      rainbows)
     """
+    name='inline-group'
     def format(self):
         leafs = self.statement.unique_leafs
         stem = self.statement.stem
