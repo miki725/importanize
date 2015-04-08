@@ -24,12 +24,12 @@ TESTING_MODULE = 'importanize.main'
 class TestMain(unittest.TestCase):
     @mock.patch(TESTING_MODULE + '.read')
     def test_run_importanize_skip(self, mock_read):
-        conf = {
-            'exclude': ['*foo.py'],
-        }
-        self.assertFalse(
-            run_importanize('/path/to/importanize/file/foo.py', conf, None)
-        )
+        conf = {'exclude': ['*input.txt'], }
+        test_file = os.path.join(os.path.dirname(__file__),
+                                 'test_data',
+                                 'input.txt')
+        self.assertFalse(run_importanize(test_file, conf, None))
+
         self.assertFalse(mock_read.called)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
@@ -39,7 +39,7 @@ class TestMain(unittest.TestCase):
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output.txt')
+                                     'output_IndentWithTabsFormatter.txt')
         expected = (
             read(expected_file)
             if six.PY3
@@ -49,9 +49,49 @@ class TestMain(unittest.TestCase):
         self.assertTrue(
             run_importanize(test_file,
                             PEP8_CONFIG,
-                            mock.MagicMock(print=True))
+                            mock.MagicMock(print=True,
+                                           formatter='IndentWithTabsFormatter')
+                            )
         )
         mock_print.assert_called_once_with(expected)
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_importanize_print_verticalhangingformatter(self, mock_print):
+        test_file = os.path.join(os.path.dirname(__file__),
+                                 'test_data',
+                                 'input.txt')
+        expected_file = os.path.join(os.path.dirname(__file__),
+                                     'test_data',
+                                     'output_VerticalHangingFormatter.txt')
+        expected = (
+            read(expected_file)
+            if six.PY3
+            else read(expected_file).encode('utf-8')
+        )
+
+        self.assertTrue(
+            run_importanize(test_file,
+                            PEP8_CONFIG,
+                            mock.MagicMock(print=True,
+                                           formatter='VerticalHangingFormatter'
+                                           )
+                            )
+        )
+        mock_print.assert_called_once_with(expected)
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_importanize_with_unavailable_formatter(self, mock_print):
+        test_file = os.path.join(os.path.dirname(__file__),
+                                 'test_data',
+                                 'input.txt')
+        with self.assertRaises(SystemExit) as cm:
+            run_importanize(test_file,
+                            PEP8_CONFIG,
+                            mock.MagicMock(print=True,
+                                           formatter='UnavailableFormatter'
+                                           )
+                            )
+        self.assertEqual(cm.exception.code, 1)
 
     @mock.patch(TESTING_MODULE + '.open', create=True)
     def test_run_importanize_write(self, mock_open):
@@ -60,13 +100,38 @@ class TestMain(unittest.TestCase):
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output.txt')
+                                     'output_IndentWithTabsFormatter.txt')
         expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
             run_importanize(test_file,
                             PEP8_CONFIG,
-                            mock.MagicMock(print=False))
+                            mock.MagicMock(print=False,
+                                           formatter='IndentWithTabsFormatter')
+                            )
+        )
+        mock_open.assert_called_once_with(test_file, 'wb')
+        mock_open.return_value \
+            .__enter__.return_value \
+            .write.assert_called_once_with(expected)
+
+    @mock.patch(TESTING_MODULE + '.open', create=True)
+    def test_run_importanize_write_verticalhangingformatter(self, mock_open):
+        test_file = os.path.join(os.path.dirname(__file__),
+                                 'test_data',
+                                 'input.txt')
+        expected_file = os.path.join(os.path.dirname(__file__),
+                                     'test_data',
+                                     'output_VerticalHangingFormatter.txt')
+        expected = read(expected_file).encode('utf-8')
+
+        self.assertTrue(
+            run_importanize(test_file,
+                            PEP8_CONFIG,
+                            mock.MagicMock(print=False,
+                                           formatter='VerticalHangingFormatter'
+                                           )
+                            )
         )
         mock_open.assert_called_once_with(test_file, 'wb')
         mock_open.return_value \

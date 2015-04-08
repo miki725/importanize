@@ -56,10 +56,36 @@ cases it would be recommended to use custom config file::
 
     $ importanize file_to_organize.py config.json
 
-Config file is simply a ``json`` file. Default config looks something like::
+Config file is simply a ``json`` file like this::
 
     {
+        "exclude": [
+            "path/to/file",
+            "path/to/files/ignore_*.py
+        ],
+        "formatter": 'MyFavoriteFormatter',
         "groups": [
+            {
+                "type": "stdlib",
+            },
+            {
+                "type": "remainder",
+            },
+            {
+                "type": "packages",
+                "packages": [
+                    "my_favorite_package"
+                ]
+            },
+            {
+                "type": "local",
+            }
+        ],
+    }
+
+Default config looks something like::
+
+    {   "groups": [
             {
                 "type": "stdlib",
             },
@@ -90,7 +116,7 @@ as defined in the config file. These are the supported group types:
       }
 
 * ``remaining`` - all remaining imports which did not satisfy requirements
-  of all other groups will go to this group
+  of all other groups will go to this group.
 
 You can use the config file by specifying it in the ``importanize``
 command as shown above however you can also create an ``.importanizerc``
@@ -99,6 +125,17 @@ you can see the
 `.importanizerc <https://github.com/miki725/importanize/blob/master/.importanizerc>`_
 config file used for the importanize repository itself.
 
+You can also choose the formatter used to organize long multiline imports.
+Currently, there are two formatters available:
+- ```IndentWithTabsFormatter```, this is the default one
+- ```VerticalHangingFormatter```
+
+It can be set using the formatter config value, or the formatter option, for
+example::
+
+    $ importanize --formatter IndentWithTabsFormatter --print tests/test_data/input.txt
+
+
 Finally, you can see all other available ``importanize`` options::
 
     $ importanize --help
@@ -106,7 +143,7 @@ Finally, you can see all other available ``importanize`` options::
 Example
 -------
 
-Here is a before and after (on hypothetical file):
+Here is a before and after using the default formatter(on hypothetical file):
 
 Before
 ~~~~~~
@@ -160,4 +197,3 @@ Then to run tests, you can use ``nosetests`` or simply use Makefile command::
     $ nosetests -sv
     # or
     $ make test
-
