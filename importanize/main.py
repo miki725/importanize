@@ -6,11 +6,13 @@ import json
 import logging
 import operator
 import os
-import six
 import sys
 from fnmatch import fnmatch
 
+import six
+
 from . import __version__, formatters
+from .formatters import DEFAULT_FORMATTER
 from .groups import ImportGroups
 from .parser import (
     find_imports_from_lines,
@@ -49,7 +51,6 @@ FORMATTERS = {
         and formatter is not formatters.Formatter
         and issubclass(formatter, formatters.Formatter))
 }
-DEFAULT_FORMATTER = FORMATTERS['grouped']
 
 # setup logging
 logging.basicConfig(format=LOGGING_FORMAT)
@@ -104,7 +105,7 @@ parser.add_argument(
 parser.add_argument(
     '-f', '--formatter',
     type=six.text_type,
-    default=None,
+    default=DEFAULT_FORMATTER,
     choices=sorted(FORMATTERS.keys()),
     help='Formatter used.'
 )
@@ -142,7 +143,7 @@ def run_importanize(path, config, args):
     # Get formatter from args or config
     formatter = FORMATTERS.get(args.formatter or config.get('formatter'),
                                DEFAULT_FORMATTER)
-    log.info('Using {} formatter'.format(formatter))
+    log.debug('Using {} formatter'.format(formatter))
 
     lines_iterator = enumerate(iter(text.splitlines()))
     imports = list(parse_statements(find_imports_from_lines(lines_iterator)))

@@ -24,12 +24,12 @@ TESTING_MODULE = 'importanize.main'
 class TestMain(unittest.TestCase):
     @mock.patch(TESTING_MODULE + '.read')
     def test_run_importanize_skip(self, mock_read):
-        conf = {'exclude': ['*input.txt'], }
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        self.assertFalse(run_importanize(test_file, conf, None))
-
+        conf = {
+            'exclude': ['*foo.py'],
+        }
+        self.assertFalse(
+            run_importanize('/path/to/importanize/file/foo.py', conf, None)
+        )
         self.assertFalse(mock_read.called)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
@@ -39,7 +39,7 @@ class TestMain(unittest.TestCase):
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output_IndentWithTabsFormatter.txt')
+                                     'output_grouped.txt')
         expected = (
             read(expected_file)
             if six.PY3
@@ -47,22 +47,22 @@ class TestMain(unittest.TestCase):
         )
 
         self.assertTrue(
-            run_importanize(test_file,
-                            PEP8_CONFIG,
-                            mock.MagicMock(print=True,
-                                           formatter='IndentWithTabsFormatter')
-                            )
+            run_importanize(
+                test_file,
+                PEP8_CONFIG,
+                mock.MagicMock(print=True,
+                               formatter='grouped'))
         )
         mock_print.assert_called_once_with(expected)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    def test_run_importanize_print_verticalhangingformatter(self, mock_print):
+    def test_run_importanize_print_inline_group_formatter(self, mock_print):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output_VerticalHangingFormatter.txt')
+                                     'output_inline_grouped.txt')
         expected = (
             read(expected_file)
             if six.PY3
@@ -70,12 +70,11 @@ class TestMain(unittest.TestCase):
         )
 
         self.assertTrue(
-            run_importanize(test_file,
-                            PEP8_CONFIG,
-                            mock.MagicMock(print=True,
-                                           formatter='VerticalHangingFormatter'
-                                           )
-                            )
+            run_importanize(
+                test_file,
+                PEP8_CONFIG,
+                mock.MagicMock(print=True,
+                               formatter='inline-group'))
         )
         mock_print.assert_called_once_with(expected)
 
@@ -84,14 +83,24 @@ class TestMain(unittest.TestCase):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
                                  'input.txt')
-        with self.assertRaises(SystemExit) as cm:
-            run_importanize(test_file,
-                            PEP8_CONFIG,
-                            mock.MagicMock(print=True,
-                                           formatter='UnavailableFormatter'
-                                           )
-                            )
-        self.assertEqual(cm.exception.code, 1)
+        expected_file = os.path.join(os.path.dirname(__file__),
+                                     'test_data',
+                                     'output_grouped.txt')
+
+        expected = (
+            read(expected_file)
+            if six.PY3
+            else read(expected_file).encode('utf-8')
+        )
+
+        self.assertTrue(
+            run_importanize(
+                test_file,
+                PEP8_CONFIG,
+                mock.MagicMock(print=True,
+                               formatter='UnavailableFormatter'))
+        )
+        mock_print.assert_called_once_with(expected)
 
     @mock.patch(TESTING_MODULE + '.open', create=True)
     def test_run_importanize_write(self, mock_open):
@@ -100,15 +109,15 @@ class TestMain(unittest.TestCase):
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output_IndentWithTabsFormatter.txt')
+                                     'output_grouped.txt')
         expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
-            run_importanize(test_file,
-                            PEP8_CONFIG,
-                            mock.MagicMock(print=False,
-                                           formatter='IndentWithTabsFormatter')
-                            )
+            run_importanize(
+                test_file,
+                PEP8_CONFIG,
+                mock.MagicMock(print=False,
+                               formatter='grouped'))
         )
         mock_open.assert_called_once_with(test_file, 'wb')
         mock_open.return_value \
@@ -116,22 +125,21 @@ class TestMain(unittest.TestCase):
             .write.assert_called_once_with(expected)
 
     @mock.patch(TESTING_MODULE + '.open', create=True)
-    def test_run_importanize_write_verticalhangingformatter(self, mock_open):
+    def test_run_importanize_write_inline_group_formatter(self, mock_open):
         test_file = os.path.join(os.path.dirname(__file__),
                                  'test_data',
                                  'input.txt')
         expected_file = os.path.join(os.path.dirname(__file__),
                                      'test_data',
-                                     'output_VerticalHangingFormatter.txt')
+                                     'output_inline_grouped.txt')
         expected = read(expected_file).encode('utf-8')
 
         self.assertTrue(
-            run_importanize(test_file,
-                            PEP8_CONFIG,
-                            mock.MagicMock(print=False,
-                                           formatter='VerticalHangingFormatter'
-                                           )
-                            )
+            run_importanize(
+                test_file,
+                PEP8_CONFIG,
+                mock.MagicMock(print=False,
+                               formatter='inline-group'))
         )
         mock_open.assert_called_once_with(test_file, 'wb')
         mock_open.return_value \

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
-
 import itertools
 import operator
 
@@ -14,10 +13,11 @@ class Formatter(object):
 
     Parameters
     ----------
-    statement : ImportStatement object
+    statement : ImportStatement
         This is the data-structure which store information about
         the import statement that must be formatted
     """
+
     def __init__(self, statement):
         self.statement = statement
 
@@ -35,7 +35,8 @@ class GroupedFormatter(Formatter):
         rainbows,
     )
     """
-    name='grouped'
+    name = 'grouped'
+
     def format(self):
         leafs = self.statement.unique_leafs
         stem = self.statement.stem
@@ -50,8 +51,7 @@ class GroupedFormatter(Formatter):
         )
 
         if len(all_comments) == 1:
-            string += '  # {}'\
-                .format(' '.join(get_normalized(all_comments)))
+            string += '  # {}'.format(' '.join(get_normalized(all_comments)))
 
         if any((len(string) > 80 and len(leafs) > 1,
                 len(all_comments) > 1)):
@@ -105,7 +105,8 @@ class GroupedInlineAlignedFormatter(Formatter):
                                                      foo,
                                                      rainbows)
     """
-    name='inline-group'
+    name = 'inline-group'
+
     def format(self):
         leafs = self.statement.unique_leafs
         stem = self.statement.stem
@@ -120,7 +121,7 @@ class GroupedInlineAlignedFormatter(Formatter):
         )
 
         if len(all_comments) == 1:
-            string += '  # {}'\
+            string += '  # {}' \
                 .format(' '.join(get_normalized(all_comments)))
 
         if any((len(string) > 80 and len(leafs) > 1,
@@ -163,3 +164,6 @@ class GroupedInlineAlignedFormatter(Formatter):
                     string += sep
 
         return string
+
+
+DEFAULT_FORMATTER = GroupedFormatter

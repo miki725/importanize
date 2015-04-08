@@ -135,7 +135,7 @@ class TestBaseImportGroup(unittest.TestCase):
         ]
 
         self.assertEqual(
-            group.formatted(formatter='IndentWithTabsFormatter'),
+            group.formatted(),
             'import a\n' +
             'from {} import (\n'.format('b' * 80) +
             '    c,\n' +
@@ -154,7 +154,7 @@ class TestBaseImportGroup(unittest.TestCase):
         ]
 
         self.assertEqual(
-            group.formatted(formatter='IndentWithTabsFormatter'),
+            group.formatted(),
             'import a\r\n' +
             'from {} import (\r\n'.format('b' * 80) +
             '    c,\r\n' +
@@ -312,7 +312,7 @@ class TestImportGroups(unittest.TestCase):
         )
 
         self.assertEqual(
-            groups.formatted(formatter='IndentWithTabsFormatter'),
+            groups.formatted(),
             'import foo\r\n'
             '\r\n'
             'import .a'

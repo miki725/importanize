@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
-import importlib
 import operator
 import re
 
 from future.utils import python_2_unicode_compatible
 
+from .formatters import DEFAULT_FORMATTER
 from .mixin import ComparatorMixin
 from .utils import list_strip
+
 
 DOTS = re.compile(r'^(\.+)(.*)')
 
@@ -134,8 +135,8 @@ class ImportStatement(ComparatorMixin):
                                         self.unique_leafs)))
             )
 
-    def formatted(self):
-        return self.formatter.format(self)
+    def formatted(self, formatter=DEFAULT_FORMATTER):
+        return formatter(self).format()
 
     def __hash__(self):
         return hash(self.as_string())
