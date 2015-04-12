@@ -110,21 +110,20 @@ def find_imports_from_lines(iterator):
         line_numbers = [line_number]
         line_imports = [line]
 
-        # if parenthesis found, consider new lines
-        # until matching closing parenthesis is found
-        if '(' in line and ')' not in line:
-            while ')' not in line:
-                line_number, line = next(iterator)
-                line_numbers.append(line_number)
-                line_imports.append(line)
+        paren_count = line.count('(') - line.count(')')
 
-        # if new line escape is found, consider new lines
-        # until no escape character is found
-        if line.endswith('\\'):
-            while line.endswith('\\'):
-                line_number, line = next(iterator)
-                line_numbers.append(line_number)
-                line_imports.append(line)
+        def read_line(paren_count):
+            line_number, line = next(iterator)
+            line_numbers.append(line_number)
+            line_imports.append(line)
+
+            paren_count += line.count('(')
+            paren_count -= line.count(')')
+
+            return line, paren_count
+
+        while paren_count > 0 or line.endswith('\\'):
+            line, paren_count = read_line(paren_count)
 
         yield line_imports, line_numbers
 
