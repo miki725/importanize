@@ -151,6 +151,18 @@ class TestParsing(unittest.TestCase):
               ')'], [1, 2, 3, 4]),
         )
         self._test_import_parsing(
+            ('foo',
+             'from a.b import \\',
+             '    (c, d,',
+             '     e, f,',
+             '     g, h)',
+             'bar'),
+            (['from a.b import \\',
+              '    (c, d,',
+              '     e, f,',
+              '     g, h)', ], [1, 2, 3, 4]),
+        )
+        self._test_import_parsing(
             ('"""',
              'from this shall not import'),
             tuple(),
