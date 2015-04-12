@@ -3,6 +3,14 @@
 History
 -------
 
+0.4 (2015-04-??)
+~~~~~~~~~~~~~~~~
+
+* Added multiple formatter options. Can be used using ``--formatter``
+  flag or can be set in the configuration file.
+* Fixes a bug in parsing imports when encountering both ``\`` and ``()``
+  (see `#26 <https://github.com/miki725/importanize/issues/26>`_ for example)
+
 0.3 (2015-01-18)
 ~~~~~~~~~~~~~~~~
 
