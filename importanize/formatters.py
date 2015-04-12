@@ -157,7 +157,7 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
                                                      foo,
                                                      rainbows)
     """
-    name = 'inline-group'
+    name = 'inline-grouped'
 
     def format_statement_comments(self, sep):
         string = (super(GroupedInlineAlignedFormatter, self)

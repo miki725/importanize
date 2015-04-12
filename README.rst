@@ -127,13 +127,14 @@ config file used for the importanize repository itself.
 
 You can also choose the formatter used to organize long multiline imports.
 Currently, there are two formatters available:
-- ```IndentWithTabsFormatter```, this is the default one
-- ```VerticalHangingFormatter```
+
+* ``grouped`` (default)
+* ``inline-grouped``
 
 It can be set using the formatter config value, or the formatter option, for
 example::
 
-    $ importanize --formatter IndentWithTabsFormatter --print tests/test_data/input.txt
+    $ importanize --formatter=inline-group --print tests/test_data/input.txt
 
 
 Finally, you can see all other available ``importanize`` options::

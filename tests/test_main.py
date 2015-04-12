@@ -74,7 +74,7 @@ class TestMain(unittest.TestCase):
                 test_file,
                 PEP8_CONFIG,
                 mock.MagicMock(print=True,
-                               formatter='inline-group'))
+                               formatter='inline-grouped'))
         )
         mock_print.assert_called_once_with(expected)
 
@@ -139,7 +139,7 @@ class TestMain(unittest.TestCase):
                 test_file,
                 PEP8_CONFIG,
                 mock.MagicMock(print=False,
-                               formatter='inline-group'))
+                               formatter='inline-grouped'))
         )
         mock_open.assert_called_once_with(test_file, 'wb')
         mock_open.return_value \
