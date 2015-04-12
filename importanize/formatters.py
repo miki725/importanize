@@ -37,63 +37,115 @@ class GroupedFormatter(Formatter):
     """
     name = 'grouped'
 
-    def format(self):
-        leafs = self.statement.unique_leafs
-        stem = self.statement.stem
-        comments = self.statement.comments
-        string = self.statement.as_string()
-        file_artifacts = self.statement.file_artifacts.get('sep', '\n')
+    def __init__(self, *args, **kwargs):
+        super(GroupedFormatter, self).__init__(*args, **kwargs)
 
-        all_comments = (
-            comments + list(itertools.chain(
-                *list(map(operator.attrgetter('comments'), leafs))
+        self.leafs = self.statement.unique_leafs
+        self.stem = self.statement.stem
+        self.comments = self.statement.comments
+        self.string = self.statement.as_string()
+        self.sep = self.statement.file_artifacts.get('sep', '\n')
+
+        self.all_comments = (
+            self.comments + list(itertools.chain(
+                *list(map(operator.attrgetter('comments'), self.leafs))
             ))
         )
 
-        if len(all_comments) == 1:
-            string += '  # {}'.format(' '.join(get_normalized(all_comments)))
+    def do_grouped_formatting(self, one_liner):
+        return any((len(one_liner) > 80 and len(self.leafs) > 1,
+                    len(self.all_comments) > 1))
 
-        if any((len(string) > 80 and len(leafs) > 1,
-                len(all_comments) > 1)):
-            sep = '{}    '.format(file_artifacts)
+    def get_leaf_separator(self, stem=None):
+        return '{}    '.format(self.sep)
 
-            string = 'from {} import ('.format(stem)
+    def format_as_one_liner(self):
+        string = self.string
 
-            if comments:
-                string += '  # {}'.format(' '.join(
-                    get_normalized(comments)
-                ))
-
-            for leaf in leafs:
-                string += sep
-
-                first_comments = list(filter(
-                    lambda i: i.is_comment_first,
-                    leaf.comments
-                ))
-                if first_comments:
-                    string += sep.join(
-                        '# {}'.format(i)
-                        for i in get_normalized(first_comments)
-                    ) + sep
-
-                string += '{},'.format(leaf.as_string())
-
-                inline_comments = list(filter(
-                    lambda i: not i.is_comment_first,
-                    leaf.comments
-                ))
-                if inline_comments:
-                    string += '  # {}'.format(
-                        ' '.join(get_normalized(inline_comments))
-                    )
-
-            string += '{})'.format(file_artifacts)
+        if len(self.all_comments) == 1:
+            string += '  # {}'.format(
+                ' '.join(get_normalized(self.all_comments))
+            )
 
         return string
 
+    def format_stem(self):
+        return 'from {} import ('.format(self.stem)
 
-class GroupedInlineAlignedFormatter(Formatter):
+    def format_statement_comments(self, sep):
+        if self.comments:
+            return '  # {}'.format(' '.join(
+                get_normalized(self.comments)
+            ))
+        return ''
+
+    def format_leaf_start(self, leaf, sep):
+        return sep
+
+    def format_leaf_end(self, leaf, sep):
+        return ''
+
+    def format_leaf_first_comments(self, leaf, sep):
+        string = ''
+
+        first_comments = list(filter(
+            lambda i: i.is_comment_first,
+            leaf.comments
+        ))
+        if first_comments:
+            string += sep.join(
+                '# {}'.format(i)
+                for i in get_normalized(first_comments)
+            ) + sep
+
+        return string
+
+    def format_leaf(self, leaf, sep):
+        return '{},'.format(leaf.as_string())
+
+    def format_leaf_inline_comments(self, leaf, sep):
+        string = ''
+
+        inline_comments = list(filter(
+            lambda i: not i.is_comment_first,
+            leaf.comments
+        ))
+        if inline_comments:
+            string += '  # {}'.format(
+                ' '.join(get_normalized(inline_comments))
+            )
+
+        return string
+
+    def format_wrap_up(self):
+        return '{})'.format(self.sep)
+
+    def format_as_grouped(self):
+        string = self.format_stem()
+        sep = self.get_leaf_separator(string)
+        string += self.format_statement_comments(sep)
+
+        for leaf in self.leafs:
+            string += self.format_leaf_start(leaf, sep)
+            string += self.format_leaf_first_comments(leaf, sep)
+            string += self.format_leaf(leaf, sep)
+            string += self.format_leaf_inline_comments(leaf, sep)
+            string += self.format_leaf_end(leaf, sep)
+
+        string += self.format_wrap_up()
+
+        return string
+
+    def format(self):
+        one_liner = self.format_as_one_liner()
+
+        if self.do_grouped_formatting(one_liner):
+            return self.format_as_grouped()
+        else:
+            return one_liner
+
+
+class GroupedInlineAlignedFormatter(GroupedFormatter):
     """Alternative formatter used to organize long imports
 
     Imports are added one by line and aligned with the opening parenthesis,
@@ -107,63 +159,33 @@ class GroupedInlineAlignedFormatter(Formatter):
     """
     name = 'inline-group'
 
-    def format(self):
-        leafs = self.statement.unique_leafs
-        stem = self.statement.stem
-        comments = self.statement.comments
-        string = self.statement.as_string()
-        file_artifacts = self.statement.file_artifacts.get('sep', '\n')
-
-        all_comments = (
-            comments + list(itertools.chain(
-                *list(map(operator.attrgetter('comments'), leafs))
-            ))
-        )
-
-        if len(all_comments) == 1:
-            string += '  # {}' \
-                .format(' '.join(get_normalized(all_comments)))
-
-        if any((len(string) > 80 and len(leafs) > 1,
-                len(all_comments) > 1)):
-
-            string = 'from {} import ('.format(stem)
-
-            sep = '{0}{1}'.format(file_artifacts, ' ' * len(string))
-
-            if comments:
-                string += '  # {}'.format(' '.join(
-                    get_normalized(comments)
-                )) + sep
-            for leaf in leafs:
-                first_comments = list(filter(
-                    lambda i: i.is_comment_first,
-                    leaf.comments
-                ))
-                if first_comments:
-                    string += sep.join(
-                        '# {}'.format(i)
-                        for i in get_normalized(first_comments)
-                    ) + sep
-
-                if leaf < leafs[-1]:
-                    string += '{},'.format(leaf.as_string())
-                else:
-                    string += '{})'.format(leaf.as_string())
-
-                inline_comments = list(filter(
-                    lambda i: not i.is_comment_first,
-                    leaf.comments
-                ))
-                if inline_comments:
-                    string += '  # {}'.format(
-                        ' '.join(get_normalized(inline_comments))
-                    )
-
-                if leaf < leafs[-1]:
-                    string += sep
-
+    def format_statement_comments(self, sep):
+        string = (super(GroupedInlineAlignedFormatter, self)
+                  .format_statement_comments(sep))
+        if string:
+            string += sep
         return string
+
+    def format_leaf_start(self, leaf, sep):
+        return ''
+
+    def format_leaf_end(self, leaf, sep):
+        if leaf != self.leafs[-1]:
+            return sep
+        return ''
+
+    def get_leaf_separator(self, stem=None):
+        return '{}{}'.format(self.sep, ' ' * len(stem))
+
+    def format_leaf(self, leaf, sep):
+        if leaf != self.leafs[-1]:
+            f = '{},'
+        else:
+            f = '{})'
+        return f.format(leaf.as_string())
+
+    def format_wrap_up(self):
+        return ''
 
 
 DEFAULT_FORMATTER = GroupedFormatter
