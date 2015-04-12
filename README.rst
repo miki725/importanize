@@ -61,9 +61,9 @@ Config file is simply a ``json`` file like this::
     {
         "exclude": [
             "path/to/file",
-            "path/to/files/ignore_*.py
+            "path/to/files/ignore_*.py"
         ],
-        "formatter": 'MyFavoriteFormatter',
+        "formatter": 'grouped',
         "groups": [
             {
                 "type": "stdlib",
