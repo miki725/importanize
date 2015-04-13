@@ -15,8 +15,8 @@ from importanize.statements import ImportLeaf, ImportStatement
 
 # Define some names for tests purposes
 module = 'module'
-obj1 = 'Object1'
-obj2 = 'Object2'
+obj1 = 'object1'
+obj2 = 'object2'
 long_module = module * 13
 long_obj1 = obj1 * 13
 long_obj2 = obj2 * 13
@@ -143,17 +143,27 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                     ImportLeaf('zz', comments=[Token('#and lots of sleep',
                                                      is_comment_first=True)])],
                    ['from foo import (  # noqa',
-                    '                 bar,  # hello',
-                    '                 rainbows,  # world',
-                    '                 # and lots of sleep',
-                    '                 zz)'],
+                    '    bar,  # hello',
+                    '    rainbows,  # world',
+                    '    # and lots of sleep',
+                    '    zz,',
+                    ')'],
                    comments=[Token('#noqa')])
         self._test('foo',
                    [ImportLeaf('bar', comments=[Token('#hello')]),
                     ImportLeaf('rainbows', comments=[Token('#world')]),
                     ImportLeaf('zzz', comments=[Token('#and lots of sleep')])],
                    ['from foo import (  # noqa',
-                    '                 bar,  # hello',
-                    '                 rainbows,  # world',
-                    '                 zzz)  # and lots of sleep'],
+                    '    bar,  # hello',
+                    '    rainbows,  # world',
+                    '    zzz,  # and lots of sleep',
+                    ')'],
+                   comments=[Token('#noqa')])
+        self._test('foo',
+                   [ImportLeaf('bar'),
+                    ImportLeaf('rainbows'),
+                    ImportLeaf(long_obj1)],
+                   ['from foo import (bar,  # noqa',
+                    '                 {},'.format(long_obj1),
+                    '                 rainbows)'],
                    comments=[Token('#noqa')])

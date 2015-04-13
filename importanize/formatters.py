@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 import itertools
 import operator
+from copy import deepcopy
 
 
 def get_normalized(i):
@@ -158,6 +159,33 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
                                                      rainbows)
     """
     name = 'inline-grouped'
+
+    def __new__(cls, statement):
+        """
+        Overwrite __new__ to return GroupedFormatter formatter instance
+        when the statement to be formatted has both statement comment and
+        leaf comment. This is a nicer fallback option vs doing super() magic
+        in each subclassed function. If some criteria is met, simply use
+        a different formatter class.
+        """
+        if all([statement.comments,
+                statement.leafs
+                and statement.leafs[0].comments]):
+            return GroupedFormatter(statement)
+        return super(GroupedInlineAlignedFormatter, cls).__new__(cls)
+
+    def __init__(self, statement):
+        (super(GroupedInlineAlignedFormatter, self)
+         .__init__(self.normalize_statement(statement)))
+
+    def normalize_statement(self, statement):
+        if all([statement.comments,
+                statement.leafs
+                and not statement.leafs[0].comments]):
+            statement = deepcopy(statement)
+            statement.leafs[0].comments.extend(statement.comments)
+            statement.comments = []
+        return statement
 
     def format_statement_comments(self, sep):
         string = (super(GroupedInlineAlignedFormatter, self)
