@@ -187,13 +187,6 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
             statement.comments = []
         return statement
 
-    def format_statement_comments(self, sep):
-        string = (super(GroupedInlineAlignedFormatter, self)
-                  .format_statement_comments(sep))
-        if string:
-            string += sep
-        return string
-
     def format_leaf_start(self, leaf, sep):
         return ''
 
