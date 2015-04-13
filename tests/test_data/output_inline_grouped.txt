@@ -5,6 +5,7 @@ import datetime
 from os import path as ospath
 
 import something  # with comment
+import z
 from a import b
 from a.b import c, d
 from other import (  # noqa
@@ -23,6 +24,8 @@ from package.subpackage.module.submodule import (CONSTANT,
                                                  bar,
                                                  foo,
                                                  rainbows)
+from z import *
+from z import foo
 
 from ..othermodule import rainbows
 from .module import bar, foo
