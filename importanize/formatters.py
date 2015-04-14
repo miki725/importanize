@@ -10,7 +10,8 @@ def get_normalized(i):
 
 
 class Formatter(object):
-    """Parent class for all formatters
+    """
+    Parent class for all formatters
 
     Parameters
     ----------
@@ -24,7 +25,8 @@ class Formatter(object):
 
 
 class GroupedFormatter(Formatter):
-    """Default formatter used to organize long imports
+    """
+    Default formatter used to organize long imports
 
     Imports are added one by line preceded by 4 spaces, here's a sample output:
 
@@ -147,7 +149,8 @@ class GroupedFormatter(Formatter):
 
 
 class GroupedInlineAlignedFormatter(GroupedFormatter):
-    """Alternative formatter used to organize long imports
+    """
+    Alternative formatter used to organize long imports
 
     Imports are added one by line and aligned with the opening parenthesis,
     here's a sample output:
