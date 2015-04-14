@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
-import itertools
 import operator
 import re
 
 from future.utils import python_2_unicode_compatible
 
+from .formatters import DEFAULT_FORMATTER
 from .mixin import ComparatorMixin
 from .utils import list_strip
 
@@ -135,60 +135,8 @@ class ImportStatement(ComparatorMixin):
                                         self.unique_leafs)))
             )
 
-    def formatted(self):
-        leafs = self.unique_leafs
-        string = self.as_string()
-        get_normalized = lambda i: map(
-            operator.attrgetter('normalized'), i
-        )
-
-        all_comments = (
-            self.comments + list(itertools.chain(
-                *list(map(operator.attrgetter('comments'), leafs))
-            ))
-        )
-
-        if len(all_comments) == 1:
-            string += '  # {}'.format(' '.join(get_normalized(all_comments)))
-
-        if any((len(string) > 80 and len(leafs) > 1,
-                len(all_comments) > 1)):
-            sep = '{}    '.format(self.file_artifacts.get('sep', '\n'))
-
-            string = 'from {} import ('.format(self.stem)
-
-            if self.comments:
-                string += '  # {}'.format(' '.join(
-                    get_normalized(self.comments)
-                ))
-
-            for leaf in leafs:
-                string += sep
-
-                first_comments = list(filter(
-                    lambda i: i.is_comment_first,
-                    leaf.comments
-                ))
-                if first_comments:
-                    string += sep.join(
-                        '# {}'.format(i)
-                        for i in get_normalized(first_comments)
-                    ) + sep
-
-                string += '{},'.format(leaf.as_string())
-
-                inline_comments = list(filter(
-                    lambda i: not i.is_comment_first,
-                    leaf.comments
-                ))
-                if inline_comments:
-                    string += '  # {}'.format(
-                        ' '.join(get_normalized(inline_comments))
-                    )
-
-            string += '{})'.format(self.file_artifacts.get('sep', '\n'))
-
-        return string
+    def formatted(self, formatter=DEFAULT_FORMATTER):
+        return formatter(self).format()
 
     def __hash__(self):
         return hash(self.as_string())

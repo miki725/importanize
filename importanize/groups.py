@@ -7,6 +7,7 @@ from functools import reduce
 
 from future.utils import python_2_unicode_compatible
 
+from .formatters import DEFAULT_FORMATTER
 from .utils import is_std_lib
 
 
@@ -35,10 +36,26 @@ class BaseImportGroup(object):
             else:
                 leafless_counter[statement.stem].append(statement)
 
-        merged_statements = list(map(operator.itemgetter(0),
-                                     leafless_counter.values()))
-        for stem, statements in counter.items():
-            merged_statements.append(reduce(lambda a, b: a + b, statements))
+        merged_statements = [i[0] for i in leafless_counter.values()]
+
+        def merge(statements):
+            _special = []
+            _statements = []
+
+            for i in statements:
+                if i.leafs and i.leafs[0].name == '*':
+                    _special.append(i)
+                else:
+                    _statements.append(i)
+
+            _reduced = []
+            if _statements:
+                _reduced = [reduce(lambda a, b: a + b, _statements)]
+
+            return _special + _reduced
+
+        for statements in counter.values():
+            merged_statements.extend(merge(statements))
 
         return merged_statements
 
@@ -62,9 +79,10 @@ class BaseImportGroup(object):
         return sep.join(map(operator.methodcaller('as_string'),
                             self.unique_statements))
 
-    def formatted(self):
+    def formatted(self, formatter=DEFAULT_FORMATTER):
         sep = self.file_artifacts.get('sep', '\n')
-        return sep.join(map(operator.methodcaller('formatted'),
+        return sep.join(map(operator.methodcaller('formatted',
+                                                  formatter=formatter),
                             self.unique_statements))
 
     def __str__(self):
@@ -157,10 +175,11 @@ class ImportGroups(object):
                       self.groups)
         ))
 
-    def formatted(self):
+    def formatted(self, formatter=DEFAULT_FORMATTER):
         sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
-            None, map(operator.methodcaller('formatted'),
+            None, map(operator.methodcaller('formatted',
+                                            formatter=formatter),
                       self.groups)
         ))
 

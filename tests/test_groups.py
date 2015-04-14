@@ -69,6 +69,18 @@ class TestBaseImportGroup(unittest.TestCase):
             ImportStatement([], 'b', [ImportLeaf('c')]),
         ])
 
+    def test_merged_statements_special(self):
+        group = BaseImportGroup()
+        group.statements = [ImportStatement([], 'a', [ImportLeaf('*')]),
+                            ImportStatement([], 'b', [ImportLeaf('c')])]
+
+        actual = group.merged_statements
+
+        self.assertListEqual(sorted(actual), [
+            ImportStatement([], 'a', [ImportLeaf('*')]),
+            ImportStatement([], 'b', [ImportLeaf('c')]),
+        ])
+
     def test_all_line_numbers(self):
         s2 = ImportStatement([2, 7], 'b')
         s1 = ImportStatement([1, 2], 'a')
