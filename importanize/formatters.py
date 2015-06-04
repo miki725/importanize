@@ -212,4 +212,49 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
         return ''
 
 
+class OneSymbolPerLineFormatter(Formatter):
+    """
+    Formatter that leaves one import on each line.  This version leaves more
+    stable output in the face of symbols being added & removed; you don't have
+    the situation where adding one more import from a package creates a large
+    diff.  Smaller diffs make merging and history analysis easier.
+
+    from other.package import CONSTANT
+    from other.package import Klass
+    from other.package import bar
+    from other.package import foo
+    from other.package import rainbows
+    """
+    name = 'one-symbol-per-line'
+
+    def __init__(self, *args, **kwargs):
+        super(OneSymbolPerLineFormatter, self).__init__(*args, **kwargs)
+
+        self.leafs = self.statement.unique_leafs
+        self.stem = self.statement.stem
+        self.comments = self.statement.comments
+        self.string = self.statement.as_string()
+        self.sep = self.statement.file_artifacts.get('sep', '\n')
+
+        self.all_comments = (
+            self.comments + list(itertools.chain(
+                *list(map(operator.attrgetter('comments'), self.leafs))
+            ))
+        )
+
+    def format(self):
+        rv = []
+        if self.leafs:
+            for leaf in sorted(self.leafs):
+                rv.append("from %s import %s" % (self.stem, leaf.as_string()))
+        else:
+            rv.append("import %s" % self.stem)
+        if self.all_comments:
+            if len(rv) > 1 or len(self.all_comments) > 1:
+                rv[:0] = self.all_comments
+            else:
+                rv[0] += "  " + self.all_comments[0]
+        return self.sep.join(rv)
+
+
 DEFAULT_FORMATTER = GroupedFormatter

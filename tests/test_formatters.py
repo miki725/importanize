@@ -8,6 +8,7 @@ from importanize.formatters import (
     Formatter,
     GroupedFormatter,
     GroupedInlineAlignedFormatter,
+    OneSymbolPerLineFormatter,
 )
 from importanize.parser import Token
 from importanize.statements import ImportLeaf, ImportStatement
@@ -166,4 +167,68 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                    ['from foo import (bar,  # noqa',
                     '                 {},'.format(long_obj1),
                     '                 rainbows)'],
+                   comments=[Token('#noqa')])
+
+
+class TestOneSymbolPerLineFormatter(BaseTestFormatter):
+    formatter = OneSymbolPerLineFormatter
+
+    def test_formatted(self):
+        # Test one-line imports
+        self._test(module, [],
+                   ['import {}'.format(module)])
+        self._test(module, [obj1],
+                   ['from {} import {}'.format(module, obj1)])
+        self._test(module, [obj1, obj2],
+                   ['from {} import {}'.format(module, obj1),
+                    'from {} import {}'.format(module, obj2)])
+        self._test(long_module, [long_obj1],
+                   ['from {} import {}'.format(long_module, long_obj1)])
+
+        # Test multi-lines imports
+        self._test(long_module, [long_obj1, long_obj2],
+                   ['from {} import {}'.format(long_module, long_obj1),
+                    'from {} import {}'.format(long_module, long_obj2)])
+
+        # Test file_artifacts
+        self.maxDiff = 1000
+        self._test(long_module, [long_obj1, long_obj2],
+                   ['from {} import {}'.format(long_module, long_obj1),
+                    'from {} import {}'.format(long_module, long_obj2)],
+                   sep='\r\n',
+                   file_artifacts={'sep': '\r\n'})
+
+        # Test imports with comments
+        self._test('foo', [],
+                   ['import foo  # comment'],
+                   comments=[Token('# comment')])
+        self._test('foo', [ImportLeaf('bar', comments=[Token('#comment')])],
+                   ['from foo import bar  #comment'])
+
+        # this is testing bad behavior really, but better than duplicating
+        # comments!
+        self._test('something', [ImportLeaf('foo'),
+                                 ImportLeaf('bar')],
+                   ['# noqa',
+                    'from something import bar',
+                    'from something import foo'],
+                   comments=[Token('# noqa')])
+        self._test('foo',
+                   [ImportLeaf('bar', comments=[Token('#hello')]),
+                    ImportLeaf('rainbows', comments=[Token('#world')]),
+                    ImportLeaf('zz', comments=[Token('#and lots of sleep',
+                                                     is_comment_first=True)])],
+                   ['#noqa', '#hello', '#world', '#and lots of sleep',
+                    'from foo import bar',
+                    'from foo import rainbows',
+                    'from foo import zz'],
+                   comments=[Token('#noqa')])
+        self._test('foo',
+                   [ImportLeaf('bar'),
+                    ImportLeaf('rainbows'),
+                    ImportLeaf(long_obj1)],
+                   ['#noqa',
+                    'from foo import bar',
+                    'from foo import {}'.format(long_obj1),
+                    'from foo import rainbows'],
                    comments=[Token('#noqa')])
