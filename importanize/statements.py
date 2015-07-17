@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import operator
 import re
 
-from future.utils import python_2_unicode_compatible
+import six
 
 from .formatters import DEFAULT_FORMATTER
 from .mixin import ComparatorMixin
@@ -13,7 +13,7 @@ from .utils import list_strip
 DOTS = re.compile(r'^(\.+)(.*)')
 
 
-@python_2_unicode_compatible
+@six.python_2_unicode_compatible
 class ImportLeaf(ComparatorMixin):
     """
     Data-structure about each import statement leaf-module.
@@ -82,7 +82,7 @@ class ImportLeaf(ComparatorMixin):
         return self.name > other.name
 
 
-@python_2_unicode_compatible
+@six.python_2_unicode_compatible
 class ImportStatement(ComparatorMixin):
     """
     Data-structure to store information about

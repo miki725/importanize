@@ -5,13 +5,13 @@ import operator
 from collections import OrderedDict, defaultdict
 from functools import reduce
 
-from future.utils import python_2_unicode_compatible
+import six
 
 from .formatters import DEFAULT_FORMATTER
 from .utils import is_std_lib
 
 
-@python_2_unicode_compatible
+@six.python_2_unicode_compatible
 class BaseImportGroup(object):
     def __init__(self, config=None, **kwargs):
         self.config = config or {}
@@ -125,7 +125,7 @@ GROUP_MAPPING = OrderedDict((
 ))
 
 
-@python_2_unicode_compatible
+@six.python_2_unicode_compatible
 class ImportGroups(object):
     def __init__(self, **kwargs):
         self.groups = []
