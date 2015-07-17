@@ -36,7 +36,6 @@ class TestUtils(unittest.TestCase):
             'collections',
             'copy',
             'csv',
-            'curses',
             'datetime',
             'decimal',
             'fileinput',

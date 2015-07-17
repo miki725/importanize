@@ -55,7 +55,7 @@ test-coverage:
 test-all:
 	tox
 
-check: clean-build clean-pyc clean-test lint test-coverage
+check: lint clean-build clean-pyc clean-test test-coverage
 
 release: clean
 	python setup.py sdist upload

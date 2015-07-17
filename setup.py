@@ -5,7 +5,7 @@ import os
 
 from setuptools import find_packages, setup
 
-from importanize import __author__, __version__
+from importanize import __author__, __description__, __version__
 
 
 def read(fname):
@@ -31,7 +31,7 @@ setup(
     name='importanize',
     version=__version__,
     author=__author__,
-    description='Utility for organizing Python imports using PEP8 or custom rules',
+    description=__description__,
     long_description='\n\n'.join([readme, history, authors, licence]),
     url='https://github.com/miki725/importanize',
     license='MIT',

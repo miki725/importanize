@@ -206,7 +206,7 @@ class TestMain(unittest.TestCase):
             conf,
         )
         mock_run_importanize.assert_called_once_with(
-            'root/foo.py',
+            os.path.join('root', 'foo.py'),
             mock.sentinel.config,
             conf,
         )
@@ -238,7 +238,7 @@ class TestMain(unittest.TestCase):
             conf,
         )
         mock_run_importanize.assert_called_once_with(
-            'root/foo.py',
+            os.path.join('root', 'foo.py'),
             mock.sentinel.config,
             conf,
         )
@@ -247,12 +247,12 @@ class TestMain(unittest.TestCase):
     @mock.patch('os.path.exists')
     @mock.patch('os.getcwd')
     def test_find_config(self, mock_getcwd, mock_exists):
-        mock_getcwd.return_value = '/path/to/importanize'
+        mock_getcwd.return_value = os.path.join('path', 'to', 'importanize')
         mock_exists.side_effect = False, True
 
         config, found = find_config()
 
-        self.assertEqual(config, '/path/to/.importanizerc')
+        self.assertEqual(config, os.path.join('path', 'to', '.importanizerc'))
         self.assertTrue(bool(found))
 
     @mock.patch(TESTING_MODULE + '.run')
@@ -265,7 +265,7 @@ class TestMain(unittest.TestCase):
         args = mock.MagicMock(
             verbose=1,
             version=False,
-            path=['/path/../'],
+            path=[os.path.join('path', '..')],
             config=None,
         )
         mock_parse_args.return_value = args
@@ -275,7 +275,7 @@ class TestMain(unittest.TestCase):
         mock_parse_args.assert_called_once_with()
         mock_get_logger.assert_called_once_with('')
         mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
-        mock_run.assert_called_once_with('/', PEP8_CONFIG, args)
+        mock_run.assert_called_once_with(os.getcwd(), PEP8_CONFIG, args)
 
     @mock.patch(TESTING_MODULE + '.read')
     @mock.patch(TESTING_MODULE + '.run')
@@ -291,7 +291,7 @@ class TestMain(unittest.TestCase):
         args = mock.MagicMock(
             verbose=1,
             version=False,
-            path=['/path/../'],
+            path=[os.path.join('path', '..')],
             config=mock.sentinel.config,
         )
         mock_parse_args.return_value = args
@@ -303,7 +303,9 @@ class TestMain(unittest.TestCase):
         mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
         mock_read.assert_called_once_with(mock.sentinel.config)
         mock_loads.assert_called_once_with(mock_read.return_value)
-        mock_run.assert_called_once_with('/', mock_loads.return_value, args)
+        mock_run.assert_called_once_with(
+            os.getcwd(), mock_loads.return_value, args
+        )
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     @mock.patch('sys.exit')
