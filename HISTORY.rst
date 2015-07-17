@@ -3,6 +3,14 @@
 History
 -------
 
+0.4.1 (2015-07-xx)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed a bug where ``importanize`` did not correctly detect stdlibs on Windows
+  (see `#29 <https://github.com/miki725/importanize/issues/29/>`_)
+* Removed ``future`` dependency since ``six>=1.9`` includes all the used features
+* Fixed tests to be executable on Windows
+
 0.4 (2015-04-13)
 ~~~~~~~~~~~~~~~~
 
