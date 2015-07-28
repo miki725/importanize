@@ -3,7 +3,7 @@
 History
 -------
 
-0.4.1 (2015-07-xx)
+0.4.1 (2015-07-28)
 ~~~~~~~~~~~~~~~~~~
 
 * Fixed a bug where ``importanize`` did not correctly detect stdlibs on Windows
