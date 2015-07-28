@@ -63,13 +63,13 @@ Config file is simply a ``json`` file like this::
             "path/to/file",
             "path/to/files/ignore_*.py"
         ],
-        "formatter": 'grouped',
+        "formatter": "grouped",
         "groups": [
             {
-                "type": "stdlib",
+                "type": "stdlib"
             },
             {
-                "type": "remainder",
+                "type": "remainder"
             },
             {
                 "type": "packages",
@@ -78,24 +78,24 @@ Config file is simply a ``json`` file like this::
                 ]
             },
             {
-                "type": "local",
+                "type": "local"
             }
-        ],
+        ]
     }
 
 Default config looks something like::
 
     {   "groups": [
             {
-                "type": "stdlib",
+                "type": "stdlib"
             },
             {
-                "type": "remainder",
+                "type": "remainder"
             },
             {
-                "type": "local",
+                "type": "local"
             }
-        ],
+        ]
     }
 
 Currently the only required key is ``"groups"`` which must be an array
