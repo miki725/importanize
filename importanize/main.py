@@ -11,7 +11,7 @@ from fnmatch import fnmatch
 
 import six
 
-from . import __version__, formatters
+from . import __description__, __version__, formatters
 from .formatters import DEFAULT_FORMATTER
 from .groups import ImportGroups
 from .parser import (
@@ -79,8 +79,7 @@ def find_config():
 default_config, found_default = find_config()
 
 parser = argparse.ArgumentParser(
-    description='Utility for organizing Python imports '
-                'using PEP8 or custom rules',
+    description=__description__,
 )
 parser.add_argument(
     'path',
@@ -231,8 +230,15 @@ def main():
     log.debug('Running importanize with {}'.format(args))
 
     if args.version:
-        msg = 'importanize version: {}'
-        print(msg.format(__version__))
+        msg = (
+            'importanize\n'
+            '===========\n'
+            '{}\n\n'
+            'version: {}\n'
+            'python: {}\n'
+            'source: https://github.com/miki725/importanize'
+        )
+        print(msg.format(__description__, __version__, sys.executable))
         sys.exit(0)
 
     if args.config is None:

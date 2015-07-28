@@ -1,2 +1,1 @@
-future
-six
+six>=1.9

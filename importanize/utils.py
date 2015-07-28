@@ -19,7 +19,8 @@ def ignore_site_packages_paths():
     sys.path = list(set(filter(
         None,
         filter(lambda i: all(('site-packages' not in i,
-                              'python' in i or 'pypy' in i)), sys.path)
+                              'python' in i or 'pypy' in i)),
+               map(operator.methodcaller('lower'), sys.path))
     )))
     yield
     sys.path = paths
