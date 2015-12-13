@@ -28,8 +28,13 @@ Why?
 
 I think imports are important in Python. I also think PEP8 is awesome
 (if you disagree, read some PHP) and there are many tools to help
-developers reformat code to match PEP8. Unfortunately there are no
-tools to reliably organize Python imports to match PEP8 suggestions.
+developers reformat code to match PEP8. There are however fewer tools
+for organizing imports either by following PEP8 or custom rules.
+There is `isort <http://isort.readthedocs.org/en/latest/>`_
+(which unfortinately I found out about after writing this lib)
+however it seems to do lots of magic to determine which packages
+are 3rd party, local packages, etc. I wanted the imports configuration
+to be simple and explicit.
 This is where ``importanize`` comes in. It allows to organize
 Python imports using PEP8 or your custom rules. Read on for
 more information.
@@ -85,7 +90,8 @@ Config file is simply a ``json`` file like this::
 
 Default config looks something like::
 
-    {   "groups": [
+    {   
+        "groups": [
             {
                 "type": "stdlib"
             },
