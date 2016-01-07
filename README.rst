@@ -31,7 +31,7 @@ I think imports are important in Python. I also think PEP8 is awesome
 developers reformat code to match PEP8. There are however fewer tools
 for organizing imports either by following PEP8 or custom rules.
 There is `isort <http://isort.readthedocs.org/en/latest/>`_
-(which unfortinately I found out about after writing this lib)
+(which unfortunately I found out about after writing this lib)
 however it seems to do lots of magic to determine which packages
 are 3rd party, local packages, etc. I wanted the imports configuration
 to be simple and explicit.
@@ -48,8 +48,8 @@ Using ``importanize`` is super easy. Just run::
 
 That will re-format all imports in the given file.
 As part of the default configuration, ``importanize`` will try
-it's best to organize imports to follow PEP8 however that is rather
-challenging task since it is difficult to determine all import groups
+it's best to organize imports to follow PEP8 however that is a rather
+challenging task, since it is difficult to determine all import groups
 as suggested by `PEP8 <http://legacy.python.org/dev/peps/pep-0008/#imports>`_:
 
 1) standard library imports
