@@ -8,7 +8,7 @@ from functools import reduce
 import six
 
 from .formatters import DEFAULT_FORMATTER
-from .utils import is_std_lib
+from .utils import is_std_lib, is_site_packages
 
 
 @six.python_2_unicode_compatible
@@ -93,6 +93,10 @@ class StdLibGroup(BaseImportGroup):
     def should_add_statement(self, statement):
         return is_std_lib(statement.root_module)
 
+class SitePackagesGroup(BaseImportGroup):
+    def should_add_statement(self, statement):
+        return is_site_packages(statement.root_module)
+
 
 class PackagesGroup(BaseImportGroup):
     def __init__(self, *args, **kwargs):
@@ -119,6 +123,7 @@ class RemainderGroup(BaseImportGroup):
 
 GROUP_MAPPING = OrderedDict((
     ('stdlib', StdLibGroup),
+    ('sitepackages', SitePackagesGroup),
     ('packages', PackagesGroup),
     ('local', LocalGroup),
     ('remainder', RemainderGroup),
