@@ -193,6 +193,7 @@ class TestSitePackagesGroup(unittest.TestCase):
         self.assertEqual(actual, mock_is_std_lib.return_value)
         mock_is_std_lib.assert_called_once_with(statement.root_module)
 
+
 class TestStdLibGroup(unittest.TestCase):
     @mock.patch('importanize.groups.is_std_lib')
     def test_should_add_statement(self, mock_is_std_lib):
