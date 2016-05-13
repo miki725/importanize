@@ -27,6 +27,7 @@ def ignore_site_packages_paths():
     finally:
         sys.path = paths
 
+
 def _safe_import_module(module_name):
     imported_module = sys.modules.pop(module_name, None)
     try:
@@ -37,6 +38,7 @@ def _safe_import_module(module_name):
         if imported_module:
             sys.modules[module_name] = imported_module
 
+
 def is_std_lib(module_name):
     if not module_name:
         return False
@@ -46,6 +48,7 @@ def is_std_lib(module_name):
 
     with ignore_site_packages_paths():
         return bool(_safe_import_module(module_name))
+
 
 def is_site_package(module_name):
     if not module_name:

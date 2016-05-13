@@ -34,14 +34,11 @@ class TestUtils(unittest.TestCase):
         self.assertListEqual(sys.path, paths)
         sys.path.remove(os.getcwd())
 
-
     def test_site_packages_paths(self):
         self._test_ignore_site_packages_paths(raise_msg=None)
 
-
     def test_site_packages_paths_exception(self):
         self._test_ignore_site_packages_paths(raise_msg="TEST EXCEPTION")
-
 
     def test_is_std_lib(self):
         self.assertFalse(is_std_lib(''))
@@ -120,7 +117,6 @@ class TestUtils(unittest.TestCase):
         # -- Be sure that fake modules are not site-packages
         self.assertFalse(is_site_package('foo'))
 
-
         # -- These packages come from requirements-dev.txt
         site_packages_modules = (
             "coverage",
@@ -132,7 +128,6 @@ class TestUtils(unittest.TestCase):
             msg = '{} should  be sitepackages'
             self.assertTrue(is_site_package(module),
                             msg.format(module))
-
 
     def test_list_strip(self):
         self.assertListEqual(
