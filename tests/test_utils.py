@@ -28,7 +28,8 @@ class TestUtils(unittest.TestCase):
                     raise ValueError(raise_msg)
         except ValueError as e:
             if raise_msg not in str(e):
-                raise
+                # -- This only happens if there's a bug in this test
+                raise  # pragma: no cover
 
         self.assertIn(os.getcwd(), sys.path)
         self.assertListEqual(sys.path, paths)
