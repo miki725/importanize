@@ -74,6 +74,9 @@ Config file is simply a ``json`` file like this::
                 "type": "stdlib"
             },
             {
+                "type": "sitepackages"
+            },
+            {
                 "type": "remainder"
             },
             {
@@ -110,6 +113,7 @@ to organize imports and will output import groups in the same order
 as defined in the config file. These are the supported group types:
 
 * ``stdlib`` - standard library imports including ``__future__``
+* ``sitepackages`` - imports coming from the ``site-packages`` directory
 * ``local`` - local imports which start with ``"."``. for example
   ``from .foo import bar``
 * ``packages`` - if this group is specified, additional key ``packages``
