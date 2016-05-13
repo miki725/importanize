@@ -7,19 +7,20 @@ import unittest
 import mock
 
 from importanize.utils import (
-    ignore_site_packages_paths,
+    site_packages_paths,
     is_std_lib,
+    is_site_packages,
     list_strip,
     read,
 )
 
 
 class TestUtils(unittest.TestCase):
-    def test_ignore_site_packages_paths(self):
+    def test_site_packages_paths(self):
         sys.path.append(os.getcwd())
         paths = sys.path[:]
 
-        with ignore_site_packages_paths():
+        with site_packages_paths(lambda i: "site-packages" not in i):
             self.assertNotEqual(sys.path, paths)
             self.assertLess(len(sys.path), len(paths))
 
@@ -87,6 +88,35 @@ class TestUtils(unittest.TestCase):
                             msg.format(module))
 
         self.assertFalse(is_std_lib('foo'))
+
+    def test_list_strip(self):
+        self.assertListEqual(
+            list_strip(['  hello ', 'world']),
+            ['hello', 'world']
+        )
+
+    def test_is_site_packages(self):
+        self.assertFalse(is_site_packages(''))
+
+        stdlib_modules = (
+            'argparse',
+            'codecs',
+        )
+        for module in stdlib_modules:
+            msg = '{} should not be sitepackages'
+            self.assertFalse(is_site_packages(module),
+                            msg.format(module))
+
+        self.assertFalse(is_site_packages('foo'))
+
+        site_packages_modules = (module_name
+                for module_name in sys.modules
+                if "site-packages" in module_name
+        )
+        for module in site_packages_modules:
+            msg = '{} should  be sitepackages'
+            self.assertFalse(is_site_packages(module),
+                            msg.format(module))
 
     def test_list_strip(self):
         self.assertListEqual(
