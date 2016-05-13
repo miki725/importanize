@@ -10,45 +10,49 @@ from importlib import import_module
 @contextmanager
 def site_packages_paths(filter_func):
     paths = sys.path[:]
-    # remove working directory so that all
-    # local imports fail
-    if os.getcwd() in sys.path:
-        sys.path.remove(os.getcwd())
-    # remove all third-party paths
-    # so that only stdlib imports will succeed
-    sys.path = list(set(filter(
-        None,
-        filter(lambda i: all((filter_func(i), 'python' in i or 'pypy' in i)),
-               map(operator.methodcaller('lower'), sys.path))
-    )))
-    yield
-    sys.path = paths
+    try:
+        # remove working directory so that all
+        # local imports fail
+        if os.getcwd() in sys.path:
+            sys.path.remove(os.getcwd())
+        # remove all third-party paths
+        # so that only stdlib imports will succeed
+        sys.path = list(set(filter(
+            None,
+            filter(lambda i: all((filter_func(i), 'python' in i or 'pypy' in i)),
+                   map(operator.methodcaller('lower'), sys.path))
+        )))
+        yield
+    finally:
+        sys.path = paths
 
 
-def _is_installed_module(module, filter_func, builtin_result):
-    if not module:
+def _is_installed_module(module_name, filter_func, builtin_result):
+    if not module_name:
         return False
 
-    if module in sys.builtin_module_names:
+    if module_name in sys.builtin_module_names:
         return builtin_result
 
     with site_packages_paths(filter_func):
-        imported_module = sys.modules.pop(module, None)
+        imported_module = sys.modules.pop(module_name, None)
         try:
-            import_module(module)
+            import_module(module_name)
         except ImportError:
             return False
         else:
             return True
         finally:
             if imported_module:
-                sys.modules[module] = imported_module
+                sys.modules[module_name] = imported_module
+
 
 def is_std_lib(module):
     return _is_installed_module(
                         module,
                         lambda i: "site-packages" not in i,
                         True)
+
 
 def is_site_packages(module):
     return _is_installed_module(

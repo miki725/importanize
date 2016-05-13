@@ -28,6 +28,24 @@ class TestUtils(unittest.TestCase):
         self.assertListEqual(sys.path, paths)
         sys.path.remove(os.getcwd())
 
+    def test_site_packages_paths_exception(self):
+        sys.path.append(os.getcwd())
+        paths = sys.path[:]
+
+        try:
+            with site_packages_paths(lambda i: "site-packages" not in i):
+                self.assertNotEqual(sys.path, paths)
+                self.assertLess(len(sys.path), len(paths))
+                raise ValueError("TEST EXCEPTION")
+
+        except ValueError as e:
+            if "TEST EXCEPTION" not in str(e):
+                raise
+
+        self.assertIn(os.getcwd(), sys.path)
+        self.assertListEqual(sys.path, paths)
+        sys.path.remove(os.getcwd())
+
     def test_is_std_lib(self):
         self.assertFalse(is_std_lib(''))
 
@@ -89,12 +107,6 @@ class TestUtils(unittest.TestCase):
 
         self.assertFalse(is_std_lib('foo'))
 
-    def test_list_strip(self):
-        self.assertListEqual(
-            list_strip(['  hello ', 'world']),
-            ['hello', 'world']
-        )
-
     def test_is_site_packages(self):
         self.assertFalse(is_site_packages(''))
 
@@ -105,18 +117,29 @@ class TestUtils(unittest.TestCase):
         for module in stdlib_modules:
             msg = '{} should not be sitepackages'
             self.assertFalse(is_site_packages(module),
-                            msg.format(module))
+                             msg.format(module))
 
         self.assertFalse(is_site_packages('foo'))
 
-        site_packages_modules = (module_name
-                for module_name in sys.modules
-                if "site-packages" in module_name
-        )
+        def _is_site_package(name, module):
+            if name in ("pkg_resources",):
+                return False
+            return "site-packages" in getattr(module, "__file__", "")
+
+        site_packages_modules = [
+                name
+                for name, module in sys.modules.items()
+                if _is_site_package(name, module)
+        ]
+        self.assertNotEqual(site_packages_modules, [])
         for module in site_packages_modules:
-            msg = '{} should  be sitepackages'
-            self.assertFalse(is_site_packages(module),
-                            msg.format(module))
+            try:
+                msg = '{} should  be sitepackages'
+                self.assertTrue(is_site_packages(module),
+                                msg.format(module))
+            except Exception:
+                print("Module Name: {}".format(module))
+                raise
 
     def test_list_strip(self):
         self.assertListEqual(
