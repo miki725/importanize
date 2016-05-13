@@ -8,7 +8,7 @@ from importlib import import_module
 
 
 @contextmanager
-def site_packages_paths(filter_func):
+def ignore_site_packages_paths():
     paths = sys.path[:]
     try:
         # remove working directory so that all
@@ -19,46 +19,43 @@ def site_packages_paths(filter_func):
         # so that only stdlib imports will succeed
         sys.path = list(set(filter(
             None,
-            filter(lambda i: all((filter_func(i), 'python' in i or 'pypy' in i)),
+            filter(lambda i: all(('site-packages' not in i,
+                                  'python' in i or 'pypy' in i)),
                    map(operator.methodcaller('lower'), sys.path))
         )))
         yield
     finally:
         sys.path = paths
 
+def _safe_import_module(module_name):
+    imported_module = sys.modules.pop(module_name, None)
+    try:
+        return import_module(module_name)
+    except ImportError:
+        return None
+    finally:
+        if imported_module:
+            sys.modules[module_name] = imported_module
 
-def _is_installed_module(module_name, filter_func, builtin_result):
+def is_std_lib(module_name):
     if not module_name:
         return False
 
     if module_name in sys.builtin_module_names:
-        return builtin_result
+        return True
 
-    with site_packages_paths(filter_func):
-        imported_module = sys.modules.pop(module_name, None)
-        try:
-            import_module(module_name)
-        except ImportError:
-            return False
-        else:
-            return True
-        finally:
-            if imported_module:
-                sys.modules[module_name] = imported_module
+    with ignore_site_packages_paths():
+        return bool(_safe_import_module(module_name))
 
+def is_site_package(module_name):
+    if not module_name:
+        return False
 
-def is_std_lib(module):
-    return _is_installed_module(
-                        module,
-                        lambda i: "site-packages" not in i,
-                        True)
-
-
-def is_site_packages(module):
-    return _is_installed_module(
-                        module,
-                        lambda i: "site-packages" in i,
-                        False)
+    module = _safe_import_module(module_name)
+    module_path = getattr(module, "__file__", "")
+    if "site-packages" not in module_path:
+        return False
+    return "python" in module_path or "pypy" in module_path
 
 
 def list_strip(data):

@@ -7,44 +7,41 @@ import unittest
 import mock
 
 from importanize.utils import (
-    site_packages_paths,
+    ignore_site_packages_paths,
     is_std_lib,
-    is_site_packages,
+    is_site_package,
     list_strip,
     read,
 )
 
 
 class TestUtils(unittest.TestCase):
-    def test_site_packages_paths(self):
-        sys.path.append(os.getcwd())
-        paths = sys.path[:]
-
-        with site_packages_paths(lambda i: "site-packages" not in i):
-            self.assertNotEqual(sys.path, paths)
-            self.assertLess(len(sys.path), len(paths))
-
-        self.assertIn(os.getcwd(), sys.path)
-        self.assertListEqual(sys.path, paths)
-        sys.path.remove(os.getcwd())
-
-    def test_site_packages_paths_exception(self):
+    def _test_ignore_site_packages_paths(self, raise_msg=None):
         sys.path.append(os.getcwd())
         paths = sys.path[:]
 
         try:
-            with site_packages_paths(lambda i: "site-packages" not in i):
+            with ignore_site_packages_paths():
                 self.assertNotEqual(sys.path, paths)
                 self.assertLess(len(sys.path), len(paths))
-                raise ValueError("TEST EXCEPTION")
-
+                if raise_msg:
+                    raise ValueError(raise_msg)
         except ValueError as e:
-            if "TEST EXCEPTION" not in str(e):
+            if raise_msg not in str(e):
                 raise
 
         self.assertIn(os.getcwd(), sys.path)
         self.assertListEqual(sys.path, paths)
         sys.path.remove(os.getcwd())
+
+
+    def test_site_packages_paths(self):
+        self._test_ignore_site_packages_paths(raise_msg=None)
+
+
+    def test_site_packages_paths_exception(self):
+        self._test_ignore_site_packages_paths(raise_msg="TEST EXCEPTION")
+
 
     def test_is_std_lib(self):
         self.assertFalse(is_std_lib(''))
@@ -107,39 +104,35 @@ class TestUtils(unittest.TestCase):
 
         self.assertFalse(is_std_lib('foo'))
 
-    def test_is_site_packages(self):
-        self.assertFalse(is_site_packages(''))
+    def test_is_site_package(self):
+        self.assertFalse(is_site_package(''))
 
+        # -- Be sure that stdlib modules are not site-packages
         stdlib_modules = (
             'argparse',
             'codecs',
         )
         for module in stdlib_modules:
             msg = '{} should not be sitepackages'
-            self.assertFalse(is_site_packages(module),
+            self.assertFalse(is_site_package(module),
                              msg.format(module))
 
-        self.assertFalse(is_site_packages('foo'))
+        # -- Be sure that fake modules are not site-packages
+        self.assertFalse(is_site_package('foo'))
 
-        def _is_site_package(name, module):
-            if name in ("pkg_resources",):
-                return False
-            return "site-packages" in getattr(module, "__file__", "")
 
-        site_packages_modules = [
-                name
-                for name, module in sys.modules.items()
-                if _is_site_package(name, module)
-        ]
-        self.assertNotEqual(site_packages_modules, [])
+        # -- These packages come from requirements-dev.txt
+        site_packages_modules = (
+            "coverage",
+            "mock",
+            "rednose",
+            "tox",
+        )
         for module in site_packages_modules:
-            try:
-                msg = '{} should  be sitepackages'
-                self.assertTrue(is_site_packages(module),
-                                msg.format(module))
-            except Exception:
-                print("Module Name: {}".format(module))
-                raise
+            msg = '{} should  be sitepackages'
+            self.assertTrue(is_site_package(module),
+                            msg.format(module))
+
 
     def test_list_strip(self):
         self.assertListEqual(

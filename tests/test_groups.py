@@ -186,7 +186,7 @@ class TestBaseImportGroup(unittest.TestCase):
 
 
 class TestSitePackagesGroup(unittest.TestCase):
-    @mock.patch('importanize.groups.is_site_packages')
+    @mock.patch('importanize.groups.is_site_package')
     def test_should_add_statement(self, mock_is_std_lib):
         statement = mock.MagicMock()
         actual = SitePackagesGroup().should_add_statement(statement)
