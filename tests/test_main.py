@@ -53,6 +53,8 @@ class TestMain(unittest.TestCase):
                 mock.MagicMock(print=True,
                                formatter='grouped'))
         )
+
+        # self.assertMultiLineEqual(mock_print.call_args[0][0], expected)
         mock_print.assert_called_once_with(expected)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)

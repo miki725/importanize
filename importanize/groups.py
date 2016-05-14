@@ -121,7 +121,7 @@ class RemainderGroup(BaseImportGroup):
     def should_add_statement(self, statement):
         return True
 
-
+# -- RemainderGroup goes last and catches everything left over
 GROUP_MAPPING = OrderedDict((
     ('stdlib', StdLibGroup),
     ('sitepackages', SitePackagesGroup),

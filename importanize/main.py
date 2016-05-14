@@ -30,6 +30,9 @@ PEP8_CONFIG = {
             'type': 'stdlib',
         },
         {
+            'type': 'sitepackages',
+        },
+        {
             'type': 'remainder',
         },
         {

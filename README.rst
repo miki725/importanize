@@ -93,10 +93,13 @@ Config file is simply a ``json`` file like this::
 
 Default config looks something like::
 
-    {   
+    {
         "groups": [
             {
                 "type": "stdlib"
+            },
+            {
+                "type": "sitepackages"
             },
             {
                 "type": "remainder"
