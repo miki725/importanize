@@ -172,8 +172,7 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
         a different formatter class.
         """
         if all([statement.comments,
-                statement.leafs
-                and statement.leafs[0].comments]):
+                statement.leafs and statement.leafs[0].comments]):
             return GroupedFormatter(statement)
         return super(GroupedInlineAlignedFormatter, cls).__new__(cls)
 
@@ -183,8 +182,7 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
 
     def normalize_statement(self, statement):
         if all([statement.comments,
-                statement.leafs
-                and not statement.leafs[0].comments]):
+                statement.leafs and not statement.leafs[0].comments]):
             statement = deepcopy(statement)
             statement.leafs[0].comments.extend(statement.comments)
             statement.comments = []

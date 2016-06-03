@@ -47,9 +47,9 @@ VERBOSITY_MAPPING = {
 FORMATTERS = {
     formatter.name: formatter
     for formatter in vars(formatters).values()
-    if (inspect.isclass(formatter)
-        and formatter is not formatters.Formatter
-        and issubclass(formatter, formatters.Formatter))
+    if (inspect.isclass(formatter) and
+        formatter is not formatters.Formatter and
+        issubclass(formatter, formatters.Formatter))
 }
 
 # setup logging
@@ -171,13 +171,15 @@ def run_importanize(path, config, args):
         else:
             i = None
 
-    lines = (lines[:first_import_line_number]
-             + formatted_imports.splitlines()
-             + ([''] * 2
-                if lines[first_import_line_number:] and formatted_imports
-                else [])
-             + lines[first_import_line_number:]
-             + [''])
+    lines = (
+        lines[:first_import_line_number] +
+        formatted_imports.splitlines() +
+        ([''] * 2
+         if lines[first_import_line_number:] and formatted_imports
+         else []) +
+        lines[first_import_line_number:] +
+        ['']
+    )
 
     lines = file_artifacts.get('sep', '\n').join(lines)
 

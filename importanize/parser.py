@@ -232,11 +232,16 @@ def parse_statements(iterable, **kwargs):
     statements : generator
         Generator which yields ``ImportStatement`` instances.
     """
-    get_comments = lambda j: filter(lambda i: i.is_comment, j)
-    get_not_comments = lambda j: filter(lambda i: not i.is_comment, j)
-    get_first_not_comment = lambda j: next(
-        iter(filter(lambda i: not i.is_comment, j))
-    )
+    def get_comments(j):
+        return filter(lambda i: i.is_comment, j)
+
+    def get_not_comments(j):
+        return filter(lambda i: not i.is_comment, j)
+
+    def get_first_not_comment(j):
+        return next(
+            iter(filter(lambda i: not i.is_comment, j))
+        )
 
     for import_lines, line_numbers in iterable:
         tokens = tokenize_import_lines(import_lines)
