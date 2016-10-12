@@ -156,8 +156,10 @@ class ImportGroups(object):
         self.groups.append(GROUP_MAPPING[config['type']](config))
 
     def add_statement_to_group(self, statement):
-        priority = lambda i: list(GROUP_MAPPING.values()).index(type(i))
-        groups_by_priority = sorted(self.groups, key=priority)
+        groups_by_priority = sorted(
+            self.groups,
+            key=lambda i: list(GROUP_MAPPING.values()).index(type(i))
+        )
 
         added = False
 

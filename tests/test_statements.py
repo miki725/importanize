@@ -172,8 +172,8 @@ class TestImportStatement(unittest.TestCase):
         with self.assertRaises(AssertionError):
             ImportStatement([], 'a') + ImportStatement([], 'b')
 
-        actual = (ImportStatement([1, 2], 'a', [ImportLeaf('b')])
-                  + ImportStatement([3, 4], 'a', [ImportLeaf('c')]))
+        actual = (ImportStatement([1, 2], 'a', [ImportLeaf('b')]) +
+                  ImportStatement([3, 4], 'a', [ImportLeaf('c')]))
 
         self.assertEqual(
             actual,
@@ -184,17 +184,16 @@ class TestImportStatement(unittest.TestCase):
 
     def test_eq(self):
         self.assertTrue(
+            ImportStatement([], 'a', [ImportLeaf('a')]) ==
             ImportStatement([], 'a', [ImportLeaf('a')])
-            == ImportStatement([], 'a', [ImportLeaf('a')])
         )
         self.assertTrue(
-            ImportStatement([], 'a', [ImportLeaf('a')])
-            == ImportStatement([], 'a', [ImportLeaf('a'),
-                                         ImportLeaf('a')])
+            ImportStatement([], 'a', [ImportLeaf('a')]) ==
+            ImportStatement([], 'a', [ImportLeaf('a'), ImportLeaf('a')])
         )
         self.assertFalse(
-            ImportStatement([], 'a', [ImportLeaf('a')])
-            == ImportStatement([], 'a', [ImportLeaf('b')])
+            ImportStatement([], 'a', [ImportLeaf('a')]) ==
+            ImportStatement([], 'a', [ImportLeaf('b')])
         )
 
     def test_gt(self):
