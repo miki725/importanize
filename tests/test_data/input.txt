@@ -14,6 +14,7 @@ from a.b import d
 
 import z
 from z import *
+import coverage  # in site-packages
 from z import foo
 
 import something # with comment

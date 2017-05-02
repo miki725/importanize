@@ -12,6 +12,7 @@ from importanize.groups import (
     PackagesGroup,
     RemainderGroup,
     StdLibGroup,
+    SitePackagesGroup,
 )
 from importanize.statements import ImportLeaf, ImportStatement
 
@@ -182,6 +183,15 @@ class TestBaseImportGroup(unittest.TestCase):
             mock_as_string.return_value
         )
         mock_as_string.assert_called_once_with()
+
+
+class TestSitePackagesGroup(unittest.TestCase):
+    @mock.patch('importanize.groups.is_site_package')
+    def test_should_add_statement(self, mock_is_std_lib):
+        statement = mock.MagicMock()
+        actual = SitePackagesGroup().should_add_statement(statement)
+        self.assertEqual(actual, mock_is_std_lib.return_value)
+        mock_is_std_lib.assert_called_once_with(statement.root_module)
 
 
 class TestStdLibGroup(unittest.TestCase):

@@ -4,6 +4,8 @@ from __future__ import print_function, unicode_literals
 import datetime
 from os import path as ospath
 
+import coverage  # in site-packages
+
 import something  # with comment
 import z
 from a import b
