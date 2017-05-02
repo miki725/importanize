@@ -8,6 +8,7 @@ import operator
 import os
 import sys
 from fnmatch import fnmatch
+from stat import S_ISFIFO
 
 import six
 
@@ -16,10 +17,10 @@ from .formatters import DEFAULT_FORMATTER
 from .groups import ImportGroups
 from .parser import (
     find_imports_from_lines,
-    get_file_artifacts,
+    get_text_artifacts,
     parse_statements,
 )
-from .utils import read
+from .utils import force_text, read
 
 
 LOGGING_FORMAT = '%(levelname)s %(name)s %(message)s'
@@ -88,7 +89,6 @@ parser.add_argument(
     'path',
     type=six.text_type,
     nargs='*',
-    default=['.'],
     help='Path either to a file or directory where '
          'all Python files imports will be organized.',
 )
@@ -119,6 +119,13 @@ parser.add_argument(
          'files will be printed to stdout.'
 )
 parser.add_argument(
+    '--ci',
+    action='store_true',
+    default=False,
+    help='When used CI mode will check if file contains expected '
+         'imports as per importanize configuration.'
+)
+parser.add_argument(
     '--version',
     action='store_true',
     default=False,
@@ -133,14 +140,12 @@ parser.add_argument(
 )
 
 
-def run_importanize(path, config, args):
-    if config.get('exclude'):
-        if any(map(lambda i: fnmatch(path, i), config.get('exclude'))):
-            log.info('Skipping {}'.format(path))
-            return False
+class CIFailure(Exception):
+    pass
 
-    text = read(path)
-    file_artifacts = get_file_artifacts(path)
+
+def run_importanize_on_text(text, config, args):
+    file_artifacts = get_text_artifacts(text)
 
     # Get formatter from args or config
     formatter = FORMATTERS.get(args.formatter or config.get('formatter'),
@@ -186,6 +191,26 @@ def run_importanize(path, config, args):
 
     lines = file_artifacts.get('sep', '\n').join(lines)
 
+    if args.ci and text != lines:
+        raise CIFailure()
+
+    return lines
+
+
+def run_importanize(path, config, args):
+    if config.get('exclude'):
+        if any(map(lambda i: fnmatch(path, i), config.get('exclude'))):
+            log.info('Skipping {}'.format(path))
+            return
+
+    text = read(path)
+
+    lines = run_importanize_on_text(text, config, args)
+
+    if text == lines:
+        log.info('Nothing to do in {}'.format(path))
+        return
+
     if args.print:
         print(lines.encode('utf-8') if not six.PY3 else lines)
     else:
@@ -193,19 +218,23 @@ def run_importanize(path, config, args):
             fid.write(lines.encode('utf-8'))
 
     log.info('Successfully importanized {}'.format(path))
-    return True
 
 
 def run(path, config, args):
     if not os.path.isdir(path):
         try:
             run_importanize(path, config, args)
+        except CIFailure:
+            print('Imports not organized in {}'.format(path), file=sys.stderr)
+            raise
         except Exception as e:
             log.exception('Error running importanize for {}'
                           ''.format(path))
             parser.error(six.text_type(e))
 
     else:
+        all_successes = True
+
         for dirpath, dirnames, filenames in os.walk(path):
             python_files = filter(
                 operator.methodcaller('endswith', '.py'),
@@ -219,10 +248,17 @@ def run(path, config, args):
                     print('-' * len(path))
                 try:
                     run_importanize(path, config, args)
+                except CIFailure:
+                    print('Imports not organized in {}'.format(path),
+                          file=sys.stderr)
+                    all_successes = False
                 except Exception as e:
                     log.exception('Error running importanize for {}'
                                   ''.format(path))
                     parser.error(six.text_type(e))
+
+        if not all_successes:
+            raise CIFailure()
 
 
 def main():
@@ -244,13 +280,47 @@ def main():
             'source: https://github.com/miki725/importanize'
         )
         print(msg.format(__description__, __version__, sys.executable))
-        sys.exit(0)
+        return 0
 
     if args.config is None:
         config = PEP8_CONFIG
     else:
         config = json.loads(read(args.config))
 
-    for p in args.path:
-        path = os.path.abspath(p)
-        run(path, config, args)
+    if S_ISFIFO(os.fstat(0).st_mode):
+        if args.path:
+            parser.error('Cant supply any paths when piping input')
+            return 1
+
+        text = force_text(sys.stdin.read())
+
+        try:
+            lines = run_importanize_on_text(text, config, args)
+        except CIFailure:
+            print('Imports not organized', file=sys.stderr)
+            return 1
+        except Exception as e:
+            log.exception('Error running importanize')
+            parser.error(six.text_type(e))
+            return 1
+
+        sys.stdout.write(lines)
+        sys.stdout.flush()
+
+    else:
+        all_successes = True
+
+        for p in (args.path or ['.']):
+            path = os.path.abspath(p)
+            try:
+                run(path, config, args)
+            except CIFailure:
+                all_successes = False
+
+        return int(not all_successes)
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

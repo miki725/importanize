@@ -2,13 +2,12 @@
 from __future__ import print_function, unicode_literals
 import unittest
 
-import mock
 import six
 
 from importanize.parser import (
     Token,
     find_imports_from_lines,
-    get_file_artifacts,
+    get_text_artifacts,
     parse_statements,
     tokenize_import_lines,
 )
@@ -30,23 +29,18 @@ class TestToken(unittest.TestCase):
 
 
 class TestParsing(unittest.TestCase):
-    @mock.patch(TESTING_MODULE + '.read')
-    def test_get_file_artifacts(self, mock_read):
-        mock_read.return_value = 'Hello\nWorld\n'
-        actual = get_file_artifacts(mock.sentinel.path)
+    def test_get_text_artifacts(self):
+        actual = get_text_artifacts('Hello\nWorld\n')
         self.assertDictEqual(actual, {
             'sep': '\n',
         })
-        mock_read.assert_called_once_with(mock.sentinel.path)
 
-        mock_read.return_value = 'Hello\r\nWorld\n'
-        actual = get_file_artifacts(mock.sentinel.path)
+        actual = get_text_artifacts('Hello\r\nWorld\n')
         self.assertDictEqual(actual, {
             'sep': '\r\n',
         })
 
-        mock_read.return_value = 'Hello'
-        actual = get_file_artifacts(mock.sentinel.path)
+        actual = get_text_artifacts('Hello')
         self.assertDictEqual(actual, {
             'sep': '\n',
         })

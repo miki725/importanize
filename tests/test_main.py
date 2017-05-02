@@ -7,7 +7,7 @@ import unittest
 import mock
 import six
 
-from importanize.main import (
+from importanize.__main__ import (
     PEP8_CONFIG,
     find_config,
     main,
@@ -18,7 +18,7 @@ from importanize.main import (
 from importanize.utils import read
 
 
-TESTING_MODULE = 'importanize.main'
+TESTING_MODULE = 'importanize.__main__'
 
 
 class TestMain(unittest.TestCase):

@@ -8,8 +8,8 @@ import mock
 
 from importanize.utils import (
     ignore_site_packages_paths,
-    is_std_lib,
     is_site_package,
+    is_std_lib,
     list_strip,
     read,
 )

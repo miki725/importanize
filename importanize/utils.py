@@ -29,14 +29,23 @@ def ignore_site_packages_paths():
 
 
 def _safe_import_module(module_name):
-    imported_module = sys.modules.pop(module_name, None)
+    # remove module and submodules
+    # removing submodules is necessary in cases when module
+    # imports an attribute from submodule
+    # if parent module is removed from sys.modules
+    # but not removing submodule will result in AttributeError
+    # when attempting to re-import parent module again
+    imported_modules = {
+        k: sys.modules.pop(k)
+        for k in list(sys.modules.keys())
+        if k == module_name or k.startswith(module_name + '.')
+    }
     try:
         return import_module(module_name)
     except ImportError:
         return None
     finally:
-        if imported_module:
-            sys.modules[module_name] = imported_module
+        sys.modules.update(imported_modules)
 
 
 def is_std_lib(module_name):
@@ -85,3 +94,17 @@ def list_split(iterable, split):
 
     if segment:
         yield segment
+
+
+def force_text(data):
+    try:
+        return data.decode('utf-8')
+    except AttributeError:
+        return data
+
+
+def force_bytes(data):
+    try:
+        return data.encode('utf-8')
+    except AttributeError:
+        return data

@@ -5,7 +5,7 @@ import re
 import six
 
 from .statements import DOTS, ImportLeaf, ImportStatement
-from .utils import list_split, read
+from .utils import list_split
 
 
 STATEMENT_COMMENTS = ('noqa',)
@@ -36,14 +36,14 @@ class Token(six.text_type):
                 return self[1:]
 
 
-def get_file_artifacts(path):
+def get_text_artifacts(text):
     """
     Get artifacts for the given file.
 
     Parameters
     ----------
     path : str
-        Path to a file
+        File content to analyze
 
     Returns
     -------
@@ -55,7 +55,7 @@ def get_file_artifacts(path):
         'sep': '\n',
     }
 
-    lines = read(path).splitlines(True)
+    lines = text.splitlines(True)
     if len(lines) > 1 and lines[0][-2:] == '\r\n':
         artifacts['sep'] = '\r\n'
 

@@ -8,7 +8,7 @@ from functools import reduce
 import six
 
 from .formatters import DEFAULT_FORMATTER
-from .utils import is_std_lib, is_site_package
+from .utils import is_site_package, is_std_lib
 
 
 @six.python_2_unicode_compatible
@@ -121,6 +121,7 @@ class RemainderGroup(BaseImportGroup):
     def should_add_statement(self, statement):
         return True
 
+
 # -- RemainderGroup goes last and catches everything left over
 GROUP_MAPPING = OrderedDict((
     ('stdlib', StdLibGroup),
@@ -150,7 +151,7 @@ class ImportGroups(object):
             raise ValueError(msg)
 
         if config['type'] not in GROUP_MAPPING:
-            msg = ('"{}" is not supported import group')
+            msg = ('"{}" is not supported import group'.format(config['type']))
             raise ValueError(msg)
 
         self.groups.append(GROUP_MAPPING[config['type']](config))
