@@ -4,8 +4,8 @@ import argparse
 import inspect
 import json
 import logging
-import operator
 import os
+import pathlib
 import sys
 from fnmatch import fnmatch
 from stat import S_ISFIFO
@@ -119,6 +119,15 @@ parser.add_argument(
          'files will be printed to stdout.'
 )
 parser.add_argument(
+    '--no-header',
+    action='store_false',
+    default=True,
+    dest='header',
+    help='If provided, when printing files will not print header '
+         'before each file. '
+         'Useful to leave when multiple files are importanized.'
+)
+parser.add_argument(
     '--ci',
     action='store_true',
     default=False,
@@ -197,65 +206,66 @@ def run_importanize_on_text(text, config, args):
     return lines
 
 
-def run_importanize(path, config, args):
-    if config.get('exclude'):
-        if any(map(lambda i: fnmatch(path, i), config.get('exclude'))):
-            log.info('Skipping {}'.format(path))
-            return
-
-    text = read(path)
-
-    lines = run_importanize_on_text(text, config, args)
-
-    if text == lines:
-        log.info('Nothing to do in {}'.format(path))
-        return
-
-    if args.print:
-        print(lines.encode('utf-8') if not six.PY3 else lines)
-    else:
-        with open(path, 'wb') as fid:
-            fid.write(lines.encode('utf-8'))
-
-    log.info('Successfully importanized {}'.format(path))
-
-
-def run(path, config, args):
-    if not os.path.isdir(path):
+def run(source, config, args, path=None):
+    if isinstance(source, six.string_types):
         try:
-            run_importanize(path, config, args)
+            organized = run_importanize_on_text(source, config, args)
+
         except CIFailure:
-            print('Imports not organized in {}'.format(path), file=sys.stderr)
+            msg = 'Imports not organized'
+            if path:
+                msg += ' in {}'.format(path)
+            print(msg, file=sys.stderr)
             raise
-        except Exception as e:
-            log.exception('Error running importanize for {}'
-                          ''.format(path))
-            parser.error(six.text_type(e))
 
-    else:
+        else:
+            if args.print and args.header and path:
+                print('=' * len(six.text_type(path)))
+                print(path)
+                print('-' * len(six.text_type(path)))
+
+            if args.print:
+                print(organized.encode('utf-8') if not six.PY3 else organized)
+
+            else:
+                if source == organized:
+                    msg = 'Nothing to do'
+                    if path:
+                        msg += ' in {}'.format(path)
+                    log.info(msg)
+
+                else:
+                    path.write_text(organized)
+
+                    msg = 'Successfully importanized'
+                    if path:
+                        msg += ' {}'.format(path)
+                    log.info(msg)
+
+            return organized
+
+    elif source.is_file():
+        if config.get('exclude'):
+            if any(map(lambda i: fnmatch(six.text_type(source), i),
+                       config.get('exclude'))):
+                log.info('Skipping {}'.format(source))
+                return
+
+        text = source.read_text('utf-8')
+        return run(text, config, args, source)
+
+    elif source.is_dir():
+        files = (
+            f for f in source.iterdir()
+            if not f.is_file() or f.is_file() and f.suffixes == ['.py']
+        )
+
         all_successes = True
-
-        for dirpath, dirnames, filenames in os.walk(path):
-            python_files = filter(
-                operator.methodcaller('endswith', '.py'),
-                filenames
-            )
-            for file in python_files:
-                path = os.path.join(dirpath, file)
-                if args.print:
-                    print('=' * len(path))
-                    print(path)
-                    print('-' * len(path))
-                try:
-                    run_importanize(path, config, args)
-                except CIFailure:
-                    print('Imports not organized in {}'.format(path),
-                          file=sys.stderr)
-                    all_successes = False
-                except Exception as e:
-                    log.exception('Error running importanize for {}'
-                                  ''.format(path))
-                    parser.error(six.text_type(e))
+        for f in files:
+            try:
+                run(f, config, args, f)
+            except CIFailure:
+                all_successes = False
 
         if not all_successes:
             raise CIFailure()
@@ -287,39 +297,33 @@ def main():
     else:
         config = json.loads(read(args.config))
 
+    to_importanize = [pathlib.Path(i) for i in (args.path or ['.'])]
+
     if S_ISFIFO(os.fstat(0).st_mode):
         if args.path:
             parser.error('Cant supply any paths when piping input')
             return 1
 
-        text = force_text(sys.stdin.read())
+        to_importanize = [force_text(sys.stdin.read())]
+        args.print = True
+        args.header = False
 
+    if args.ci:
+        args.print = False
+        args.header = False
+
+    all_successes = True
+
+    for p in to_importanize:
         try:
-            lines = run_importanize_on_text(text, config, args)
+            run(p, config, args)
         except CIFailure:
-            print('Imports not organized', file=sys.stderr)
-            return 1
-        except Exception as e:
+            all_successes = False
+        except Exception:
             log.exception('Error running importanize')
-            parser.error(six.text_type(e))
             return 1
 
-        sys.stdout.write(lines)
-        sys.stdout.flush()
-
-    else:
-        all_successes = True
-
-        for p in (args.path or ['.']):
-            path = os.path.abspath(p)
-            try:
-                run(path, config, args)
-            except CIFailure:
-                all_successes = False
-
-        return int(not all_successes)
-
-    return 0
+    return int(not all_successes)
 
 
 if __name__ == '__main__':
