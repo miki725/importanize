@@ -60,9 +60,11 @@ check: lint clean-build clean-pyc clean-test test-coverage
 
 release: clean
 	python setup.py sdist upload
+	python setup.py bdist_wheel upload
 
 dist: clean
 	python setup.py sdist
+	python setup.py bdist_wheel
 	ls -l dist
 
 docs:
