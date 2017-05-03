@@ -235,10 +235,10 @@ def run(source, config, args, path=None):
                 else:
                     path.write_text(organized)
 
-            msg = 'Successfully importanized'
-            if path:
-                msg += ' {}'.format(path)
-            log.info(msg)
+                    msg = 'Successfully importanized'
+                    if path:
+                        msg += ' {}'.format(path)
+                    log.info(msg)
 
             return organized
 
