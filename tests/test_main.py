@@ -1,327 +1,285 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
-import logging
-import os
+import sys
 import unittest
+from copy import deepcopy
 
 import mock
 import six
+from pathlib2 import Path
 
+from importanize import __version__
 from importanize.__main__ import (
+    IMPORTANIZE_CONFIG,
     PEP8_CONFIG,
+    CIFailure,
     find_config,
     main,
-    parser,
     run,
-    run_importanize,
+    run_importanize_on_text,
 )
-from importanize.utils import read
 
 
 TESTING_MODULE = 'importanize.__main__'
 
 
 class TestMain(unittest.TestCase):
-    @mock.patch(TESTING_MODULE + '.read')
-    def test_run_importanize_skip(self, mock_read):
-        conf = {
-            'exclude': ['*foo.py'],
-        }
-        self.assertFalse(
-            run_importanize('/path/to/importanize/file/foo.py', conf, None)
+    test_data = Path(__file__).parent / 'test_data'
+
+    input_text = (test_data / 'input.py').read_text()
+    output_grouped = (test_data / 'output_grouped.py').read_text()
+    output_inline_grouped = (
+        test_data / 'output_inline_grouped.py'
+    ).read_text()
+
+    def test_run_importanize_on_text_grouped(self):
+        actual = run_importanize_on_text(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False),
         )
-        self.assertFalse(mock_read.called)
+
+        self.assertEqual(actual, self.output_grouped)
+
+    def test_run_importanize_on_text_inline_grouped(self):
+        actual = run_importanize_on_text(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='inline-grouped',
+                      ci=False),
+        )
+
+        self.assertEqual(actual, self.output_inline_grouped)
+
+    def test_run_importanize_on_text_ci_failed(self):
+        with self.assertRaises(CIFailure):
+            run_importanize_on_text(
+                self.input_text,
+                PEP8_CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=True),
+            )
+
+    def test_run_importanize_on_text_ci_passed(self):
+        actual = run_importanize_on_text(
+            self.output_grouped,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=True),
+        )
+
+        self.assertEqual(actual, self.output_grouped)
+
+    @mock.patch.object(Path, 'write_text')
+    def test_run_text_to_file_organized(self, mock_write_text):
+        actual = run(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=False),
+            Path(__file__),
+        )
+
+        self.assertEqual(actual, self.output_grouped)
+        mock_write_text.assert_called_once_with(self.output_grouped)
+
+    @mock.patch.object(Path, 'write_text')
+    def test_run_text_to_file_nothing_to_do(self, mock_write_text):
+        actual = run(
+            self.output_grouped,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=False),
+            Path(__file__),
+        )
+
+        self.assertEqual(actual, self.output_grouped)
+        mock_write_text.assert_not_called()
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    def test_run_importanize_print(self, mock_print):
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        expected_file = os.path.join(os.path.dirname(__file__),
-                                     'test_data',
-                                     'output_grouped.txt')
-        expected = (
-            read(expected_file)
-            if six.PY3
-            else read(expected_file).encode('utf-8')
+    def test_run_text_print(self, mock_print):
+        actual = run(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=True),
+            Path('foo'),
         )
 
-        self.assertTrue(
-            run_importanize(
-                test_file,
-                PEP8_CONFIG,
-                mock.MagicMock(print=True,
-                               formatter='grouped'))
-        )
-
-        # self.assertMultiLineEqual(mock_print.call_args[0][0], expected)
-        mock_print.assert_called_once_with(expected)
+        self.assertEqual(actual, self.output_grouped)
+        mock_print.assert_has_calls([
+            mock.call('==='),
+            mock.call('foo'),
+            mock.call('---'),
+            mock.call(self.output_grouped),
+        ])
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    def test_run_importanize_print_inline_group_formatter(self, mock_print):
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        expected_file = os.path.join(os.path.dirname(__file__),
-                                     'test_data',
-                                     'output_inline_grouped.txt')
-        expected = (
-            read(expected_file)
-            if six.PY3
-            else read(expected_file).encode('utf-8')
+    def test_run_text_print_no_file(self, mock_print):
+        actual = run(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=True),
         )
 
-        self.assertTrue(
-            run_importanize(
-                test_file,
-                PEP8_CONFIG,
-                mock.MagicMock(print=True,
-                               formatter='inline-grouped'))
-        )
-        mock_print.assert_called_once_with(expected)
+        self.assertEqual(actual, self.output_grouped)
+        mock_print.assert_has_calls([
+            mock.call(self.output_grouped),
+        ])
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    def test_run_importanize_with_unavailable_formatter(self, mock_print):
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        expected_file = os.path.join(os.path.dirname(__file__),
-                                     'test_data',
-                                     'output_grouped.txt')
-
-        expected = (
-            read(expected_file)
-            if six.PY3
-            else read(expected_file).encode('utf-8')
+    def test_run_text_print_no_header(self, mock_print):
+        actual = run(
+            self.input_text,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=False),
+            Path('foo'),
         )
 
-        self.assertTrue(
-            run_importanize(
-                test_file,
-                PEP8_CONFIG,
-                mock.MagicMock(print=True,
-                               formatter='UnavailableFormatter'))
-        )
-        mock_print.assert_called_once_with(expected)
-
-    @mock.patch(TESTING_MODULE + '.open', create=True)
-    def test_run_importanize_write(self, mock_open):
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        expected_file = os.path.join(os.path.dirname(__file__),
-                                     'test_data',
-                                     'output_grouped.txt')
-        expected = read(expected_file).encode('utf-8')
-
-        self.assertTrue(
-            run_importanize(
-                test_file,
-                PEP8_CONFIG,
-                mock.MagicMock(print=False,
-                               formatter='grouped'))
-        )
-        mock_open.assert_called_once_with(test_file, 'wb')
-        mock_open.return_value \
-            .__enter__.return_value \
-            .write.assert_called_once_with(expected)
-
-    @mock.patch(TESTING_MODULE + '.open', create=True)
-    def test_run_importanize_write_inline_group_formatter(self, mock_open):
-        test_file = os.path.join(os.path.dirname(__file__),
-                                 'test_data',
-                                 'input.txt')
-        expected_file = os.path.join(os.path.dirname(__file__),
-                                     'test_data',
-                                     'output_inline_grouped.txt')
-        expected = read(expected_file).encode('utf-8')
-
-        self.assertTrue(
-            run_importanize(
-                test_file,
-                PEP8_CONFIG,
-                mock.MagicMock(print=False,
-                               formatter='inline-grouped'))
-        )
-        mock_open.assert_called_once_with(test_file, 'wb')
-        mock_open.return_value \
-            .__enter__.return_value \
-            .write.assert_called_once_with(expected)
-
-    @mock.patch(TESTING_MODULE + '.run_importanize')
-    @mock.patch('os.path.isdir')
-    def test_run_single_file(self, mock_isdir, mock_run_importanize):
-        mock_isdir.return_value = False
-        run(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            mock.sentinel.args,
-        )
-        mock_run_importanize.assert_called_once_with(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            mock.sentinel.args,
-        )
-
-    @mock.patch(TESTING_MODULE + '.parser')
-    @mock.patch(TESTING_MODULE + '.run_importanize')
-    @mock.patch('os.path.isdir')
-    def test_run_single_file_exception(self,
-                                       mock_isdir,
-                                       mock_run_importanize,
-                                       mock_parser):
-        mock_isdir.return_value = False
-        mock_run_importanize.side_effect = ValueError
-        run(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            mock.sentinel.args,
-        )
-        mock_run_importanize.assert_called_once_with(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            mock.sentinel.args,
-        )
-        mock_parser.error.assert_called_once_with(mock.ANY)
-
-    @mock.patch(TESTING_MODULE + '.print', mock.MagicMock(), create=True)
-    @mock.patch(TESTING_MODULE + '.run_importanize')
-    @mock.patch('os.walk')
-    @mock.patch('os.path.isdir')
-    def test_run_folder(self,
-                        mock_isdir,
-                        mock_walk,
-                        mock_run_importanize):
-        mock_isdir.return_value = True
-        mock_walk.return_value = [
-            (
-                'root',
-                ['dir1', 'dir2'],
-                ['foo.py', 'bar.txt'],
-            ),
-        ]
-
-        conf = mock.MagicMock(print=True)
-        run(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            conf,
-        )
-        mock_run_importanize.assert_called_once_with(
-            os.path.join('root', 'foo.py'),
-            mock.sentinel.config,
-            conf,
-        )
-
-    @mock.patch(TESTING_MODULE + '.print', mock.MagicMock(), create=True)
-    @mock.patch(TESTING_MODULE + '.parser')
-    @mock.patch(TESTING_MODULE + '.run_importanize')
-    @mock.patch('os.walk')
-    @mock.patch('os.path.isdir')
-    def test_run_folder_exception(self,
-                                  mock_isdir,
-                                  mock_walk,
-                                  mock_run_importanize,
-                                  mock_parser):
-        mock_run_importanize.side_effect = ValueError
-        mock_isdir.return_value = True
-        mock_walk.return_value = [
-            (
-                'root',
-                ['dir1', 'dir2'],
-                ['foo.py', 'bar.txt'],
-            ),
-        ]
-
-        conf = mock.MagicMock(print=True)
-        run(
-            mock.sentinel.path,
-            mock.sentinel.config,
-            conf,
-        )
-        mock_run_importanize.assert_called_once_with(
-            os.path.join('root', 'foo.py'),
-            mock.sentinel.config,
-            conf,
-        )
-        mock_parser.error.assert_called_once_with(mock.ANY)
-
-    @mock.patch('os.path.exists')
-    @mock.patch('os.getcwd')
-    def test_find_config(self, mock_getcwd, mock_exists):
-        mock_getcwd.return_value = os.path.join('path', 'to', 'importanize')
-        mock_exists.side_effect = False, True
-
-        config, found = find_config()
-
-        self.assertEqual(config, os.path.join('path', 'to', '.importanizerc'))
-        self.assertTrue(bool(found))
-
-    @mock.patch(TESTING_MODULE + '.run')
-    @mock.patch('logging.getLogger')
-    @mock.patch.object(parser, 'parse_args')
-    def test_main_without_config(self,
-                                 mock_parse_args,
-                                 mock_get_logger,
-                                 mock_run):
-        args = mock.MagicMock(
-            verbose=1,
-            version=False,
-            path=[os.path.join('path', '..')],
-            config=None,
-        )
-        mock_parse_args.return_value = args
-
-        main()
-
-        mock_parse_args.assert_called_once_with()
-        mock_get_logger.assert_called_once_with('')
-        mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
-        mock_run.assert_called_once_with(os.getcwd(), PEP8_CONFIG, args)
-
-    @mock.patch(TESTING_MODULE + '.read')
-    @mock.patch(TESTING_MODULE + '.run')
-    @mock.patch('json.loads')
-    @mock.patch('logging.getLogger')
-    @mock.patch.object(parser, 'parse_args')
-    def test_main_with_config(self,
-                              mock_parse_args,
-                              mock_get_logger,
-                              mock_loads,
-                              mock_run,
-                              mock_read):
-        args = mock.MagicMock(
-            verbose=1,
-            version=False,
-            path=[os.path.join('path', '..')],
-            config=mock.sentinel.config,
-        )
-        mock_parse_args.return_value = args
-
-        main()
-
-        mock_parse_args.assert_called_once_with()
-        mock_get_logger.assert_called_once_with('')
-        mock_get_logger().setLevel.assert_called_once_with(logging.INFO)
-        mock_read.assert_called_once_with(mock.sentinel.config)
-        mock_loads.assert_called_once_with(mock_read.return_value)
-        mock_run.assert_called_once_with(
-            os.getcwd(), mock_loads.return_value, args
-        )
+        self.assertEqual(actual, self.output_grouped)
+        mock_print.assert_has_calls([
+            mock.call(self.output_grouped),
+        ])
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    @mock.patch('sys.exit')
-    @mock.patch.object(parser, 'parse_args')
-    def test_main_version(self, mock_parse_args, mock_exit, mock_print):
-        mock_exit.side_effect = SystemExit
-        mock_parse_args.return_value = mock.MagicMock(
-            verbose=1,
-            version=True,
+    def test_run_file_skipped(self, mock_print):
+        config = deepcopy(PEP8_CONFIG)
+        config['exclude'] = ['*/test_data/*.py']
+
+        actual = run(
+            self.test_data / 'input.py',
+            config,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=False),
         )
 
+        self.assertIsNone(actual)
+        mock_print.assert_not_called()
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_file(self, mock_print):
+        actual = run(
+            self.test_data / 'input.py',
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=False),
+        )
+
+        self.assertEqual(actual, self.output_grouped)
+        mock_print.assert_called_once_with(self.output_grouped)
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir(self, mock_print):
+        actual = run(
+            self.test_data,
+            PEP8_CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=False),
+        )
+
+        self.assertIsNone(actual)
+        mock_print.assert_has_calls([
+            mock.call(self.output_grouped),
+        ])
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_co(self, mock_print):
+        with self.assertRaises(CIFailure):
+            run(
+                self.test_data,
+                PEP8_CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=True,
+                          print=True,
+                          header=False),
+            )
+
+    @mock.patch.object(Path, 'cwd')
+    def test_find_config(self, mock_cwd):
+        mock_cwd.return_value = Path(__file__)
+
+        config = find_config()
+
+        expected_config = Path(__file__).parent.parent.joinpath(
+            IMPORTANIZE_CONFIG
+        )
+        self.assertEqual(config, six.text_type(expected_config.resolve()))
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_main_version(self, mock_print):
+
+        self.assertEqual(main(['--version']), 0)
+
+        self.assertEqual(mock_print.call_count, 1)
+        version = mock_print.mock_calls[0][1][0]
+        self.assertIn('version: {}'.format(__version__), version)
+
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=True))
+    def test_main_piped_with_paths(self):
         with self.assertRaises(SystemExit):
-            main()
+            main(['path'])
 
-        mock_parse_args.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
-        mock_print.assert_called_once_with(mock.ANY)
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=True))
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    @mock.patch.object(sys, 'stdin')
+    def test_main_piped(self, mock_stdin, mock_print):
+        mock_stdin.read.return_value = self.input_text
+        actual = main([])
+
+        self.assertEqual(actual, 0)
+        mock_print.assert_called_once_with(self.output_grouped)
+
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=False))
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_main_not_piped(self, mock_print):
+        actual = main([
+            six.text_type(self.test_data / 'input.py'),
+            '--config', six.text_type(self.test_data / 'config.json'),
+            '--print',
+            '--no-header',
+        ])
+
+        self.assertEqual(actual, 0)
+        mock_print.assert_called_once_with(self.output_grouped)
+
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=False))
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_main_not_piped_ci(self, mock_print):
+        actual = main([
+            six.text_type(self.test_data / 'input.py'),
+            '--config', six.text_type(self.test_data / 'config.json'),
+            '--ci',
+        ])
+
+        self.assertEqual(actual, 1)
+
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=False))
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    @mock.patch(TESTING_MODULE + '.run')
+    def test_main_not_piped_exception(self, mock_run, mock_print):
+        mock_run.side_effect = ValueError
+
+        actual = main([
+            six.text_type(self.test_data / 'input.py'),
+            '--config', six.text_type(self.test_data / 'config.json'),
+            '--ci',
+        ])
+
+        self.assertEqual(actual, 1)

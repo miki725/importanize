@@ -104,8 +104,19 @@ class ImportStatement(ComparatorMixin):
 
     def __init__(self, line_numbers, stem, leafs=None,
                  comments=None, **kwargs):
+        as_name = None
+
+        if ' as ' in stem:
+            stem, as_name = list_strip(stem.split(' as '))
+            if leafs:
+                as_name = None
+
+        if stem == as_name:
+            as_name = None
+
         self.line_numbers = line_numbers
         self.stem = stem
+        self.as_name = as_name
         self.leafs = leafs or []
         self.comments = comments or []
         self.file_artifacts = kwargs.get('file_artifacts', {})
@@ -126,7 +137,10 @@ class ImportStatement(ComparatorMixin):
 
     def as_string(self):
         if not self.leafs:
-            return 'import {}'.format(self.stem)
+            data = 'import {}'.format(self.stem)
+            if self.as_name:
+                data += ' as {}'.format(self.as_name)
+            return data
         else:
             return (
                 'from {} import {}'

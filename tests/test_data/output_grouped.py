@@ -5,6 +5,7 @@ import datetime
 from os import path as ospath
 
 import coverage  # in site-packages
+import flake8 as lint  # in site-package
 
 import something  # with comment
 import z

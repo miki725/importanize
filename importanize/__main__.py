@@ -5,11 +5,11 @@ import inspect
 import json
 import logging
 import os
-import pathlib
 import sys
 from fnmatch import fnmatch
 from stat import S_ISFIFO
 
+import pathlib2 as pathlib
 import six
 
 from . import __description__, __version__, formatters
@@ -63,24 +63,19 @@ log = logging.getLogger(__name__)
 
 
 def find_config():
-    path = os.getcwd()
+    path = pathlib.Path.cwd()
     default_config = None
-    found_default = ''
 
-    while path != os.sep:
-        config_path = os.path.join(path, IMPORTANIZE_CONFIG)
-        if os.path.exists(config_path):
-            default_config = config_path
-            found_default = (' Found configuration file at {}'
-                             ''.format(default_config))
+    while path != pathlib.Path(path.root):
+        config_path = path / IMPORTANIZE_CONFIG
+        if config_path.exists():
+            default_config = six.text_type(config_path)
             break
         else:
-            path = os.path.dirname(path)
+            path = path.parent
 
-    return default_config, found_default
+    return default_config
 
-
-default_config, found_default = find_config()
 
 parser = argparse.ArgumentParser(
     description=__description__,
@@ -94,15 +89,13 @@ parser.add_argument(
 )
 parser.add_argument(
     '-c', '--config',
-    type=six.text_type,
-    default=default_config,
+    type=argparse.FileType('rb'),
     help='Path to importanize config json file. '
          'If "{}" is present in either current folder '
          'or any parent folder, that config '
          'will be used. Otherwise crude default pep8 '
-         'config will be used.{}'
-         ''.format(IMPORTANIZE_CONFIG,
-                   found_default),
+         'config will be used.'
+         ''.format(IMPORTANIZE_CONFIG),
 )
 parser.add_argument(
     '-f', '--formatter',
@@ -208,6 +201,11 @@ def run_importanize_on_text(text, config, args):
 
 def run(source, config, args, path=None):
     if isinstance(source, six.string_types):
+        msg = 'About to importanize'
+        if path:
+            msg += ' {}'.format(path)
+        log.debug(msg)
+
         try:
             organized = run_importanize_on_text(source, config, args)
 
@@ -221,7 +219,7 @@ def run(source, config, args, path=None):
         else:
             if args.print and args.header and path:
                 print('=' * len(six.text_type(path)))
-                print(path)
+                print(six.text_type(path))
                 print('-' * len(six.text_type(path)))
 
             if args.print:
@@ -237,10 +235,10 @@ def run(source, config, args, path=None):
                 else:
                     path.write_text(organized)
 
-                    msg = 'Successfully importanized'
-                    if path:
-                        msg += ' {}'.format(path)
-                    log.info(msg)
+            msg = 'Successfully importanized'
+            if path:
+                msg += ' {}'.format(path)
+            log.info(msg)
 
             return organized
 
@@ -271,8 +269,9 @@ def run(source, config, args, path=None):
             raise CIFailure()
 
 
-def main():
-    args = parser.parse_args()
+def main(args=None):
+    args = args if args is not None else sys.argv[1:]
+    args = parser.parse_args(args=args)
 
     # adjust logging level
     (logging.getLogger('')
@@ -280,29 +279,33 @@ def main():
 
     log.debug('Running importanize with {}'.format(args))
 
+    config_path = getattr(args.config, 'name', '') or find_config()
+
     if args.version:
         msg = (
             'importanize\n'
             '===========\n'
-            '{}\n\n'
-            'version: {}\n'
-            'python: {}\n'
+            '{description}\n\n'
+            'version: {version}\n'
+            'python: {python}\n'
+            'config: {config}\n'
             'source: https://github.com/miki725/importanize'
         )
-        print(msg.format(__description__, __version__, sys.executable))
+        print(msg.format(
+            description=__description__,
+            version=__version__,
+            python=sys.executable,
+            config=config_path or '<default pep8>',
+        ))
         return 0
 
-    if args.config is None:
-        config = PEP8_CONFIG
-    else:
-        config = json.loads(read(args.config))
+    config = json.loads(read(config_path)) if config_path else PEP8_CONFIG
 
     to_importanize = [pathlib.Path(i) for i in (args.path or ['.'])]
 
     if S_ISFIFO(os.fstat(0).st_mode):
         if args.path:
-            parser.error('Cant supply any paths when piping input')
-            return 1
+            return parser.error('Cant supply any paths when piping input')
 
         to_importanize = [force_text(sys.stdin.read())]
         args.print = True
@@ -326,5 +329,4 @@ def main():
     return int(not all_successes)
 
 
-if __name__ == '__main__':
-    sys.exit(main())
+sys.exit(main()) if __name__ == '__main__' else None

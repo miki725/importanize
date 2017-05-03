@@ -1,51 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+import imp
 import operator
-import os
 import sys
-from contextlib import contextmanager
-from importlib import import_module
 
 
-@contextmanager
-def ignore_site_packages_paths():
-    paths = sys.path[:]
+def _get_module_path(module_name):
     try:
-        # remove working directory so that all
-        # local imports fail
-        if os.getcwd() in sys.path:
-            sys.path.remove(os.getcwd())
-        # remove all third-party paths
-        # so that only stdlib imports will succeed
-        sys.path = list(set(filter(
-            None,
-            filter(lambda i: all(('site-packages' not in i,
-                                  'python' in i or 'pypy' in i)),
-                   map(operator.methodcaller('lower'), sys.path))
-        )))
-        yield
-    finally:
-        sys.path = paths
-
-
-def _safe_import_module(module_name):
-    # remove module and submodules
-    # removing submodules is necessary in cases when module
-    # imports an attribute from submodule
-    # if parent module is removed from sys.modules
-    # but not removing submodule will result in AttributeError
-    # when attempting to re-import parent module again
-    imported_modules = {
-        k: sys.modules.pop(k)
-        for k in list(sys.modules.keys())
-        if k == module_name or k.startswith(module_name + '.')
-    }
-    try:
-        return import_module(module_name)
+        # TODO deprecated in Py3.
+        # TODO Find better way for py2 and py3 compatibility.
+        return imp.find_module(module_name)[1]
     except ImportError:
-        return None
-    finally:
-        sys.modules.update(imported_modules)
+        return ''
 
 
 def is_std_lib(module_name):
@@ -55,16 +21,17 @@ def is_std_lib(module_name):
     if module_name in sys.builtin_module_names:
         return True
 
-    with ignore_site_packages_paths():
-        return bool(_safe_import_module(module_name))
+    module_path = _get_module_path(module_name)
+    if 'site-packages' in module_path:
+        return False
+    return 'python' in module_path or 'pypy' in module_path
 
 
 def is_site_package(module_name):
     if not module_name:
         return False
 
-    module = _safe_import_module(module_name)
-    module_path = getattr(module, "__file__", "")
+    module_path = _get_module_path(module_name)
     if "site-packages" not in module_path:
         return False
     return "python" in module_path or "pypy" in module_path

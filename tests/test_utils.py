@@ -1,46 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
-import os
-import sys
 import unittest
 
 import mock
 
 from importanize.utils import (
-    ignore_site_packages_paths,
+    force_bytes,
+    force_text,
     is_site_package,
     is_std_lib,
+    list_split,
     list_strip,
     read,
 )
 
 
 class TestUtils(unittest.TestCase):
-    def _test_ignore_site_packages_paths(self, raise_msg=None):
-        sys.path.append(os.getcwd())
-        paths = sys.path[:]
-
-        try:
-            with ignore_site_packages_paths():
-                self.assertNotEqual(sys.path, paths)
-                self.assertLess(len(sys.path), len(paths))
-                if raise_msg:
-                    raise ValueError(raise_msg)
-        except ValueError as e:
-            if raise_msg not in str(e):
-                # -- This only happens if there's a bug in this test
-                raise  # pragma: no cover
-
-        self.assertIn(os.getcwd(), sys.path)
-        self.assertListEqual(sys.path, paths)
-        sys.path.remove(os.getcwd())
-
-    def test_site_packages_paths(self):
-        self._test_ignore_site_packages_paths(raise_msg=None)
-
-    def test_site_packages_paths_exception(self):
-        self._test_ignore_site_packages_paths(raise_msg="TEST EXCEPTION")
-
     def test_is_std_lib(self):
         self.assertFalse(is_std_lib(''))
 
@@ -69,7 +44,6 @@ class TestUtils(unittest.TestCase):
             'operator',
             'optparse',
             'os',
-            'pdb',
             'pickle',
             'pprint',
             'random',
@@ -159,3 +133,17 @@ class TestUtils(unittest.TestCase):
              .read.return_value
              .decode.return_value)
         )
+
+    def test_list_split(self):
+        self.assertEqual(
+            list(list_split(['foo', '/', 'bar'], '/')),
+            [['foo'], ['bar']]
+        )
+
+    def test_force_text(self):
+        self.assertEqual(force_text(b'foo'), u'foo')
+        self.assertEqual(force_text(u'foo'), u'foo')
+
+    def test_force_bytes(self):
+        self.assertEqual(force_bytes('foo'), b'foo')
+        self.assertEqual(force_bytes(b'foo'), b'foo')
