@@ -232,11 +232,6 @@ class TestMain(unittest.TestCase):
         self.assertIn('version: {}'.format(__version__), version)
 
     @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=True))
-    def test_main_piped_with_paths(self):
-        with self.assertRaises(SystemExit):
-            main(['path'])
-
-    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=True))
     @mock.patch(TESTING_MODULE + '.print', create=True)
     @mock.patch.object(sys, 'stdin')
     def test_main_piped(self, mock_stdin, mock_print):

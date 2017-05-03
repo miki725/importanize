@@ -269,6 +269,10 @@ def run(source, config, args, path=None):
             raise CIFailure()
 
 
+def is_piped():
+    return S_ISFIFO(os.fstat(0).st_mode)
+
+
 def main(args=None):
     args = args if args is not None else sys.argv[1:]
     args = parser.parse_args(args=args)
@@ -303,10 +307,7 @@ def main(args=None):
 
     to_importanize = [pathlib.Path(i) for i in (args.path or ['.'])]
 
-    if S_ISFIFO(os.fstat(0).st_mode):
-        if args.path:
-            return parser.error('Cant supply any paths when piping input')
-
+    if is_piped() and not args.path:
         to_importanize = [force_text(sys.stdin.read())]
         args.print = True
         args.header = False
