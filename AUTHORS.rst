@@ -9,5 +9,5 @@ Development Lead
 Contributors
 ~~~~~~~~~~~~
 
-Benjamin Abel  - https://github.com/benjaminabel
-Pamela McA'Nulty - https://github.com/PamelaM
+* Benjamin Abel  - https://github.com/benjaminabel
+* Pamela McA'Nulty - https://github.com/PamelaM
