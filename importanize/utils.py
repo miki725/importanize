@@ -2,14 +2,19 @@
 from __future__ import print_function, unicode_literals
 import imp
 import operator
+import os
 import sys
 
 
 def _get_module_path(module_name):
+    paths = sys.path[:]
+    if os.getcwd() in sys.path:
+        paths.remove(os.getcwd())
+
     try:
         # TODO deprecated in Py3.
         # TODO Find better way for py2 and py3 compatibility.
-        return imp.find_module(module_name)[1]
+        return imp.find_module(module_name, paths)[1]
     except ImportError:
         return ''
 
