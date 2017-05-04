@@ -11,8 +11,8 @@ from importanize.groups import (
     LocalGroup,
     PackagesGroup,
     RemainderGroup,
-    StdLibGroup,
     SitePackagesGroup,
+    StdLibGroup,
 )
 from importanize.statements import ImportLeaf, ImportStatement
 

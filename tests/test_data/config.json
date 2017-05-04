@@ -1,8 +1,4 @@
 {
-    "exclude": [
-        "*/.tox/*",
-        "*/test_data/*.py"
-    ],
     "groups": [
         {
             "type": "stdlib"
@@ -12,12 +8,6 @@
         },
         {
             "type": "remainder"
-        },
-        {
-            "type": "packages",
-            "packages": [
-                "importanize"
-            ]
         },
         {
             "type": "local"

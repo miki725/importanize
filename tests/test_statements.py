@@ -104,16 +104,39 @@ class TestImportLeaf(unittest.TestCase):
 class TestImportStatement(unittest.TestCase):
     def test_init(self):
         actual = ImportStatement(mock.sentinel.line_numbers,
-                                 mock.sentinel.stem)
+                                 'foo')
         self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
-        self.assertEqual(actual.stem, mock.sentinel.stem)
+        self.assertEqual(actual.stem, 'foo')
+        self.assertIsNone(actual.as_name)
         self.assertEqual(actual.leafs, [])
 
         actual = ImportStatement(mock.sentinel.line_numbers,
-                                 mock.sentinel.stem,
+                                 'foo as bar')
+        self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
+        self.assertEqual(actual.stem, 'foo')
+        self.assertEqual(actual.as_name, 'bar')
+        self.assertEqual(actual.leafs, [])
+
+        actual = ImportStatement(mock.sentinel.line_numbers,
+                                 'foo as foo')
+        self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
+        self.assertEqual(actual.stem, 'foo')
+        self.assertIsNone(actual.as_name)
+        self.assertEqual(actual.leafs, [])
+
+        actual = ImportStatement(mock.sentinel.line_numbers,
+                                 'foo',
                                  mock.sentinel.leafs)
         self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
-        self.assertEqual(actual.stem, mock.sentinel.stem)
+        self.assertEqual(actual.stem, 'foo')
+        self.assertEqual(actual.leafs, mock.sentinel.leafs)
+
+        actual = ImportStatement(mock.sentinel.line_numbers,
+                                 'foo as bar',
+                                 mock.sentinel.leafs)
+        self.assertEqual(actual.line_numbers, mock.sentinel.line_numbers)
+        self.assertEqual(actual.stem, 'foo')
+        self.assertIsNone(actual.as_name)
         self.assertEqual(actual.leafs, mock.sentinel.leafs)
 
     def test_root_module(self):
@@ -140,6 +163,7 @@ class TestImportStatement(unittest.TestCase):
             self.assertEqual(statement.as_string(), expected)
 
         _test('a', [], 'import a')
+        _test('a as b', [], 'import a as b')
         _test('a.b.c', [], 'import a.b.c')
         _test('a.b', ['c'], 'from a.b import c')
         _test('a.b', ['c', 'd'], 'from a.b import c, d')

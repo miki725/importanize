@@ -3,5 +3,6 @@ coverage
 flake8
 mock
 nose
+pdbpp
 rednose
 tox

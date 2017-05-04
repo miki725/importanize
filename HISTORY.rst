@@ -3,6 +3,18 @@
 History
 -------
 
+0.5.0 (2017-05-03)
+~~~~~~~~~~~~~~~~~~
+
+* Added ``--ci`` flag to validate import organization in files
+* Added ``sitepackages`` import group. Thanks `Pamela <https://github.com/PamelaM>`_.
+  See ``README`` for more info
+* Added pipe handling (e.g. ``cat foo.py | importanize``)
+* Fixed bug which incorrectly sorted imports with aliases (e.g. ``import foo as bar``)
+* Files are not overridden when imports are already organized.
+  Useful in precommit hooks which detect changed files.
+* Released as Python `wheel <http://pythonwheels.com/>`_
+
 0.4.1 (2015-07-28)
 ~~~~~~~~~~~~~~~~~~
 

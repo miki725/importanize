@@ -10,6 +10,7 @@ from .module import foo, bar
 from ..othermodule import rainbows
 from a import b
 from a.b import c
+import flake8 as lint  # in site-package
 from a.b import d
 
 import z

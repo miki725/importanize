@@ -1,42 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+import imp
 import operator
 import os
 import sys
-from contextlib import contextmanager
-from importlib import import_module
 
 
-@contextmanager
-def ignore_site_packages_paths():
+def _get_module_path(module_name):
     paths = sys.path[:]
-    try:
-        # remove working directory so that all
-        # local imports fail
-        if os.getcwd() in sys.path:
-            sys.path.remove(os.getcwd())
-        # remove all third-party paths
-        # so that only stdlib imports will succeed
-        sys.path = list(set(filter(
-            None,
-            filter(lambda i: all(('site-packages' not in i,
-                                  'python' in i or 'pypy' in i)),
-                   map(operator.methodcaller('lower'), sys.path))
-        )))
-        yield
-    finally:
-        sys.path = paths
+    if os.getcwd() in sys.path:
+        paths.remove(os.getcwd())
 
-
-def _safe_import_module(module_name):
-    imported_module = sys.modules.pop(module_name, None)
     try:
-        return import_module(module_name)
+        # TODO deprecated in Py3.
+        # TODO Find better way for py2 and py3 compatibility.
+        return imp.find_module(module_name, paths)[1]
     except ImportError:
-        return None
-    finally:
-        if imported_module:
-            sys.modules[module_name] = imported_module
+        return ''
 
 
 def is_std_lib(module_name):
@@ -46,16 +26,17 @@ def is_std_lib(module_name):
     if module_name in sys.builtin_module_names:
         return True
 
-    with ignore_site_packages_paths():
-        return bool(_safe_import_module(module_name))
+    module_path = _get_module_path(module_name)
+    if 'site-packages' in module_path:
+        return False
+    return 'python' in module_path or 'pypy' in module_path
 
 
 def is_site_package(module_name):
     if not module_name:
         return False
 
-    module = _safe_import_module(module_name)
-    module_path = getattr(module, "__file__", "")
+    module_path = _get_module_path(module_name)
     if "site-packages" not in module_path:
         return False
     return "python" in module_path or "pypy" in module_path
@@ -85,3 +66,17 @@ def list_split(iterable, split):
 
     if segment:
         yield segment
+
+
+def force_text(data):
+    try:
+        return data.decode('utf-8')
+    except AttributeError:
+        return data
+
+
+def force_bytes(data):
+    try:
+        return data.encode('utf-8')
+    except AttributeError:
+        return data

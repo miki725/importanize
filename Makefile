@@ -1,6 +1,6 @@
 .PHONY: clean-pyc clean-build docs clean
 
-NOSE_FLAGS=-sv --with-doctest --rednose
+NOSE_FLAGS=-sv --with-doctest --rednose --exclude=test_data
 COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tests --cover-erase
 COVER_REPORT_FLAGS=--cover-html --cover-html-dir=htmlcov
 COVER_FLAGS=${COVER_CONFIG_FLAGS} ${COVER_REPORT_FLAGS}
@@ -45,6 +45,7 @@ clean-test-all: clean-test
 
 lint:
 	flake8 importanize tests
+	python -m importanize tests/ importanize/ tests/ --ci
 
 test:
 	nosetests ${NOSE_FLAGS} tests/
@@ -59,9 +60,11 @@ check: lint clean-build clean-pyc clean-test test-coverage
 
 release: clean
 	python setup.py sdist upload
+	python setup.py bdist_wheel upload
 
 dist: clean
 	python setup.py sdist
+	python setup.py bdist_wheel
 	ls -l dist
 
 docs:
