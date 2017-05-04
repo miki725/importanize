@@ -244,7 +244,7 @@ def run(source, config, args, path=None):
 
     elif source.is_file():
         if config.get('exclude'):
-            if any(map(lambda i: fnmatch(six.text_type(source), i),
+            if any(map(lambda i: fnmatch(six.text_type(source.resolve()), i),
                        config.get('exclude'))):
                 log.info('Skipping {}'.format(source))
                 return
