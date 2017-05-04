@@ -23,7 +23,7 @@ from .parser import (
 from .utils import force_text, read
 
 
-LOGGING_FORMAT = '%(levelname)s %(name)s %(message)s'
+LOGGING_FORMAT = '%(message)s'
 IMPORTANIZE_CONFIG = '.importanizerc'
 PEP8_CONFIG = {
     'groups': [
