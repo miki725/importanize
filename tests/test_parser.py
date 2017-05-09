@@ -280,12 +280,20 @@ class TestParsing(unittest.TestCase):
             'import a as b'
         )
         self._test_import_string_matches(
+            'import a.b',
+            'import a.b'
+        )
+        self._test_import_string_matches(
             'import a.b as b',
             'from a import b'
         )
         self._test_import_string_matches(
             'import a.b as c',
             'from a import b as c'
+        )
+        self._test_import_string_matches(
+            'import a.b.c as d',
+            'from a.b import c as d'
         )
         self._test_import_string_matches(
             'import a.b.c',

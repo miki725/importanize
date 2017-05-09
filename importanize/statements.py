@@ -56,7 +56,8 @@ class ImportLeaf(ComparatorMixin):
         return hash(self.as_string())
 
     def __eq__(self, other):
-        return self.name == other.name
+        return all([self.name == other.name,
+                    self.as_name == other.as_name])
 
     def __gt__(self, other):
         def _type(obj):
@@ -122,6 +123,13 @@ class ImportStatement(ComparatorMixin):
         self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
+    def full_stem(self):
+        stem = self.stem
+        if self.as_name:
+            stem += ' as {}'.format(self.as_name)
+        return stem
+
+    @property
     def unique_leafs(self):
         return sorted(list(set(self.leafs)))
 
@@ -137,10 +145,7 @@ class ImportStatement(ComparatorMixin):
 
     def as_string(self):
         if not self.leafs:
-            data = 'import {}'.format(self.stem)
-            if self.as_name:
-                data += ' as {}'.format(self.as_name)
-            return data
+            return 'import {}'.format(self.full_stem)
         else:
             return (
                 'from {} import {}'
@@ -179,6 +184,7 @@ class ImportStatement(ComparatorMixin):
 
     def __eq__(self, other):
         return all((self.stem == other.stem,
+                    self.as_name == other.as_name,
                     self.unique_leafs == other.unique_leafs))
 
     def __gt__(self, other):
@@ -224,4 +230,4 @@ class ImportStatement(ComparatorMixin):
             return self_len > other_len
 
         # alphabetical sort
-        return self.stem > other.stem
+        return self.full_stem > other.full_stem

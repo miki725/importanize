@@ -36,7 +36,7 @@ class BaseImportGroup(object):
             else:
                 leafless_counter[statement.stem].append(statement)
 
-        merged_statements = [i[0] for i in leafless_counter.values()]
+        merged_statements = list(itertools.chain(*leafless_counter.values()))
 
         def merge(statements):
             _special = []
