@@ -3,6 +3,11 @@
 History
 -------
 
+0.5.1 (2017-05-09)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed bug which incorrectly removed duplicate leafless imports which had different ``as`` names
+
 0.5.0 (2017-05-03)
 ~~~~~~~~~~~~~~~~~~
 
