@@ -6,6 +6,8 @@ from __future__ import unicode_literals, print_function
 import os.path as ospath
 import datetime
 from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+import datetime.parser
+import datetime as mydatetime
 from .module import foo, bar
 from ..othermodule import rainbows
 from a import b
@@ -18,6 +20,7 @@ from z import *
 import coverage  # in site-packages
 from z import foo
 
+import datetime.parser
 import something # with comment
 from other.package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows # noqa
 from other import(
