@@ -200,7 +200,24 @@ class TestMain(unittest.TestCase):
         ])
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
-    def test_run_dir_co(self, mock_print):
+    def test_run_dir_skipped(self, mock_print):
+        config = deepcopy(PEP8_CONFIG)
+        config['exclude'] = ['*/test_data']
+
+        actual = run(
+            self.test_data,
+            config,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      print=True,
+                      header=False),
+        )
+
+        self.assertIsNone(actual)
+        mock_print.assert_not_called()
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_ci(self, mock_print):
         with self.assertRaises(CIFailure):
             run(
                 self.test_data,
