@@ -244,7 +244,7 @@ def run(source, config, args, path=None):
 
     elif source.is_file():
         if config.get('exclude'):
-            norm = os.path.normpath(os.path.abspath(source))
+            norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
                        config.get('exclude'))):
                 log.info('Skipping {}'.format(source))
@@ -255,7 +255,7 @@ def run(source, config, args, path=None):
 
     elif source.is_dir():
         if config.get('exclude'):
-            norm = os.path.normpath(os.path.abspath(source))
+            norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
                        config.get('exclude'))):
                 log.info('Skipping {}'.format(source))
