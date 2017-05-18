@@ -3,6 +3,12 @@
 History
 -------
 
+0.5.2 (2017-05-18)
+~~~~~~~~~~~~~~~~~~
+
+* Skipping directories which makes skipping subfolders much faster
+* Fixed bug which incorrectly skipped files
+
 0.5.1 (2017-05-09)
 ~~~~~~~~~~~~~~~~~~
 
