@@ -1,4 +1,5 @@
 {
+    "after_imports_new_lines": 2,
     "exclude": [
         "*/.tox/*",
         "*/test_data/*.py"

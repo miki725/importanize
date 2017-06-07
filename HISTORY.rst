@@ -3,6 +3,13 @@
 History
 -------
 
+0.5.3 (2017-06-06)
+~~~~~~~~~~~~~~~~~~
+
+* Added support to customize number of new lines added after imports
+  via ``after_imports_new_lines`` configuration.
+  Useful when using auto formatters such as ``yapf``.
+
 0.5.2 (2017-05-18)
 ~~~~~~~~~~~~~~~~~~
 
