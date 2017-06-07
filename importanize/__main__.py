@@ -184,7 +184,7 @@ def run_importanize_on_text(text, config, args):
     lines = (
         lines[:first_import_line_number] +
         formatted_imports.splitlines() +
-        ([''] * 2
+        ([''] * config.get('after_imports_new_lines', 2)
          if lines[first_import_line_number:] and formatted_imports
          else []) +
         lines[first_import_line_number:] +
