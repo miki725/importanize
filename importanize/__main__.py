@@ -159,8 +159,8 @@ parser.add_argument(
 )
 parser.add_argument(
     '--no-subconfig',
-    action='store_true',
-    default=False,
+    action='store_false',
+    default=True,
     dest='subconfig',
     help='If provided, sub-configurations will not be used.'
 )
@@ -338,7 +338,6 @@ def is_piped():
 def main(args=None):
     args = args if args is not None else sys.argv[1:]
     args = parser.parse_args(args=args)
-
     # adjust logging level
     (logging.getLogger('')
      .setLevel(VERBOSITY_MAPPING.get(args.verbose, 0)))
