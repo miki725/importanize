@@ -19,6 +19,7 @@ from importanize.__main__ import (
     run,
     run_importanize_on_text,
 )
+from importanize.utils import force_text
 
 
 TESTING_MODULE = 'importanize.__main__'
@@ -232,7 +233,7 @@ class TestMain(unittest.TestCase):
         config['after_imports_new_lines'] = 1
 
         config_file = self.test_data / IMPORTANIZE_CONFIG
-        config_file.write_text(json.dumps(config))
+        config_file.write_text(force_text(json.dumps(config)))
 
         try:
             actual = run(
