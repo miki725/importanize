@@ -156,7 +156,7 @@ Finally, you can see all other available ``importanize`` cli options::
 Not all configurations can be provided via cli.
 Additional available configurations in configuration file:
 
-* ``exclude`` - list of glob patterns of files which should be excludede from organizing.
+* ``exclude`` - list of glob patterns of files which should be excluded from organizing.
   For example::
 
         "exclude": [

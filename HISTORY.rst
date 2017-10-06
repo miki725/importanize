@@ -3,6 +3,11 @@
 History
 -------
 
+0.6.0 (2017-10-06)
+~~~~~~~~~~~~~~~~~~
+
+* Added support for sub-configurations when ``.importanize`` is found.
+
 0.5.3 (2017-06-06)
 ~~~~~~~~~~~~~~~~~~
 
