@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+import json
 import sys
 import unittest
 from copy import deepcopy
 
-import mock
 import six
-from pathlib2 import Path
-
 from importanize import __version__
 from importanize.__main__ import (
     IMPORTANIZE_CONFIG,
@@ -18,6 +16,9 @@ from importanize.__main__ import (
     run,
     run_importanize_on_text,
 )
+from pathlib2 import Path
+
+import mock
 
 
 TESTING_MODULE = 'importanize.__main__'
@@ -28,6 +29,7 @@ class TestMain(unittest.TestCase):
 
     input_text = (test_data / 'input.py').read_text()
     output_grouped = (test_data / 'output_grouped.py').read_text()
+    output_grouped_single_line = (test_data / 'output_grouped_single_line.py').read_text()
     output_inline_grouped = (
         test_data / 'output_inline_grouped.py'
     ).read_text()
@@ -198,6 +200,55 @@ class TestMain(unittest.TestCase):
         mock_print.assert_has_calls([
             mock.call(self.output_grouped),
         ])
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_subconfig_invalid(self, mock_print):
+        config_file = self.test_data / IMPORTANIZE_CONFIG
+        config_file.write_text('invalid json')
+
+        try:
+            actual = run(
+                self.test_data,
+                PEP8_CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=False,
+                          print=True,
+                          header=False),
+            )
+
+            self.assertIsNone(actual)
+            mock_print.assert_has_calls([
+                mock.call(self.output_grouped),
+            ])
+
+        finally:
+            config_file.unlink()
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_subconfig_valid(self, mock_print):
+        config = deepcopy(PEP8_CONFIG)
+        config['after_imports_new_lines'] = 1
+
+        config_file = self.test_data / IMPORTANIZE_CONFIG
+        config_file.write_text(json.dumps(config))
+
+        try:
+            actual = run(
+                self.test_data,
+                PEP8_CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=False,
+                          print=True,
+                          header=False),
+            )
+
+            self.assertIsNone(actual)
+            mock_print.assert_has_calls([
+                mock.call(self.output_grouped_single_line),
+            ])
+
+        finally:
+            config_file.unlink()
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_dir_skipped(self, mock_print):

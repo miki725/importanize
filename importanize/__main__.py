@@ -254,6 +254,13 @@ def run(source, config, args, path=None):
         return run(text, config, args, source)
 
     elif source.is_dir():
+        config_path = source / IMPORTANIZE_CONFIG
+        if config_path.exists():
+            try:
+                config = json.loads(config_path.read_text('utf-8'))
+            except json.JSONDecodeError:
+                log.error('Invalid sub-configuration {}'.format(config_path))
+
         if config.get('exclude'):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
@@ -300,7 +307,7 @@ def main(args=None):
             '{description}\n\n'
             'version: {version}\n'
             'python: {python}\n'
-            'config: {config}\n'
+            'root config: {config}\n'
             'source: https://github.com/miki725/importanize'
         )
         print(msg.format(
