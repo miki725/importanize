@@ -5,7 +5,10 @@ import sys
 import unittest
 from copy import deepcopy
 
+import mock
 import six
+from pathlib2 import Path
+
 from importanize import __version__
 from importanize.__main__ import (
     IMPORTANIZE_CONFIG,
@@ -16,9 +19,6 @@ from importanize.__main__ import (
     run,
     run_importanize_on_text,
 )
-from pathlib2 import Path
-
-import mock
 
 
 TESTING_MODULE = 'importanize.__main__'
@@ -29,7 +29,9 @@ class TestMain(unittest.TestCase):
 
     input_text = (test_data / 'input.py').read_text()
     output_grouped = (test_data / 'output_grouped.py').read_text()
-    output_grouped_single_line = (test_data / 'output_grouped_single_line.py').read_text()
+    output_grouped_single_line = (
+        test_data / 'output_grouped_single_line.py'
+    ).read_text()
     output_inline_grouped = (
         test_data / 'output_inline_grouped.py'
     ).read_text()
