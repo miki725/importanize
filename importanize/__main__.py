@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import argparse
 import inspect
 import json
@@ -165,16 +165,20 @@ def run_importanize_on_text(text, config, args):
     for i in imports:
         groups.add_statement_to_group(i)
 
-    formatted_imports = groups.formatted(formatter=formatter)
     line_numbers = groups.all_line_numbers()
+    first_import_line_number = min(line_numbers) if line_numbers else 0
+
+    for i in config.get('added_imports', []):
+        for j in parse_statements([([i], [first_import_line_number])]):
+            groups.add_statement_to_group(j)
+
+    formatted_imports = groups.formatted(formatter=formatter)
 
     lines = text.splitlines()
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
         lines.pop(line_number)
 
-    first_import_line_number = min(line_numbers) if line_numbers else 0
     i = first_import_line_number
-
     while i is not None and len(lines) > i:
         if not lines[i]:
             lines.pop(i)
