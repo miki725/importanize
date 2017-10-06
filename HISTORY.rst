@@ -7,6 +7,7 @@ History
 ~~~~~~~~~~~~~~~~~~
 
 * Added support for sub-configurations when ``.importanize`` is found.
+* Added support for ``add_imports`` in configuration.
 
 0.5.3 (2017-06-06)
 ~~~~~~~~~~~~~~~~~~

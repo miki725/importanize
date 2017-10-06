@@ -168,7 +168,7 @@ def run_importanize_on_text(text, config, args):
     line_numbers = groups.all_line_numbers()
     first_import_line_number = min(line_numbers) if line_numbers else 0
 
-    for i in config.get('added_imports', []):
+    for i in config.get('add_imports', []):
         for j in parse_statements([([i], [first_import_line_number])]):
             groups.add_statement_to_group(j)
 

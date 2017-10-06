@@ -165,6 +165,12 @@ Additional available configurations in configuration file:
         ]
 
 * ``after_imports_new_lines`` - number of lines to be included after imports
+* ``add_imports`` - list of imports to add to every file.
+  For example::
+
+        "add_imports": [
+            "from __future__ import absolute_import, print_function, unicode_literals"
+        ]
 
 Example
 -------

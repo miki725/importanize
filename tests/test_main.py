@@ -24,7 +24,7 @@ from importanize.utils import force_text
 
 TESTING_MODULE = 'importanize.__main__'
 CONFIG = PEP8_CONFIG.copy()
-CONFIG['added_imports'] = [
+CONFIG['add_imports'] = [
     'from __future__ import absolute_import, print_function, unicode_literals',
 ]
 
