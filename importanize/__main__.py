@@ -258,7 +258,7 @@ def run(source, config, args, path=None):
         if config_path.exists():
             try:
                 config = json.loads(config_path.read_text('utf-8'))
-            except json.JSONDecodeError:
+            except ValueError:
                 log.error('Invalid sub-configuration {}'.format(config_path))
 
         if config.get('exclude'):
