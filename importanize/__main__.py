@@ -20,7 +20,7 @@ from .parser import (
     get_text_artifacts,
     parse_statements,
 )
-from .utils import force_text, read
+from .utils import force_text
 
 
 LOGGING_FORMAT = '%(message)s'
@@ -62,19 +62,56 @@ logging.getLogger('').setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 
 
-def find_config():
-    path = pathlib.Path.cwd()
-    default_config = None
+@six.python_2_unicode_compatible
+class Config(dict):
+    def __init__(self, *args, **kwargs):
+        self.path = kwargs.pop('path', None)
+        super(Config, self).__init__(*args, **kwargs)
 
-    while path != pathlib.Path(path.root):
-        config_path = path / IMPORTANIZE_CONFIG
-        if config_path.exists():
-            default_config = six.text_type(config_path)
-            break
-        else:
-            path = path.parent
+    @classmethod
+    def default(cls):
+        return cls(
+            PEP8_CONFIG,
+        )
 
-    return default_config
+    @classmethod
+    def from_path(cls, path):
+        if not path:
+            return cls.default()
+        path = pathlib.Path(path)
+
+        try:
+            return cls(
+                json.loads(path.read_text('utf-8')),
+                path=path,
+            )
+        except ValueError:
+            log.exception(
+                'Invalid configuration @ {}. Defaulting to pep8.'
+                ''.format(path)
+            )
+            return cls.default()
+
+    @classmethod
+    def find(cls, cwd=pathlib.Path.cwd(), root=None):
+        path = cwd
+
+        while path != pathlib.Path(root or cwd.root):
+            config_path = path / IMPORTANIZE_CONFIG
+            if config_path.exists():
+                return Config.from_path(config_path)
+            else:
+                path = path.parent
+
+        return cls.default()
+
+    def __str__(self):
+        return six.text_type(self.path or '<default pep8>')
+
+    def __bool__(self):
+        return bool(self.path)
+
+    __nonzero__ = __bool__
 
 
 parser = argparse.ArgumentParser(
@@ -119,6 +156,13 @@ parser.add_argument(
     help='If provided, when printing files will not print header '
          'before each file. '
          'Useful to leave when multiple files are importanized.'
+)
+parser.add_argument(
+    '--no-subconfig',
+    action='store_false',
+    default=True,
+    dest='subconfig',
+    help='If provided, sub-configurations will not be used.'
 )
 parser.add_argument(
     '--ci',
@@ -247,6 +291,12 @@ def run(source, config, args, path=None):
             return organized
 
     elif source.is_file():
+        if args.subconfig:
+            config = Config.find(
+                cwd=source.parent,
+                root=getattr(config.path, 'parent', None)
+            ) or config
+
         if config.get('exclude'):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
@@ -258,13 +308,6 @@ def run(source, config, args, path=None):
         return run(text, config, args, source)
 
     elif source.is_dir():
-        config_path = source / IMPORTANIZE_CONFIG
-        if config_path.exists():
-            try:
-                config = json.loads(config_path.read_text('utf-8'))
-            except ValueError:
-                log.error('Invalid sub-configuration {}'.format(config_path))
-
         if config.get('exclude'):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
@@ -295,14 +338,15 @@ def is_piped():
 def main(args=None):
     args = args if args is not None else sys.argv[1:]
     args = parser.parse_args(args=args)
-
     # adjust logging level
     (logging.getLogger('')
      .setLevel(VERBOSITY_MAPPING.get(args.verbose, 0)))
 
     log.debug('Running importanize with {}'.format(args))
 
-    config_path = getattr(args.config, 'name', '') or find_config()
+    config = Config.from_path(
+        getattr(args.config, 'name', '')
+    ) or Config.find()
 
     if args.version:
         msg = (
@@ -318,11 +362,9 @@ def main(args=None):
             description=__description__,
             version=__version__,
             python=sys.executable,
-            config=config_path or '<default pep8>',
+            config=config,
         ))
         return 0
-
-    config = json.loads(read(config_path)) if config_path else PEP8_CONFIG
 
     to_importanize = [pathlib.Path(i) for i in (args.path or ['.'])]
 

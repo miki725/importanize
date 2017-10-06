@@ -14,7 +14,7 @@ from importanize.__main__ import (
     IMPORTANIZE_CONFIG,
     PEP8_CONFIG,
     CIFailure,
-    find_config,
+    Config,
     main,
     run,
     run_importanize_on_text,
@@ -46,7 +46,8 @@ class TestMain(unittest.TestCase):
             self.input_text,
             CONFIG,
             mock.Mock(formatter='grouped',
-                      ci=False),
+                      ci=False,
+                      subconfig=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -56,7 +57,8 @@ class TestMain(unittest.TestCase):
             self.input_text,
             CONFIG,
             mock.Mock(formatter='inline-grouped',
-                      ci=False),
+                      ci=False,
+                      subconfig=False),
         )
 
         self.assertEqual(actual, self.output_inline_grouped)
@@ -67,7 +69,8 @@ class TestMain(unittest.TestCase):
                 self.input_text,
                 CONFIG,
                 mock.Mock(formatter='grouped',
-                          ci=True),
+                          ci=True,
+                          subconfig=False),
             )
 
     def test_run_importanize_on_text_ci_passed(self):
@@ -75,7 +78,8 @@ class TestMain(unittest.TestCase):
             self.output_grouped,
             CONFIG,
             mock.Mock(formatter='grouped',
-                      ci=True),
+                      ci=True,
+                      subconfig=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -87,7 +91,8 @@ class TestMain(unittest.TestCase):
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
-                      print=False),
+                      print=False,
+                      subconfig=False),
             Path(__file__),
         )
 
@@ -101,7 +106,8 @@ class TestMain(unittest.TestCase):
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
-                      print=False),
+                      print=False,
+                      subconfig=False),
             Path(__file__),
         )
 
@@ -116,7 +122,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=True),
+                      header=True,
+                      subconfig=False),
             Path('foo'),
         )
 
@@ -136,7 +143,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=True),
+                      header=True,
+                      subconfig=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -152,7 +160,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=False),
+                      header=False,
+                      subconfig=False),
             Path('foo'),
         )
 
@@ -168,11 +177,12 @@ class TestMain(unittest.TestCase):
 
         actual = run(
             self.test_data / 'input.py',
-            config,
+            Config(config),
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=False),
+                      header=False,
+                      subconfig=False),
         )
 
         self.assertIsNone(actual)
@@ -182,11 +192,12 @@ class TestMain(unittest.TestCase):
     def test_run_file(self, mock_print):
         actual = run(
             self.test_data / 'input.py',
-            CONFIG,
+            Config(CONFIG),
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=False),
+                      header=False,
+                      subconfig=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -196,11 +207,12 @@ class TestMain(unittest.TestCase):
     def test_run_dir(self, mock_print):
         actual = run(
             self.test_data,
-            CONFIG,
+            Config(CONFIG),
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=False),
+                      header=False,
+                      subconfig=False),
         )
 
         self.assertIsNone(actual)
@@ -216,11 +228,12 @@ class TestMain(unittest.TestCase):
         try:
             actual = run(
                 self.test_data,
-                CONFIG,
+                Config(CONFIG),
                 mock.Mock(formatter='grouped',
                           ci=False,
                           print=True,
-                          header=False),
+                          header=False,
+                          subconfig=True),
             )
 
             self.assertIsNone(actual)
@@ -242,11 +255,12 @@ class TestMain(unittest.TestCase):
         try:
             actual = run(
                 self.test_data,
-                CONFIG,
+                Config(CONFIG),
                 mock.Mock(formatter='grouped',
                           ci=False,
                           print=True,
-                          header=False),
+                          header=False,
+                          subconfig=True),
             )
 
             self.assertIsNone(actual)
@@ -264,11 +278,12 @@ class TestMain(unittest.TestCase):
 
         actual = run(
             self.test_data,
-            config,
+            Config(config),
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
-                      header=False),
+                      header=False,
+                      subconfig=False),
         )
 
         self.assertIsNone(actual)
@@ -279,23 +294,26 @@ class TestMain(unittest.TestCase):
         with self.assertRaises(CIFailure):
             run(
                 self.test_data,
-                CONFIG,
+                Config(CONFIG),
                 mock.Mock(formatter='grouped',
                           ci=True,
                           print=True,
-                          header=False),
+                          header=False,
+                          subconfig=False),
             )
 
-    @mock.patch.object(Path, 'cwd')
-    def test_find_config(self, mock_cwd):
-        mock_cwd.return_value = Path(__file__)
-
-        config = find_config()
+    def test_find_config(self):
+        config = Config.find(Path(__file__))
 
         expected_config = Path(__file__).parent.parent.joinpath(
             IMPORTANIZE_CONFIG
         )
-        self.assertEqual(config, six.text_type(expected_config.resolve()))
+        self.assertEqual(config.path, expected_config)
+
+    def test_find_config_nonfound(self):
+        config = Config.find(Path(Path(__file__).root))
+
+        self.assertIsNone(config.path)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_main_version(self, mock_print):

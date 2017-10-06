@@ -3,6 +3,11 @@
 History
 -------
 
+0.6.1 (2017-10-06)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed sub-configrations. They are searched when organizing individual files now.
+
 0.6.0 (2017-10-06)
 ~~~~~~~~~~~~~~~~~~
 
