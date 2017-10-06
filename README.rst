@@ -64,10 +64,6 @@ cases it would be recommended to use custom config file::
 Config file is simply a ``json`` file like this::
 
     {
-        "exclude": [
-            "path/to/file",
-            "path/to/files/ignore_*.py"
-        ],
         "formatter": "grouped",
         "groups": [
             {
@@ -137,6 +133,9 @@ file and commit that to your repository. As a matter of fact,
 you can see the
 `.importanizerc <https://github.com/miki725/importanize/blob/master/.importanizerc>`_
 config file used for the importanize repository itself.
+Additionally multiple configurations are supported within a single repository
+via sub-configurations. Simply place ``.importanizerc`` within a sub-folder
+and all imports will be reconfigured under that folder.
 
 You can also choose the formatter used to organize long multiline imports.
 Currently, there are two formatters available:
@@ -150,9 +149,28 @@ example::
     $ importanize --formatter=inline-group --print tests/test_data/input.txt
 
 
-Finally, you can see all other available ``importanize`` options::
+Finally, you can see all other available ``importanize`` cli options::
 
     $ importanize --help
+
+Not all configurations can be provided via cli.
+Additional available configurations in configuration file:
+
+* ``exclude`` - list of glob patterns of files which should be excluded from organizing.
+  For example::
+
+        "exclude": [
+            "path/to/file",
+            "path/to/files/ignore_*.py"
+        ]
+
+* ``after_imports_new_lines`` - number of lines to be included after imports
+* ``add_imports`` - list of imports to add to every file.
+  For example::
+
+        "add_imports": [
+            "from __future__ import absolute_import, print_function, unicode_literals"
+        ]
 
 Example
 -------

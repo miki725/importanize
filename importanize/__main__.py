@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import argparse
 import inspect
 import json
@@ -165,16 +165,20 @@ def run_importanize_on_text(text, config, args):
     for i in imports:
         groups.add_statement_to_group(i)
 
-    formatted_imports = groups.formatted(formatter=formatter)
     line_numbers = groups.all_line_numbers()
+    first_import_line_number = min(line_numbers) if line_numbers else 0
+
+    for i in config.get('add_imports', []):
+        for j in parse_statements([([i], [first_import_line_number])]):
+            groups.add_statement_to_group(j)
+
+    formatted_imports = groups.formatted(formatter=formatter)
 
     lines = text.splitlines()
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
         lines.pop(line_number)
 
-    first_import_line_number = min(line_numbers) if line_numbers else 0
     i = first_import_line_number
-
     while i is not None and len(lines) > i:
         if not lines[i]:
             lines.pop(i)
@@ -254,6 +258,13 @@ def run(source, config, args, path=None):
         return run(text, config, args, source)
 
     elif source.is_dir():
+        config_path = source / IMPORTANIZE_CONFIG
+        if config_path.exists():
+            try:
+                config = json.loads(config_path.read_text('utf-8'))
+            except ValueError:
+                log.error('Invalid sub-configuration {}'.format(config_path))
+
         if config.get('exclude'):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
@@ -300,7 +311,7 @@ def main(args=None):
             '{description}\n\n'
             'version: {version}\n'
             'python: {python}\n'
-            'config: {config}\n'
+            'root config: {config}\n'
             'source: https://github.com/miki725/importanize'
         )
         print(msg.format(

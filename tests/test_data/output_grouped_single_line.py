@@ -39,5 +39,4 @@ from z import foo
 from ..othermodule import rainbows
 from .module import bar, foo
 
-
 # stuff here

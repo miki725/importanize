@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
+import json
 import sys
 import unittest
 from copy import deepcopy
@@ -18,9 +19,14 @@ from importanize.__main__ import (
     run,
     run_importanize_on_text,
 )
+from importanize.utils import force_text
 
 
 TESTING_MODULE = 'importanize.__main__'
+CONFIG = PEP8_CONFIG.copy()
+CONFIG['add_imports'] = [
+    'from __future__ import absolute_import, print_function, unicode_literals',
+]
 
 
 class TestMain(unittest.TestCase):
@@ -28,6 +34,9 @@ class TestMain(unittest.TestCase):
 
     input_text = (test_data / 'input.py').read_text()
     output_grouped = (test_data / 'output_grouped.py').read_text()
+    output_grouped_single_line = (
+        test_data / 'output_grouped_single_line.py'
+    ).read_text()
     output_inline_grouped = (
         test_data / 'output_inline_grouped.py'
     ).read_text()
@@ -35,7 +44,7 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_on_text_grouped(self):
         actual = run_importanize_on_text(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False),
         )
@@ -45,7 +54,7 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_on_text_inline_grouped(self):
         actual = run_importanize_on_text(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='inline-grouped',
                       ci=False),
         )
@@ -56,7 +65,7 @@ class TestMain(unittest.TestCase):
         with self.assertRaises(CIFailure):
             run_importanize_on_text(
                 self.input_text,
-                PEP8_CONFIG,
+                CONFIG,
                 mock.Mock(formatter='grouped',
                           ci=True),
             )
@@ -64,7 +73,7 @@ class TestMain(unittest.TestCase):
     def test_run_importanize_on_text_ci_passed(self):
         actual = run_importanize_on_text(
             self.output_grouped,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=True),
         )
@@ -75,7 +84,7 @@ class TestMain(unittest.TestCase):
     def test_run_text_to_file_organized(self, mock_write_text):
         actual = run(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False),
@@ -89,7 +98,7 @@ class TestMain(unittest.TestCase):
     def test_run_text_to_file_nothing_to_do(self, mock_write_text):
         actual = run(
             self.output_grouped,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False),
@@ -103,7 +112,7 @@ class TestMain(unittest.TestCase):
     def test_run_text_print(self, mock_print):
         actual = run(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
@@ -123,7 +132,7 @@ class TestMain(unittest.TestCase):
     def test_run_text_print_no_file(self, mock_print):
         actual = run(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
@@ -139,7 +148,7 @@ class TestMain(unittest.TestCase):
     def test_run_text_print_no_header(self, mock_print):
         actual = run(
             self.input_text,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
@@ -154,7 +163,7 @@ class TestMain(unittest.TestCase):
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_file_skipped(self, mock_print):
-        config = deepcopy(PEP8_CONFIG)
+        config = deepcopy(CONFIG)
         config['exclude'] = ['*/test_data/*.py']
 
         actual = run(
@@ -173,7 +182,7 @@ class TestMain(unittest.TestCase):
     def test_run_file(self, mock_print):
         actual = run(
             self.test_data / 'input.py',
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
@@ -187,7 +196,7 @@ class TestMain(unittest.TestCase):
     def test_run_dir(self, mock_print):
         actual = run(
             self.test_data,
-            PEP8_CONFIG,
+            CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=True,
@@ -200,8 +209,57 @@ class TestMain(unittest.TestCase):
         ])
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_subconfig_invalid(self, mock_print):
+        config_file = self.test_data / IMPORTANIZE_CONFIG
+        config_file.write_text('invalid json')
+
+        try:
+            actual = run(
+                self.test_data,
+                CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=False,
+                          print=True,
+                          header=False),
+            )
+
+            self.assertIsNone(actual)
+            mock_print.assert_has_calls([
+                mock.call(self.output_grouped),
+            ])
+
+        finally:
+            config_file.unlink()
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_run_dir_subconfig_valid(self, mock_print):
+        config = deepcopy(CONFIG)
+        config['after_imports_new_lines'] = 1
+
+        config_file = self.test_data / IMPORTANIZE_CONFIG
+        config_file.write_text(force_text(json.dumps(config)))
+
+        try:
+            actual = run(
+                self.test_data,
+                CONFIG,
+                mock.Mock(formatter='grouped',
+                          ci=False,
+                          print=True,
+                          header=False),
+            )
+
+            self.assertIsNone(actual)
+            mock_print.assert_has_calls([
+                mock.call(self.output_grouped_single_line),
+            ])
+
+        finally:
+            config_file.unlink()
+
+    @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_dir_skipped(self, mock_print):
-        config = deepcopy(PEP8_CONFIG)
+        config = deepcopy(CONFIG)
         config['exclude'] = ['*/test_data']
 
         actual = run(
@@ -221,7 +279,7 @@ class TestMain(unittest.TestCase):
         with self.assertRaises(CIFailure):
             run(
                 self.test_data,
-                PEP8_CONFIG,
+                CONFIG,
                 mock.Mock(formatter='grouped',
                           ci=True,
                           print=True,

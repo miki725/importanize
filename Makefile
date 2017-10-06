@@ -45,7 +45,7 @@ clean-test-all: clean-test
 
 lint:
 	flake8 importanize tests
-	python -m importanize tests/ importanize/ tests/ --ci
+	python -m importanize importanize/ tests/ --ci
 
 test:
 	nosetests ${NOSE_FLAGS} tests/
