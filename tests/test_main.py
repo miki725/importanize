@@ -310,6 +310,22 @@ class TestMain(unittest.TestCase):
         )
         self.assertEqual(config.path, expected_config)
 
+    def test_find_config_current_dir(self):
+        # Instead of the absolute path, assume, user is running importanize
+        # from the current directory.
+
+        expected_config = Path(__file__).parent.parent.joinpath(
+            IMPORTANIZE_CONFIG
+        )
+        # If path is a file, and we have a config for the project and no
+        # subconfig, and we dont find the config for the file, return the
+        # passed config.
+        config = Config.find(
+            Path('tests/test_main.py'),
+            config=Config.from_path(expected_config)
+        )
+        self.assertEqual(config.path, expected_config)
+
     def test_find_config_nonfound(self):
         config = Config.find(Path(Path(__file__).root))
 
