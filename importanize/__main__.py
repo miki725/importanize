@@ -220,7 +220,8 @@ def run_importanize_on_text(text, config, args):
 
     lines = text.splitlines()
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
-        lines.pop(line_number)
+        if lines:
+            lines.pop(line_number)
 
     i = first_import_line_number
     while i is not None and len(lines) > i:
