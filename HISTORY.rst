@@ -3,6 +3,14 @@
 History
 -------
 
+0.6.2 (2018-01-08)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed importanize failing on empty files.
+  Thanks `Milind <https://github.com/milin>`_.
+* Fixed importanize hanging when provided relative file path when finding sub-configurations.
+  Thanks `Milind <https://github.com/milin>`_.
+
 0.6.1 (2017-10-06)
 ~~~~~~~~~~~~~~~~~~
 
