@@ -93,17 +93,21 @@ class Config(dict):
             return cls.default()
 
     @classmethod
-    def find(cls, cwd=pathlib.Path.cwd(), root=None):
+    def find(cls, cwd=pathlib.Path.cwd(), root=None, config=None):
         path = cwd
+        config = config or cls.default()
 
-        while path != pathlib.Path(root or cwd.root):
+        while all([
+            path != pathlib.Path(root or cwd.root),
+            path != pathlib.Path('.')
+        ]):
             config_path = path / IMPORTANIZE_CONFIG
             if config_path.exists():
                 return Config.from_path(config_path)
             else:
                 path = path.parent
 
-        return cls.default()
+        return config
 
     def __str__(self):
         return six.text_type(self.path or '<default pep8>')
@@ -220,7 +224,8 @@ def run_importanize_on_text(text, config, args):
 
     lines = text.splitlines()
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
-        lines.pop(line_number)
+        if lines:
+            lines.pop(line_number)
 
     i = first_import_line_number
     while i is not None and len(lines) > i:
@@ -294,7 +299,8 @@ def run(source, config, args, path=None):
         if args.subconfig:
             config = Config.find(
                 cwd=source.parent,
-                root=getattr(config.path, 'parent', None)
+                root=getattr(config.path, 'parent', None),
+                config=config
             ) or config
 
         if config.get('exclude'):
