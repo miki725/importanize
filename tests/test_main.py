@@ -320,10 +320,7 @@ class TestMain(unittest.TestCase):
         # If path is a file, and we have a config for the project and no
         # subconfig, and we dont find the config for the file, return the
         # passed config.
-        config = Config.find(
-            Path('tests/test_main.py'),
-            config=Config.from_path(expected_config)
-        )
+        config = Config.find(Path('tests/test_main.py'))
         self.assertEqual(config.path, expected_config)
 
     def test_find_config_nonfound(self):
