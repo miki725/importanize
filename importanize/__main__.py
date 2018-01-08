@@ -93,21 +93,17 @@ class Config(dict):
             return cls.default()
 
     @classmethod
-    def find(cls, cwd=pathlib.Path.cwd(), root=None, config=None):
-        path = cwd
-        config = config or cls.default()
+    def find(cls, cwd=pathlib.Path.cwd(), root=None):
+        path = cwd.resolve()
 
-        while all([
-            path != pathlib.Path(root or cwd.root),
-            path != pathlib.Path('.')
-        ]):
+        while path != pathlib.Path(root or cwd.root):
             config_path = path / IMPORTANIZE_CONFIG
             if config_path.exists():
                 return Config.from_path(config_path)
             else:
                 path = path.parent
 
-        return config
+        return cls.default()
 
     def __str__(self):
         return six.text_type(self.path or '<default pep8>')
@@ -300,7 +296,6 @@ def run(source, config, args, path=None):
             config = Config.find(
                 cwd=source.parent,
                 root=getattr(config.path, 'parent', None),
-                config=config
             ) or config
 
         if config.get('exclude'):
