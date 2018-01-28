@@ -94,7 +94,7 @@ class Config(dict):
 
     @classmethod
     def find(cls, cwd=pathlib.Path.cwd(), root=None):
-        path = cwd.resolve()
+        path = cwd = cwd.resolve()
 
         while path != pathlib.Path(root or cwd.root):
             config_path = path / IMPORTANIZE_CONFIG

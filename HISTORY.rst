@@ -3,6 +3,11 @@
 History
 -------
 
+0.6.3 (2018-01-27)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed (again) importanize hanging when provided relative file path when finding sub-configurations.
+
 0.6.2 (2018-01-08)
 ~~~~~~~~~~~~~~~~~~
 
