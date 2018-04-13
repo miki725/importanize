@@ -172,6 +172,17 @@ Additional available configurations in configuration file:
             "from __future__ import absolute_import, print_function, unicode_literals"
         ]
 
+It integrates with pre-commit_. You can use the following config
+
+::
+
+    repos:
+    - repo: https://github.com/miki725/importanize/
+      rev: 'master'
+      hooks:
+      - id: importanize
+        args: [--verbose]
+
 Example
 -------
 
@@ -229,3 +240,5 @@ Then to run tests, you can use ``nosetests`` or simply use Makefile command::
     $ nosetests -sv
     # or
     $ make test
+
+.. _pre-commit: https://pre-commit.com/
