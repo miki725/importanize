@@ -131,7 +131,7 @@ def find_imports_from_lines(iterator):
 def tokenize_import_lines(import_lines):
     tokens = []
 
-    for n, line in enumerate(import_lines):
+    for line in import_lines:
         _tokens = []
         words = filter(None, TOKEN_REGEX.split(line))
 

@@ -5,7 +5,7 @@ import re
 
 import six
 
-from .formatters import DEFAULT_FORMATTER
+from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .mixin import ComparatorMixin
 from .utils import list_strip
 
@@ -154,8 +154,8 @@ class ImportStatement(ComparatorMixin):
                                         self.unique_leafs)))
             )
 
-    def formatted(self, formatter=DEFAULT_FORMATTER):
-        return formatter(self).format()
+    def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
+        return formatter(self, length=length).format()
 
     def __hash__(self):
         return hash(self.as_string())

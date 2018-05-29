@@ -47,7 +47,8 @@ class TestMain(unittest.TestCase):
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -58,7 +59,8 @@ class TestMain(unittest.TestCase):
             CONFIG,
             mock.Mock(formatter='inline-grouped',
                       ci=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertEqual(actual, self.output_inline_grouped)
@@ -70,7 +72,8 @@ class TestMain(unittest.TestCase):
                 CONFIG,
                 mock.Mock(formatter='grouped',
                           ci=True,
-                          subconfig=False),
+                          subconfig=False,
+                          length=None),
             )
 
     def test_run_importanize_on_text_ci_passed(self):
@@ -79,7 +82,8 @@ class TestMain(unittest.TestCase):
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=True,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -92,7 +96,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
             Path(__file__),
         )
 
@@ -107,7 +112,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
             Path(__file__),
         )
 
@@ -123,7 +129,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=True,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
             Path('foo'),
         )
 
@@ -144,7 +151,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=True,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -161,7 +169,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
             Path('foo'),
         )
 
@@ -182,7 +191,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertIsNone(actual)
@@ -197,7 +207,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -212,7 +223,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertIsNone(actual)
@@ -233,7 +245,8 @@ class TestMain(unittest.TestCase):
                           ci=False,
                           print=True,
                           header=False,
-                          subconfig=True),
+                          subconfig=True,
+                          length=None),
             )
 
             self.assertIsNone(actual)
@@ -260,7 +273,8 @@ class TestMain(unittest.TestCase):
                           ci=False,
                           print=True,
                           header=False,
-                          subconfig=True),
+                          subconfig=True,
+                          length=None),
             )
 
             self.assertIsNone(actual)
@@ -283,7 +297,8 @@ class TestMain(unittest.TestCase):
                       ci=False,
                       print=True,
                       header=False,
-                      subconfig=False),
+                      subconfig=False,
+                      length=None),
         )
 
         self.assertIsNone(actual)
@@ -299,7 +314,8 @@ class TestMain(unittest.TestCase):
                           ci=True,
                           print=True,
                           header=False,
-                          subconfig=False),
+                          subconfig=False,
+                          length=None),
             )
 
     def test_find_config(self):

@@ -5,72 +5,52 @@ COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tes
 COVER_REPORT_FLAGS=--cover-html --cover-html-dir=htmlcov
 COVER_FLAGS=${COVER_CONFIG_FLAGS} ${COVER_REPORT_FLAGS}
 
-help:
-	@echo "install - install all requirements including for testing"
-	@echo "clean - remove all artifacts"
-	@echo "clean-build - remove build artifacts"
-	@echo "clean-pyc - remove Python file artifacts"
-	@echo "clean-test - remove test and coverage artifacts"
-	@echo "clean-test-all - remove all test-related artifacts including tox"
-	@echo "lint - check style with flake8"
-	@echo "test - run tests quickly with the default Python"
-	@echo "test-coverage - run tests with coverage report"
-	@echo "test-all - run tests on every Python version with tox"
-	@echo "check - run all necessary steps to check validity of project"
-	@echo "release - package and upload a release"
-	@echo "dist - package"
-	@echo "docs - generate Sphinx HTML documentation, including API docs"
+help:  ## show help
+	@grep -E '^[a-zA-Z_\-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		cut -d':' -f1- | \
+		sort | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-install:
+install:  ## install all dependecies
 	pip install -U -r requirements-dev.txt
 
-clean: clean-build clean-pyc clean-test-all
+clean: clean-build clean-pyc clean-test  ## clean everything except tox
 
-clean-build:
+clean-build:  ## clean build and distribution artifacts
 	@rm -rf build/
 	@rm -rf dist/
 	@rm -rf *.egg-info
 
-clean-pyc:
-	-@find . -name '*.pyc' -follow -print0 | xargs -0 rm -f
-	-@find . -name '*.pyo' -follow -print0 | xargs -0 rm -f
-	-@find . -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
+clean-pyc:  ## clean pyc files
+	-@find . -path ./.tox -prune -o -name '*.pyc' -follow -print0 | xargs -0 rm -f
+	-@find . -path ./.tox -prune -o -name '*.pyo' -follow -print0 | xargs -0 rm -f
+	-@find . -path ./.tox -prune -o -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
 
-clean-test:
+clean-test:  ## clean test artifacts like converage
 	rm -rf .coverage coverage*
 	rm -rf htmlcov/
 
-clean-test-all: clean-test
+clean-all: clean  ## clean everything including tox
 	rm -rf .tox/
 
-lint:
+lint: clean  ## lint whole library
 	flake8 importanize tests
 	python -m importanize importanize/ tests/ --ci
 
-test:
+test: clean  ## run all tests
 	nosetests ${NOSE_FLAGS} tests/
 
-test-coverage:
+test-coverage: clean  ## run all tests with coverage
 	nosetests ${NOSE_FLAGS} ${COVER_FLAGS} tests/
 
-test-all:
+test-all: clean  ## run all tests with tox with different python/django versions
 	tox
 
-check: lint clean-build clean-pyc clean-test test-coverage
+check: lint clean test-coverage   ## check library which runs lint and tests
 
-release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+release: clean  ## push release to pypi
+	python setup.py sdist bdist_wheel upload
 
-dist: clean
-	python setup.py sdist
-	python setup.py bdist_wheel
+dist: clean  ## create distribution of the library
+	python setup.py sdist bdist_wheel
 	ls -l dist
-
-docs:
-	rm -f docs/importanize.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ importanize
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	open docs/_build/html/index.html

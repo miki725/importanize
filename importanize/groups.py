@@ -7,7 +7,7 @@ from functools import reduce
 
 import six
 
-from .formatters import DEFAULT_FORMATTER
+from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .utils import is_site_package, is_std_lib
 
 
@@ -79,10 +79,11 @@ class BaseImportGroup(object):
         return sep.join(map(operator.methodcaller('as_string'),
                             self.unique_statements))
 
-    def formatted(self, formatter=DEFAULT_FORMATTER):
+    def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
         sep = self.file_artifacts.get('sep', '\n')
         return sep.join(map(operator.methodcaller('formatted',
-                                                  formatter=formatter),
+                                                  formatter=formatter,
+                                                  length=length),
                             self.unique_statements))
 
     def __str__(self):
@@ -184,11 +185,12 @@ class ImportGroups(object):
                       self.groups)
         ))
 
-    def formatted(self, formatter=DEFAULT_FORMATTER):
+    def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
         sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
             None, map(operator.methodcaller('formatted',
-                                            formatter=formatter),
+                                            formatter=formatter,
+                                            length=length),
                       self.groups)
         ))
 

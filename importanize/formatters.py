@@ -5,6 +5,9 @@ import operator
 from copy import deepcopy
 
 
+DEFAULT_LENGTH = 80
+
+
 def get_normalized(i):
     return map(operator.attrgetter('normalized'), i)
 
@@ -20,8 +23,9 @@ class Formatter(object):
         the import statement that must be formatted
     """
 
-    def __init__(self, statement):
+    def __init__(self, statement, length=DEFAULT_LENGTH):
         self.statement = statement
+        self.length = length
 
 
 class GroupedFormatter(Formatter):
@@ -56,7 +60,7 @@ class GroupedFormatter(Formatter):
         )
 
     def do_grouped_formatting(self, one_liner):
-        return any((len(one_liner) > 80 and len(self.leafs) > 1,
+        return any((len(one_liner) > self.length and len(self.leafs) > 1,
                     len(self.all_comments) > 1))
 
     def get_leaf_separator(self, stem=None):
@@ -163,7 +167,7 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
     """
     name = 'inline-grouped'
 
-    def __new__(cls, statement):
+    def __new__(cls, statement, **kwargs):
         """
         Overwrite __new__ to return GroupedFormatter formatter instance
         when the statement to be formatted has both statement comment and
@@ -173,12 +177,12 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
         """
         if all([statement.comments,
                 statement.leafs and statement.leafs[0].comments]):
-            return GroupedFormatter(statement)
+            return GroupedFormatter(statement, **kwargs)
         return super(GroupedInlineAlignedFormatter, cls).__new__(cls)
 
-    def __init__(self, statement):
+    def __init__(self, statement, **kwargs):
         (super(GroupedInlineAlignedFormatter, self)
-         .__init__(self.normalize_statement(statement)))
+         .__init__(self.normalize_statement(statement), **kwargs))
 
     def normalize_statement(self, statement):
         if all([statement.comments,

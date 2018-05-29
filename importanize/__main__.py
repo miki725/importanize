@@ -13,7 +13,7 @@ import pathlib2 as pathlib
 import six
 
 from . import __description__, __version__, formatters
-from .formatters import DEFAULT_FORMATTER
+from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .groups import ImportGroups
 from .parser import (
     find_imports_from_lines,
@@ -93,7 +93,8 @@ class Config(dict):
             return cls.default()
 
     @classmethod
-    def find(cls, cwd=pathlib.Path.cwd(), root=None):
+    def find(cls, cwd=None, root=None):
+        cwd = cwd or pathlib.Path.cwd()
         path = cwd = cwd.resolve()
 
         while path != pathlib.Path(root or cwd.root):
@@ -140,6 +141,11 @@ parser.add_argument(
     default=DEFAULT_FORMATTER,
     choices=sorted(FORMATTERS.keys()),
     help='Formatter used.'
+)
+parser.add_argument(
+    '-l', '--length',
+    type=int,
+    help='Line length when formatters will break imports.'
 )
 parser.add_argument(
     '--print',
@@ -216,7 +222,10 @@ def run_importanize_on_text(text, config, args):
         for j in parse_statements([([i], [first_import_line_number])]):
             groups.add_statement_to_group(j)
 
-    formatted_imports = groups.formatted(formatter=formatter)
+    formatted_imports = groups.formatted(
+        formatter=formatter,
+        length=args.length or config.get('length') or DEFAULT_LENGTH,
+    )
 
     lines = text.splitlines()
     for line_number in sorted(groups.all_line_numbers(), reverse=True):
