@@ -156,6 +156,7 @@ Finally, you can see all other available ``importanize`` cli options::
 Not all configurations can be provided via cli.
 Additional available configurations in configuration file:
 
+* ``length`` - line length after which the formatter will split imports
 * ``exclude`` - list of glob patterns of files which should be excluded from organizing.
   For example::
 
