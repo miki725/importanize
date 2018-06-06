@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from fnmatch import fnmatch
+from itertools import chain
 from stat import S_ISFIFO
 
 import pathlib2 as pathlib
@@ -178,6 +179,12 @@ parser.add_argument(
          'imports as per importanize configuration.'
 )
 parser.add_argument(
+    '--list',
+    action='store_true',
+    default=False,
+    help='List all dependencies found in all parsed files'
+)
+parser.add_argument(
     '--version',
     action='store_true',
     default=False,
@@ -221,6 +228,9 @@ def run_importanize_on_text(text, config, args):
     for i in config.get('add_imports', []):
         for j in parse_statements([([i], [first_import_line_number])]):
             groups.add_statement_to_group(j)
+
+    if args.list:
+        return groups
 
     formatted_imports = groups.formatted(
         formatter=formatter,
@@ -275,6 +285,10 @@ def run(source, config, args, path=None):
             raise
 
         else:
+            if args.list:
+                yield organized
+                return
+
             if args.print and args.header and path:
                 print('=' * len(six.text_type(path)))
                 print(six.text_type(path))
@@ -298,7 +312,7 @@ def run(source, config, args, path=None):
                         msg += ' {}'.format(path)
                     log.info(msg)
 
-            return organized
+            yield organized
 
     elif source.is_file():
         if args.subconfig:
@@ -315,7 +329,8 @@ def run(source, config, args, path=None):
                 return
 
         text = source.read_text('utf-8')
-        return run(text, config, args, source)
+        for i in run(text, config, args, source):
+            yield i
 
     elif source.is_dir():
         if config.get('exclude'):
@@ -333,7 +348,8 @@ def run(source, config, args, path=None):
         all_successes = True
         for f in files:
             try:
-                run(f, config, args, f)
+                for i in run(f, config, args, f):
+                    yield i
             except CIFailure:
                 all_successes = False
 
@@ -388,15 +404,30 @@ def main(args=None):
         args.header = False
 
     all_successes = True
+    all_groups = []
 
     for p in to_importanize:
         try:
-            run(p, config, args)
+            all_groups += [i for i in run(p, config, args)]
         except CIFailure:
             all_successes = False
         except Exception:
             log.exception('Error running importanize')
             return 1
+
+    if args.list:
+        groups = ImportGroups()
+        for c in config['groups']:
+            groups.add_group(c)
+        statements = chain(*(i.statements for i in chain(*all_groups)))
+        for s in statements:
+            groups.add_statement_to_group(s)
+        for g in groups:
+            print(g.config['type'])
+            print('-' * len(g.config['type']))
+            for s in g.unique_statements:
+                print(s)
+            print()
 
     return int(not all_successes)
 

@@ -29,6 +29,11 @@ CONFIG['add_imports'] = [
 ]
 
 
+def consume(i):
+    for _ in i:
+        pass
+
+
 class TestMain(unittest.TestCase):
     test_data = Path(__file__).parent / 'test_data'
 
@@ -48,7 +53,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=False,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
@@ -60,7 +66,8 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='inline-grouped',
                       ci=False,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
         )
 
         self.assertEqual(actual, self.output_inline_grouped)
@@ -73,7 +80,8 @@ class TestMain(unittest.TestCase):
                 mock.Mock(formatter='grouped',
                           ci=True,
                           subconfig=False,
-                          length=None),
+                          length=None,
+                          list=False),
             )
 
     def test_run_importanize_on_text_ci_passed(self):
@@ -83,46 +91,49 @@ class TestMain(unittest.TestCase):
             mock.Mock(formatter='grouped',
                       ci=True,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
         )
 
         self.assertEqual(actual, self.output_grouped)
 
     @mock.patch.object(Path, 'write_text')
     def test_run_text_to_file_organized(self, mock_write_text):
-        actual = run(
+        actual = next(run(
             self.input_text,
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
             Path(__file__),
-        )
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_write_text.assert_called_once_with(self.output_grouped)
 
     @mock.patch.object(Path, 'write_text')
     def test_run_text_to_file_nothing_to_do(self, mock_write_text):
-        actual = run(
+        actual = next(run(
             self.output_grouped,
             CONFIG,
             mock.Mock(formatter='grouped',
                       ci=False,
                       print=False,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
             Path(__file__),
-        )
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_write_text.assert_not_called()
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_text_print(self, mock_print):
-        actual = run(
+        actual = next(run(
             self.input_text,
             CONFIG,
             mock.Mock(formatter='grouped',
@@ -130,9 +141,10 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=True,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
             Path('foo'),
-        )
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_print.assert_has_calls([
@@ -144,7 +156,7 @@ class TestMain(unittest.TestCase):
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_text_print_no_file(self, mock_print):
-        actual = run(
+        actual = next(run(
             self.input_text,
             CONFIG,
             mock.Mock(formatter='grouped',
@@ -152,8 +164,9 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=True,
                       subconfig=False,
-                      length=None),
-        )
+                      length=None,
+                      list=False),
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_print.assert_has_calls([
@@ -162,7 +175,7 @@ class TestMain(unittest.TestCase):
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_text_print_no_header(self, mock_print):
-        actual = run(
+        actual = next(run(
             self.input_text,
             CONFIG,
             mock.Mock(formatter='grouped',
@@ -170,9 +183,10 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=False,
                       subconfig=False,
-                      length=None),
+                      length=None,
+                      list=False),
             Path('foo'),
-        )
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_print.assert_has_calls([
@@ -184,7 +198,7 @@ class TestMain(unittest.TestCase):
         config = deepcopy(CONFIG)
         config['exclude'] = ['*/test_data/*.py']
 
-        actual = run(
+        consume(run(
             self.test_data / 'input.py',
             Config(config),
             mock.Mock(formatter='grouped',
@@ -192,15 +206,15 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=False,
                       subconfig=False,
-                      length=None),
-        )
+                      length=None,
+                      list=False),
+        ))
 
-        self.assertIsNone(actual)
         mock_print.assert_not_called()
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_file(self, mock_print):
-        actual = run(
+        actual = next(run(
             self.test_data / 'input.py',
             Config(CONFIG),
             mock.Mock(formatter='grouped',
@@ -208,15 +222,16 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=False,
                       subconfig=False,
-                      length=None),
-        )
+                      length=None,
+                      list=False),
+        ))
 
         self.assertEqual(actual, self.output_grouped)
         mock_print.assert_called_once_with(self.output_grouped)
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_dir(self, mock_print):
-        actual = run(
+        consume(run(
             self.test_data,
             Config(CONFIG),
             mock.Mock(formatter='grouped',
@@ -224,10 +239,10 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=False,
                       subconfig=False,
-                      length=None),
-        )
+                      length=None,
+                      list=False),
+        ))
 
-        self.assertIsNone(actual)
         mock_print.assert_has_calls([
             mock.call(self.output_grouped),
         ])
@@ -238,7 +253,7 @@ class TestMain(unittest.TestCase):
         config_file.write_text('invalid json')
 
         try:
-            actual = run(
+            consume(run(
                 self.test_data,
                 Config(CONFIG),
                 mock.Mock(formatter='grouped',
@@ -246,10 +261,10 @@ class TestMain(unittest.TestCase):
                           print=True,
                           header=False,
                           subconfig=True,
-                          length=None),
-            )
+                          length=None,
+                          list=False),
+            ))
 
-            self.assertIsNone(actual)
             mock_print.assert_has_calls([
                 mock.call(self.output_grouped),
             ])
@@ -266,7 +281,7 @@ class TestMain(unittest.TestCase):
         config_file.write_text(force_text(json.dumps(config)))
 
         try:
-            actual = run(
+            consume(run(
                 self.test_data,
                 Config(CONFIG),
                 mock.Mock(formatter='grouped',
@@ -274,10 +289,10 @@ class TestMain(unittest.TestCase):
                           print=True,
                           header=False,
                           subconfig=True,
-                          length=None),
-            )
+                          length=None,
+                          list=False),
+            ))
 
-            self.assertIsNone(actual)
             mock_print.assert_has_calls([
                 mock.call(self.output_grouped_single_line),
             ])
@@ -290,7 +305,7 @@ class TestMain(unittest.TestCase):
         config = deepcopy(CONFIG)
         config['exclude'] = ['*/test_data']
 
-        actual = run(
+        consume(run(
             self.test_data,
             Config(config),
             mock.Mock(formatter='grouped',
@@ -298,16 +313,16 @@ class TestMain(unittest.TestCase):
                       print=True,
                       header=False,
                       subconfig=False,
-                      length=None),
-        )
+                      length=None,
+                      list=False),
+        ))
 
-        self.assertIsNone(actual)
         mock_print.assert_not_called()
 
     @mock.patch(TESTING_MODULE + '.print', create=True)
     def test_run_dir_ci(self, mock_print):
         with self.assertRaises(CIFailure):
-            run(
+            consume(run(
                 self.test_data,
                 Config(CONFIG),
                 mock.Mock(formatter='grouped',
@@ -315,8 +330,9 @@ class TestMain(unittest.TestCase):
                           print=True,
                           header=False,
                           subconfig=False,
-                          length=None),
-            )
+                          length=None,
+                          list=False),
+            ))
 
     def test_find_config(self):
         config = Config.find(Path(__file__))

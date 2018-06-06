@@ -16,7 +16,7 @@ class BaseImportGroup(object):
     def __init__(self, config=None, **kwargs):
         self.config = config or {}
 
-        self.statements = []
+        self.statements = kwargs.get('statements', [])
         self.file_artifacts = kwargs.get('file_artifacts', {})
 
     @property
@@ -133,16 +133,23 @@ GROUP_MAPPING = OrderedDict((
 ))
 
 
+def sort_groups(groups):
+    return sorted(
+        groups,
+        key=lambda i: list(GROUP_MAPPING.values()).index(type(i))
+    )
+
+
 @six.python_2_unicode_compatible
-class ImportGroups(object):
-    def __init__(self, **kwargs):
-        self.groups = []
+class ImportGroups(list):
+    def __init__(self, *args, **kwargs):
+        super(ImportGroups, self).__init__(*args)
         self.file_artifacts = kwargs.get('file_artifacts', {})
 
     def all_line_numbers(self):
         return sorted(list(set(list(
             itertools.chain(*map(operator.methodcaller('all_line_numbers'),
-                                 self.groups))
+                                 self))
         ))))
 
     def add_group(self, config):
@@ -155,13 +162,10 @@ class ImportGroups(object):
             msg = ('"{}" is not supported import group'.format(config['type']))
             raise ValueError(msg)
 
-        self.groups.append(GROUP_MAPPING[config['type']](config))
+        self.append(GROUP_MAPPING[config['type']](config))
 
     def add_statement_to_group(self, statement):
-        groups_by_priority = sorted(
-            self.groups,
-            key=lambda i: list(GROUP_MAPPING.values()).index(type(i))
-        )
+        groups_by_priority = sort_groups(self)
 
         added = False
 
@@ -182,7 +186,7 @@ class ImportGroups(object):
         sep = self.file_artifacts.get('sep', '\n') * 2
         return sep.join(filter(
             None, map(operator.methodcaller('as_string'),
-                      self.groups)
+                      self)
         ))
 
     def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
@@ -191,7 +195,7 @@ class ImportGroups(object):
             None, map(operator.methodcaller('formatted',
                                             formatter=formatter,
                                             length=length),
-                      self.groups)
+                      self)
         ))
 
     def __str__(self):
