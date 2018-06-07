@@ -3,6 +3,12 @@
 History
 -------
 
+0.7.0 (2018-06-06)
+~~~~~~~~~~~~~~~~~~
+
+* Fixed removing first line in files without imports.
+* Added ``--list`` option to list all found imports grouped by same packages as in config.
+
 0.6.4 (2018-05-29)
 ~~~~~~~~~~~~~~~~~~
 

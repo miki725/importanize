@@ -37,14 +37,38 @@ def consume(i):
 class TestMain(unittest.TestCase):
     test_data = Path(__file__).parent / 'test_data'
 
-    input_text = (test_data / 'input.py').read_text()
-    output_grouped = (test_data / 'output_grouped.py').read_text()
+    input_text = (
+        test_data / 'input.py'
+    ).read_text()
+    output_grouped = (
+        test_data / 'output_grouped.py'
+    ).read_text()
     output_grouped_single_line = (
         test_data / 'output_grouped_single_line.py'
     ).read_text()
     output_inline_grouped = (
         test_data / 'output_inline_grouped.py'
     ).read_text()
+
+    input_no_imports = (
+        test_data / 'input_no_imports.py'
+    ).read_text()
+    output_no_imports = (
+        test_data / 'output_no_imports.py'
+    ).read_text()
+
+    def test_run_importanize_no_imports(self):
+        actual = run_importanize_on_text(
+            self.input_no_imports,
+            CONFIG,
+            mock.Mock(formatter='grouped',
+                      ci=False,
+                      subconfig=False,
+                      length=None,
+                      list=False),
+        )
+
+        self.assertEqual(actual, self.output_no_imports)
 
     def test_run_importanize_on_text_grouped(self):
         actual = run_importanize_on_text(
@@ -368,6 +392,37 @@ class TestMain(unittest.TestCase):
         self.assertEqual(mock_print.call_count, 1)
         version = mock_print.mock_calls[0][1][0]
         self.assertIn('version: {}'.format(__version__), version)
+
+    @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=False))
+    @mock.patch(TESTING_MODULE + '.print', create=True)
+    def test_main_list(self, mock_print):
+        actual = main([
+            six.text_type(self.test_data / 'input_few_imports.py'),
+            '--config', six.text_type(self.test_data / 'config.json'),
+            '--list',
+        ])
+
+        self.assertEqual(actual, 0)
+        mock_print.assert_has_calls([
+            mock.call('stdlib'),
+            mock.call('------'),
+            mock.call('from __future__ import print_function, unicode_literals'),
+            mock.call('import datetime as mydatetime'),
+            mock.call(),
+            mock.call('sitepackages'),
+            mock.call('------------'),
+            mock.call('import flake8 as lint'),
+            mock.call(),
+            mock.call('remainder'),
+            mock.call('---------'),
+            mock.call('import z'),
+            mock.call('from a import b'),
+            mock.call('from a.b import d'),
+            mock.call(),
+            mock.call('local'),
+            mock.call('-----'),
+            mock.call('from .module import bar, foo'),
+        ])
 
     @mock.patch(TESTING_MODULE + '.S_ISFIFO', mock.Mock(return_value=True))
     @mock.patch(TESTING_MODULE + '.print', create=True)
