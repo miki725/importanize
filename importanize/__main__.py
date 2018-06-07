@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from fnmatch import fnmatch
+from itertools import chain
 from stat import S_ISFIFO
 
 import pathlib2 as pathlib
@@ -97,7 +98,7 @@ class Config(dict):
         cwd = cwd or pathlib.Path.cwd()
         path = cwd = cwd.resolve()
 
-        while path != pathlib.Path(root or cwd.root):
+        while path.resolve() != pathlib.Path(root or cwd.root).resolve():
             config_path = path / IMPORTANIZE_CONFIG
             if config_path.exists():
                 return Config.from_path(config_path)
@@ -178,6 +179,12 @@ parser.add_argument(
          'imports as per importanize configuration.'
 )
 parser.add_argument(
+    '--list',
+    action='store_true',
+    default=False,
+    help='List all dependencies found in all parsed files'
+)
+parser.add_argument(
     '--version',
     action='store_true',
     default=False,
@@ -215,20 +222,14 @@ def run_importanize_on_text(text, config, args):
     for i in imports:
         groups.add_statement_to_group(i)
 
+    if args.list:
+        return groups
+
     line_numbers = groups.all_line_numbers()
-    first_import_line_number = min(line_numbers) if line_numbers else 0
-
-    for i in config.get('add_imports', []):
-        for j in parse_statements([([i], [first_import_line_number])]):
-            groups.add_statement_to_group(j)
-
-    formatted_imports = groups.formatted(
-        formatter=formatter,
-        length=args.length or config.get('length') or DEFAULT_LENGTH,
-    )
+    first_import_line_number = min(line_numbers) if line_numbers else None
 
     lines = text.splitlines()
-    for line_number in sorted(groups.all_line_numbers(), reverse=True):
+    for line_number in sorted(set(groups.all_line_numbers()), reverse=True):
         if lines:
             lines.pop(line_number)
 
@@ -239,13 +240,22 @@ def run_importanize_on_text(text, config, args):
         else:
             i = None
 
+    for i in config.get('add_imports', []):
+        for j in parse_statements([([i], [first_import_line_number or 0])]):
+            groups.add_statement_to_group(j)
+
+    formatted_imports = groups.formatted(
+        formatter=formatter,
+        length=args.length or config.get('length') or DEFAULT_LENGTH,
+    )
+
     lines = (
-        lines[:first_import_line_number] +
+        lines[:first_import_line_number or 0] +
         formatted_imports.splitlines() +
         ([''] * config.get('after_imports_new_lines', 2)
-         if lines[first_import_line_number:] and formatted_imports
+         if lines[first_import_line_number or 0:] and formatted_imports
          else []) +
-        lines[first_import_line_number:] +
+        lines[first_import_line_number or 0:] +
         ['']
     )
 
@@ -275,6 +285,10 @@ def run(source, config, args, path=None):
             raise
 
         else:
+            if args.list:
+                yield organized
+                return
+
             if args.print and args.header and path:
                 print('=' * len(six.text_type(path)))
                 print(six.text_type(path))
@@ -298,7 +312,7 @@ def run(source, config, args, path=None):
                         msg += ' {}'.format(path)
                     log.info(msg)
 
-            return organized
+            yield organized
 
     elif source.is_file():
         if args.subconfig:
@@ -311,18 +325,19 @@ def run(source, config, args, path=None):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
                        config.get('exclude'))):
-                log.info('Skipping {}'.format(source))
+                log.info('Skipping {} as per {}'.format(source, config))
                 return
 
         text = source.read_text('utf-8')
-        return run(text, config, args, source)
+        for i in run(text, config, args, source):
+            yield i
 
     elif source.is_dir():
         if config.get('exclude'):
             norm = os.path.normpath(os.path.abspath(six.text_type(source)))
             if any(map(lambda i: fnmatch(norm, i),
                        config.get('exclude'))):
-                log.info('Skipping {}'.format(source))
+                log.info('Skipping {} as per {}'.format(source, config))
                 return
 
         files = (
@@ -333,7 +348,8 @@ def run(source, config, args, path=None):
         all_successes = True
         for f in files:
             try:
-                run(f, config, args, f)
+                for i in run(f, config, args, f):
+                    yield i
             except CIFailure:
                 all_successes = False
 
@@ -383,20 +399,35 @@ def main(args=None):
         args.print = True
         args.header = False
 
-    if args.ci:
+    if args.ci or args.list:
         args.print = False
         args.header = False
 
     all_successes = True
+    all_groups = []
 
     for p in to_importanize:
         try:
-            run(p, config, args)
+            all_groups += [i for i in run(p, config, args)]
         except CIFailure:
             all_successes = False
         except Exception:
             log.exception('Error running importanize')
             return 1
+
+    if args.list:
+        groups = ImportGroups()
+        for c in config['groups']:
+            groups.add_group(c)
+        statements = chain(*(i.statements for i in chain(*all_groups)))
+        for s in statements:
+            groups.add_statement_to_group(s)
+        for g in groups:
+            print(g.config['type'])
+            print('-' * len(g.config['type']))
+            for s in g.unique_statements:
+                print(six.text_type(s))
+            print()
 
     return int(not all_successes)
 

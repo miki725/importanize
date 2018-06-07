@@ -238,7 +238,7 @@ class TestRemainderGroup(unittest.TestCase):
 class TestImportGroups(unittest.TestCase):
     def test_init(self):
         groups = ImportGroups()
-        self.assertListEqual(groups.groups, [])
+        self.assertListEqual(groups, [])
 
     def test_all_line_numbers(self):
         groups = ImportGroups()
@@ -248,12 +248,12 @@ class TestImportGroups(unittest.TestCase):
         g = BaseImportGroup()
         g.statements = [mock.MagicMock(line_numbers=[2, 7],
                                        spec=ImportStatement)]
-        groups.groups.append(g)
+        groups.append(g)
 
         g = BaseImportGroup()
         g.statements = [mock.MagicMock(line_numbers=[1, 2],
                                        spec=ImportStatement)]
-        groups.groups.append(g)
+        groups.append(g)
 
         self.assertListEqual(groups.all_line_numbers(), [1, 2, 7])
 
@@ -268,14 +268,14 @@ class TestImportGroups(unittest.TestCase):
 
         groups.add_group({'type': 'stdlib'})
 
-        self.assertEqual(len(groups.groups), 1)
-        self.assertEqual(groups.groups[0].__class__, StdLibGroup)
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0].__class__, StdLibGroup)
 
     def test_add_statement_to_group_one(self):
         groups = ImportGroups()
-        groups.groups = [
+        groups.extend([
             LocalGroup()
-        ]
+        ])
 
         with self.assertRaises(ValueError):
             groups.add_statement_to_group(
@@ -287,27 +287,27 @@ class TestImportGroups(unittest.TestCase):
         )
 
         self.assertListEqual(
-            groups.groups[0].statements,
+            groups[0].statements,
             [ImportStatement([], '.a')]
         )
 
     def test_add_statement_to_group_priority(self):
         groups = ImportGroups()
-        groups.groups = [
+        groups.extend([
             RemainderGroup(),
             LocalGroup(),
-        ]
+        ])
 
         groups.add_statement_to_group(
             ImportStatement([], '.a')
         )
 
         self.assertListEqual(
-            groups.groups[0].statements,
+            groups[0].statements,
             []
         )
         self.assertListEqual(
-            groups.groups[1].statements,
+            groups[1].statements,
             [ImportStatement([], '.a')]
         )
 
@@ -321,10 +321,10 @@ class TestImportGroups(unittest.TestCase):
         artifacts = {'sep': '\r\n'}
 
         groups = ImportGroups(file_artifacts=artifacts)
-        groups.groups = [
+        groups.extend([
             RemainderGroup(file_artifacts=artifacts),
             LocalGroup(file_artifacts=artifacts),
-        ]
+        ])
 
         groups.add_statement_to_group(
             ImportStatement([], '.a', file_artifacts=artifacts)
