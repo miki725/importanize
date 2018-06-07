@@ -406,7 +406,7 @@ class TestMain(unittest.TestCase):
         mock_print.assert_has_calls([
             mock.call('stdlib'),
             mock.call('------'),
-            mock.call('from __future__ import print_function, unicode_literals'),
+            mock.call('from __future__ import unicode_literals'),
             mock.call('import datetime as mydatetime'),
             mock.call(),
             mock.call('sitepackages'),
