@@ -182,7 +182,7 @@ parser.add_argument(
     '--list',
     action='store_true',
     default=False,
-    help='List all dependencies found in all parsed files'
+    help='List all imports found in all parsed files'
 )
 parser.add_argument(
     '--version',
