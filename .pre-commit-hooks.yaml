@@ -5,5 +5,5 @@
   description: Organize python imports
   entry: importanize
   language: python
-  language_version: python3.6
+  language_version: python3
   types: [python]
