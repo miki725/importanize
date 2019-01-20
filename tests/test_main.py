@@ -44,6 +44,7 @@ class TestMain(unittest.TestCase):
         test_data / "output_grouped_single_line.py"
     ).read_text()
     output_inline_grouped = (test_data / "output_inline_grouped.py").read_text()
+    output_lines = (test_data / "output_lines.py").read_text()
 
     input_no_imports = (test_data / "input_no_imports.py").read_text()
     output_no_imports = (test_data / "output_no_imports.py").read_text()
@@ -92,6 +93,21 @@ class TestMain(unittest.TestCase):
         )
 
         self.assertEqual(actual, self.output_inline_grouped)
+
+    def test_run_importanize_on_text_lines(self):
+        actual = run_importanize_on_text(
+            self.input_text,
+            CONFIG,
+            mock.Mock(
+                formatter="lines",
+                ci=False,
+                subconfig=False,
+                length=None,
+                list=False,
+            ),
+        )
+
+        self.assertEqual(actual, self.output_lines)
 
     def test_run_importanize_on_text_ci_failed(self):
         with self.assertRaises(CIFailure):

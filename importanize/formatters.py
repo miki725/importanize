@@ -32,15 +32,15 @@ class GroupedFormatter(Formatter):
     """
     Default formatter used to organize long imports
 
-    Imports are added one by line preceded by 4 spaces, here's a sample output:
+    Imports are added one by line preceded by 4 spaces, here's a sample output::
 
-    from other.package.subpackage.module.submodule import (
-        CONSTANT,
-        Klass,
-        bar,
-        foo,
-        rainbows,
-    )
+        from other.package.subpackage.module.submodule import (
+            CONSTANT,
+            Klass,
+            bar,
+            foo,
+            rainbows,
+        )
     """
 
     name = "grouped"
@@ -74,7 +74,7 @@ class GroupedFormatter(Formatter):
     def format_as_one_liner(self):
         string = self.string
 
-        if len(self.all_comments) == 1:
+        if self.all_comments:
             string += "  # {}".format(
                 " ".join(get_normalized(self.all_comments))
             )
@@ -158,13 +158,13 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
     Alternative formatter used to organize long imports
 
     Imports are added one by line and aligned with the opening parenthesis,
-    here's a sample output:
+    here's a sample output::
 
-    from package.subpackage.module.submodule import (CONSTANT,
-                                                     Klass,
-                                                     bar,
-                                                     foo,
-                                                     rainbows)
+        from package.subpackage.module.submodule import (CONSTANT,
+                                                         Klass,
+                                                         bar,
+                                                         foo,
+                                                         rainbows)
     """
 
     name = "inline-grouped"
@@ -225,6 +225,48 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
 
     def format_wrap_up(self):
         return ""
+
+
+class LinesFormatter(Formatter):
+    """
+    Formatter which outputs each import on an individual line
+
+    Sample output::
+
+        from package.subpackage.module.submodule import CONSTANT
+        from package.subpackage.module.submodule import Klass
+        from package.subpackage.module.submodule import bar
+        from package.subpackage.module.submodule import foo
+        from package.subpackage.module.submodule import rainbows
+    """
+
+    name = "lines"
+
+    def __init__(self, statement, **kwargs):
+        self.kwargs = kwargs
+
+        super(LinesFormatter, self).__init__(statement, **kwargs)
+
+        self.sep = self.statement.file_artifacts.get("sep", "\n")
+        self.statements = self.split_to_statements(self.statement)
+
+    def split_to_statements(self, statement):
+        statements = []
+
+        for leaf in statement.unique_leafs:
+            s = deepcopy(statement)
+            s.leafs = [leaf]
+            statements.append(s)
+
+        return statements or [statement]
+
+    def format(self):
+        return self.sep.join(
+            [
+                GroupedFormatter(statement, **self.kwargs).format_as_one_liner()
+                for statement in self.statements
+            ]
+        )
 
 
 DEFAULT_FORMATTER = GroupedFormatter

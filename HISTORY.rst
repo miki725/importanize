@@ -10,6 +10,13 @@ History
   In addition to ``.importanizerc`` can read config from ``setup.cfg`` and ``importanize.ini``.
 * Added ``--py`` option to only run importanize with specific python version.
   Useful when combined with ``--ci``.
+* Added ``lines`` formatter which formats all imports on individual lines::
+
+      from package.subpackage.module.submodule import CONSTANT
+      from package.subpackage.module.submodule import Klass
+      from package.subpackage.module.submodule import bar
+      from package.subpackage.module.submodule import foo
+      from package.subpackage.module.submodule import rainbows
 
 0.7.0 (2018-06-06)
 ~~~~~~~~~~~~~~~~~~
