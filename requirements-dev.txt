@@ -1,9 +1,14 @@
 -r requirements.txt
+-e .
+black; python_version >= '3.6'
 coverage
+docutils
 flake8
 flake8-bugbear; python_version >= '3'
 mock
 nose
 pdbpp
+pre-commit
+pre-commit-hooks
 rednose
 tox

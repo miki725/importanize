@@ -3,6 +3,14 @@
 History
 -------
 
+0.8.0 (TBD)
+~~~~~~~~~~~~~~~~~~
+
+* Added support for ``.ini`` files configuration style.
+  In addition to ``.importanizerc`` can read config from ``setup.cfg`` and ``importanize.ini``.
+* Added ``--py`` option to only run importanize with specific python version.
+  Useful when combined with ``--ci``.
+
 0.7.0 (2018-06-06)
 ~~~~~~~~~~~~~~~~~~
 

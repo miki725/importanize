@@ -16,7 +16,7 @@ def _get_module_path(module_name):
         # TODO Find better way for py2 and py3 compatibility.
         return imp.find_module(module_name, paths)[1]
     except ImportError:
-        return ''
+        return ""
 
 
 def is_std_lib(module_name):
@@ -27,9 +27,9 @@ def is_std_lib(module_name):
         return True
 
     module_path = _get_module_path(module_name)
-    if 'site-packages' in module_path:
+    if "site-packages" in module_path:
         return False
-    return 'python' in module_path or 'pypy' in module_path
+    return "python" in module_path or "pypy" in module_path
 
 
 def is_site_package(module_name):
@@ -46,12 +46,12 @@ def list_strip(data):
     """
     Return list of stripped strings from given list
     """
-    return list(map(operator.methodcaller('strip'), data))
+    return list(map(operator.methodcaller("strip"), data))
 
 
 def read(path):
-    with open(path, 'rb') as fid:
-        return fid.read().decode('utf-8')
+    with open(path, "rb") as fid:
+        return fid.read().decode("utf-8")
 
 
 def list_split(iterable, split):
@@ -70,13 +70,13 @@ def list_split(iterable, split):
 
 def force_text(data):
     try:
-        return data.decode('utf-8')
+        return data.decode("utf-8")
     except AttributeError:
         return data
 
 
 def force_bytes(data):
     try:
-        return data.encode('utf-8')
+        return data.encode("utf-8")
     except AttributeError:
         return data

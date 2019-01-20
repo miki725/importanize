@@ -34,19 +34,21 @@ clean-all: clean  ## clean everything including tox
 	rm -rf .tox/
 
 lint: clean  ## lint whole library
-	flake8 importanize tests
-	python -m importanize importanize/ tests/ --ci
+	if python -c "import sys; exit(1) if sys.version[:3] < '3.6' else exit(0)"; \
+	then \
+		pre-commit run --all-files ; \
+	fi
 
 test: clean  ## run all tests
 	nosetests ${NOSE_FLAGS} tests/
 
-test-coverage: clean  ## run all tests with coverage
+coverage: clean  ## run all tests with coverage
 	nosetests ${NOSE_FLAGS} ${COVER_FLAGS} tests/
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox
 
-check: lint clean test-coverage   ## check library which runs lint and tests
+check: lint clean coverage   ## check library which runs lint and tests
 
 release: clean  ## push release to pypi
 	python setup.py sdist bdist_wheel upload

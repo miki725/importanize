@@ -10,7 +10,7 @@ from .mixin import ComparatorMixin
 from .utils import list_strip
 
 
-DOTS = re.compile(r'^(\.+)(.*)')
+DOTS = re.compile(r"^(\.+)(.*)")
 
 
 @six.python_2_unicode_compatible
@@ -27,8 +27,8 @@ class ImportLeaf(ComparatorMixin):
     def __init__(self, name, comments=None):
         as_name = None
 
-        if ' as ' in name:
-            name, as_name = list_strip(name.split(' as '))
+        if " as " in name:
+            name, as_name = list_strip(name.split(" as "))
 
         if name == as_name:
             as_name = None
@@ -40,42 +40,41 @@ class ImportLeaf(ComparatorMixin):
     def as_string(self):
         string = self.name
         if self.as_name:
-            string += ' as {}'.format(self.as_name)
+            string += " as {}".format(self.as_name)
         return string
 
     def __str__(self):
         return self.as_string()
 
     def __repr__(self):
-        return str('<{}.{} object - "{}">'
-                   ''.format(self.__class__.__module__,
-                             self.__class__.__name__,
-                             self.as_string()))
+        return str(
+            '<{}.{} object - "{}">'
+            "".format(
+                self.__class__.__module__,
+                self.__class__.__name__,
+                self.as_string(),
+            )
+        )
 
     def __hash__(self):
         return hash(self.as_string())
 
     def __eq__(self, other):
-        return all([self.name == other.name,
-                    self.as_name == other.as_name])
+        return all([self.name == other.name, self.as_name == other.as_name])
 
     def __gt__(self, other):
         def _type(obj):
             if obj.name.isupper():
-                return 'upper'
+                return "upper"
             elif obj.name.islower():
-                return 'lower'
+                return "lower"
             else:
-                return 'mixed'
+                return "mixed"
 
         self_type = _type(self)
         other_type = _type(other)
 
-        priority = (
-            'upper',
-            'mixed',
-            'lower',
-        )
+        priority = ("upper", "mixed", "lower")
 
         if self_type != other_type:
             return priority.index(self_type) > priority.index(other_type)
@@ -103,12 +102,11 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None,
-                 comments=None, **kwargs):
+    def __init__(self, line_numbers, stem, leafs=None, comments=None, **kwargs):
         as_name = None
 
-        if ' as ' in stem:
-            stem, as_name = list_strip(stem.split(' as '))
+        if " as " in stem:
+            stem, as_name = list_strip(stem.split(" as "))
             if leafs:
                 as_name = None
 
@@ -120,13 +118,13 @@ class ImportStatement(ComparatorMixin):
         self.as_name = as_name
         self.leafs = leafs or []
         self.comments = comments or []
-        self.file_artifacts = kwargs.get('file_artifacts', {})
+        self.file_artifacts = kwargs.get("file_artifacts", {})
 
     @property
     def full_stem(self):
         stem = self.stem
         if self.as_name:
-            stem += ' as {}'.format(self.as_name)
+            stem += " as {}".format(self.as_name)
         return stem
 
     @property
@@ -141,17 +139,17 @@ class ImportStatement(ComparatorMixin):
         determine to which import group this import
         belongs to.
         """
-        return self.stem.split('.', 1)[0]
+        return self.stem.split(".", 1)[0]
 
     def as_string(self):
         if not self.leafs:
-            return 'import {}'.format(self.full_stem)
+            return "import {}".format(self.full_stem)
         else:
-            return (
-                'from {} import {}'
-                ''.format(self.stem,
-                          ', '.join(map(operator.methodcaller('as_string'),
-                                        self.unique_leafs)))
+            return "from {} import {}" "".format(
+                self.stem,
+                ", ".join(
+                    map(operator.methodcaller("as_string"), self.unique_leafs)
+                ),
             )
 
     def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
@@ -164,10 +162,14 @@ class ImportStatement(ComparatorMixin):
         return self.as_string()
 
     def __repr__(self):
-        return str('<{}.{} object - "{}">'
-                   ''.format(self.__class__.__module__,
-                             self.__class__.__name__,
-                             self.as_string()))
+        return str(
+            '<{}.{} object - "{}">'
+            "".format(
+                self.__class__.__module__,
+                self.__class__.__name__,
+                self.as_string(),
+            )
+        )
 
     def __add__(self, other):
         """
@@ -183,9 +185,13 @@ class ImportStatement(ComparatorMixin):
         )
 
     def __eq__(self, other):
-        return all((self.stem == other.stem,
-                    self.as_name == other.as_name,
-                    self.unique_leafs == other.unique_leafs))
+        return all(
+            (
+                self.stem == other.stem,
+                self.as_name == other.as_name,
+                self.unique_leafs == other.unique_leafs,
+            )
+        )
 
     def __gt__(self, other):
         """
@@ -202,14 +208,13 @@ class ImportStatement(ComparatorMixin):
             return sorted(self.leafs)[0] > sorted(other.leafs)[0]
 
         # check for __future__
-        if self.root_module == '__future__':
+        if self.root_module == "__future__":
             return False
-        elif other.root_module == '__future__':
+        elif other.root_module == "__future__":
             return True
 
         # local imports
-        if all([self.stem.startswith('.'),
-                other.stem.startswith('.')]):
+        if all([self.stem.startswith("."), other.stem.startswith(".")]):
             # double dot import should be ahead of single dot
             # so only make comparison when different number of dots
             self_local = DOTS.findall(self.stem)[0][0]
@@ -218,15 +223,18 @@ class ImportStatement(ComparatorMixin):
                 return len(self_local) < len(other_local)
 
         # only one is local import
-        if any([not self.stem.startswith('.') and other.stem.startswith('.'),
-                self.stem.startswith('.') and not other.stem.startswith('.')]):
-            return self.stem.startswith('.')
+        if any(
+            [
+                not self.stem.startswith(".") and other.stem.startswith("."),
+                self.stem.startswith(".") and not other.stem.startswith("."),
+            ]
+        ):
+            return self.stem.startswith(".")
 
         # check for ``import ..`` vs ``from .. import ..``
         self_len = len(self.leafs)
         other_len = len(other.leafs)
-        if any([not self_len and other_len,
-                self_len and not other_len]):
+        if any([not self_len and other_len, self_len and not other_len]):
             return self_len > other_len
 
         # alphabetical sort

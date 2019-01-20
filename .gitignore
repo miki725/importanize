@@ -45,3 +45,6 @@ docs/_build
 # IDEs
 /.idea
 .venv
+
+# system
+.DS_Store
