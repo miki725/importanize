@@ -175,6 +175,14 @@ Configuration Options
                                                            foo,
                                                            rainbows)
 
+    * ``lines``::
+
+          from package.subpackage.module.submodule import CONSTANT
+          from package.subpackage.module.submodule import Klass
+          from package.subpackage.module.submodule import bar
+          from package.subpackage.module.submodule import foo
+          from package.subpackage.module.submodule import rainbows
+
     Can be specified in CLI with ``-f`` or ``--formatter`` parameter::
 
         ❯❯❯ importanize --formatter=grouped
