@@ -2,9 +2,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 
-__author__ = 'Miroslav Shubernetskiy'
-__email__ = 'miroslav@miki725.com'
-__version__ = '0.7.0'
+__author__ = "Miroslav Shubernetskiy"
+__email__ = "miroslav@miki725.com"
+__version__ = "0.8.0"
 __description__ = (
-    'Utility for organizing Python imports using PEP8 or custom rules'
+    "Utility for organizing Python imports using PEP8 or custom rules"
 )

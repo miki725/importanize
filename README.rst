@@ -21,7 +21,7 @@ Installing
 
 You can install ``importanize`` using pip::
 
-    $ pip install importanize
+    ❯❯❯ pip install importanize
 
 Why?
 ----
@@ -39,174 +39,29 @@ This is where ``importanize`` comes in. It allows to organize
 Python imports using PEP8 or your custom rules. Read on for
 more information.
 
-Using
------
-
-Using ``importanize`` is super easy. Just run::
-
-    $ importanize file_to_organize.py
-
-That will re-format all imports in the given file.
-As part of the default configuration, ``importanize`` will try
-it's best to organize imports to follow PEP8 however that is a rather
-challenging task, since it is difficult to determine all import groups
-as suggested by `PEP8 <http://legacy.python.org/dev/peps/pep-0008/#imports>`_:
-
-1) standard library imports
-2) related third party imports
-3) local application/library specific imports
-
-To help ``importanize`` distinguish between different import groups in most
-cases it would be recommended to use custom config file::
-
-    $ importanize file_to_organize.py config.json
-
-Config file is simply a ``json`` file like this::
-
-    {
-        "formatter": "grouped",
-        "groups": [
-            {
-                "type": "stdlib"
-            },
-            {
-                "type": "sitepackages"
-            },
-            {
-                "type": "remainder"
-            },
-            {
-                "type": "packages",
-                "packages": [
-                    "my_favorite_package"
-                ]
-            },
-            {
-                "type": "local"
-            }
-        ]
-    }
-
-Default config looks something like::
-
-    {
-        "groups": [
-            {
-                "type": "stdlib"
-            },
-            {
-                "type": "sitepackages"
-            },
-            {
-                "type": "remainder"
-            },
-            {
-                "type": "local"
-            }
-        ]
-    }
-
-Currently the only required key is ``"groups"`` which must be an array
-of group definitions. ``importanize`` will use these group definitions
-to organize imports and will output import groups in the same order
-as defined in the config file. These are the supported group types:
-
-* ``stdlib`` - standard library imports including ``__future__``
-* ``sitepackages`` - imports coming from the ``site-packages`` directory
-* ``local`` - local imports which start with ``"."``. for example
-  ``from .foo import bar``
-* ``packages`` - if this group is specified, additional key ``packages``
-  is required within import group definition which should list
-  all Python packages (root level) which should be included in that group::
-
-      {
-          "type": "packages",
-          "packages": ["foo", "bar"]
-      }
-
-* ``remaining`` - all remaining imports which did not satisfy requirements
-  of all other groups will go to this group.
-
-You can use the config file by specifying it in the ``importanize``
-command as shown above however you can also create an ``.importanizerc``
-file and commit that to your repository. As a matter of fact,
-you can see the
-`.importanizerc <https://github.com/miki725/importanize/blob/master/.importanizerc>`_
-config file used for the importanize repository itself.
-Additionally multiple configurations are supported within a single repository
-via sub-configurations. Simply place ``.importanizerc`` within a sub-folder
-and all imports will be reconfigured under that folder.
-
-You can also choose the formatter used to organize long multiline imports.
-Currently, there are two formatters available:
-
-* ``grouped`` (default)
-* ``inline-grouped``
-
-It can be set using the formatter config value, or the formatter option, for
-example::
-
-    $ importanize --formatter=inline-group --print tests/test_data/input.txt
-
-
-Finally, you can see all other available ``importanize`` cli options::
-
-    $ importanize --help
-
-Not all configurations can be provided via cli.
-Additional available configurations in configuration file:
-
-* ``length`` - line length after which the formatter will split imports
-* ``exclude`` - list of glob patterns of files which should be excluded from organizing.
-  For example::
-
-        "exclude": [
-            "path/to/file",
-            "path/to/files/ignore_*.py"
-        ]
-
-* ``after_imports_new_lines`` - number of lines to be included after imports
-* ``add_imports`` - list of imports to add to every file.
-  For example::
-
-        "add_imports": [
-            "from __future__ import absolute_import, print_function, unicode_literals"
-        ]
-
-It integrates with pre-commit_. You can use the following config
-
-::
-
-    repos:
-    - repo: https://github.com/miki725/importanize/
-      rev: 'master'
-      hooks:
-      - id: importanize
-        args: [--verbose]
-
 Example
 -------
 
-Here is a before and after using the default formatter(on hypothetical file):
-
 Before
-~~~~~~
+++++++
 
 ::
 
+    ❯❯❯ cat tests/test_data/input_readme.py
     from __future__ import unicode_literals, print_function
     import os.path as ospath
-    import datetime
     from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+    import datetime
     from .module import foo, bar
     from ..othermodule import rainbows
 
 After
-~~~~~
++++++
 
 ::
 
-    from __future__ import print_function, unicode_literals
+    ❯❯❯ cat tests/test_data/input_readme.py | importanize
+    from __future__ import absolute_import, print_function, unicode_literals
     import datetime
     from os import path as ospath
 
@@ -221,7 +76,7 @@ After
     from ..othermodule import rainbows
     from .module import bar, foo
 
-Here is what ``importanize`` did:
+``importanize`` did:
 
 * alphabetical sort, even inside import line (look at ``__future__``)
 * normalized ``import .. as ..`` into ``from .. import .. as ..``
@@ -229,17 +84,220 @@ Here is what ``importanize`` did:
   into multiple lines
 * reordered some imports (e.g. local imports ``..`` should be before ``.``)
 
+Using
+-----
+
+Using ``importanize`` is super easy. Just run::
+
+    ❯❯❯ importanize file_to_organize.py
+
+That will re-format all imports in the given file.
+As part of the default configuration, ``importanize`` will try
+it's best to organize imports to follow PEP8 however that is a rather
+challenging task, since it is difficult to determine all import groups
+as suggested by `PEP8 <http://legacy.python.org/dev/peps/pep-0008/#imports>`_:
+
+1) standard library imports
+2) related third party imports
+3) local application/library specific imports
+
+Configuration
+-------------
+
+To help ``importanize`` distinguish between different import groups in most
+cases it would be recommended to use custom config file::
+
+    ❯❯❯ importanize file_to_organize.py --config=config.json
+
+Alternatively ``importanize`` attempts to find configuration in couple of
+default files:
+
+* ``.importanizerc``
+* ``setup.cfg``
+* ``importanize.ini``
+
+As a matter of fact you can see the config file for the importanize
+repository itself at
+`setup.cfg <https://github.com/miki725/importanize/blob/master/setup.cfg>`_.
+
+Additionally multiple configurations are supported within a single repository
+via sub-configurations.
+Simply place any of supported config files ``.importanizerc``, ``setup.cfg``
+or ``importanize.ini`` within a sub-folder and all imports will be
+reconfigured under that folder.
+
+Configuration Options
++++++++++++++++++++++
+
+:``groups``:
+    List of import group definition.
+    ``importanize`` will use these group definitions
+    to organize imports and will output import groups in the same order
+    as defined. Supported group types are:
+
+    * ``stdlib`` - standard library imports including ``__future__``
+    * ``sitepackages`` - imports coming from the ``site-packages`` directory
+    * ``local`` - local imports which start with ``"."``.
+      for example ``from .foo import bar``
+    * ``packages`` - if this group is specified, additional key ``packages``
+      is required within import group definition which should list
+      all Python packages (root level) which should be included in that group::
+
+          {
+              "type": "packages",
+              "packages": ["foo", "bar"]
+          }
+
+    * ``remaining`` - all remaining imports which did not satisfy requirements
+      of all other groups will go to this group.
+
+    Can only be specified in configuration file.
+
+:``formatter``:
+    Select how to format long multiline imports.
+    Supported formatters:
+
+    * ``grouped`` (default)::
+
+          from package.subpackage.module.submodule import (
+              CONSTANT,
+              Klass,
+              bar,
+              foo,
+              rainbows,
+          )
+
+    * ``inline-grouped``::
+
+          from package.subpackage.module.submodule import (CONSTANT,
+                                                           Klass,
+                                                           bar,
+                                                           foo,
+                                                           rainbows)
+
+    Can be specified in CLI with ``-f`` or ``--formatter`` parameter::
+
+        ❯❯❯ importanize --formatter=grouped
+
+:``length``:
+    Line length after which the formatter will split imports.
+
+    Can be specified in CLI with ``-l`` or ``--length`` parameter::
+
+        ❯❯❯ importanize --length=120
+
+:``exclude``:
+    List of glob patterns of files which should be excluded from organizing::
+
+        "exclude": [
+            "path/to/file",
+            "path/to/files/ignore_*.py"
+        ]
+
+    Can only be specified in configuration file.
+
+:``after_imports_new_lines``:
+    Number of lines to be included after imports.
+
+    Can only be specified in configuration file.
+
+:``add_imports``:
+    List of imports to add to every file::
+
+        "add_imports": [
+            "from __future__ import absolute_import, print_function, unicode_literals"
+        ]
+
+    Can only be specified in configuration file.
+
+To view all additional run-time options you can use ``--help`` parameter::
+
+    ❯❯❯ importanize --help
+
+Default Configuration
++++++++++++++++++++++
+
+As mentioned previously default configuration attempts to mimic PEP8.
+Specific configuration is::
+
+    [importanize]
+    groups=
+        stdlib
+        sitepackages
+        remainder
+        local
+
+Configuration Styles
+++++++++++++++++++++
+
+Configuration file can either be ``json`` or ``ini`` file.
+The following configurations are identical::
+
+    {
+        "formatter": "grouped",
+        "groups": [
+            {"type": "stdlib"},
+            {"type": "sitepackages"},
+            {"type": "remainder"},
+            {"type": "packages",
+             "packages": ["my_favorite_package"]},
+            {"type": "local"}
+        ]
+    }
+
+and::
+
+    [importanize]
+    formatter=grouped
+    groups=
+        stdlib
+        sitepackages
+        remainder
+        mypackages
+        local
+
+    [importanize:mypackages]
+    packages:
+        my_favorite_package
+
+CI Mode
+-------
+
+Sometimes it is useful to check if imports are already organized in a file::
+
+    ❯❯❯ importanize --ci
+
+In addition since some imports change order between Python 2/3 due to different
+stdlibs, ``--py`` can be used to enable ``importanize`` only for specific
+Python versions::
+
+    ❯❯❯ importanize --ci --py=3
+
+Pre-Commit
+----------
+
+Importanize integrates with pre-commit_. You can use the following config
+
+::
+
+    repos:
+    - repo: https://github.com/miki725/importanize/
+      rev: 'master'
+      hooks:
+      - id: importanize
+        args: [--verbose]
+
 Testing
 -------
 
 To run the tests you need to install testing requirements first::
 
-    $ make install
+    ❯❯❯ make install
 
 Then to run tests, you can use ``nosetests`` or simply use Makefile command::
 
-    $ nosetests -sv
+    ❯❯❯ nosetests -sv
     # or
-    $ make test
+    ❯❯❯ make test
 
 .. _pre-commit: https://pre-commit.com/
