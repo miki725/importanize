@@ -2,19 +2,45 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import operator
 import re
+from functools import total_ordering
 
 import six
 
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
-from .mixin import ComparatorMixin
-from .utils import list_strip
 
 
 DOTS = re.compile(r"^(\.+)(.*)")
 
 
+class BaseImport(object):
+    def __init__(self, pre_comments=None, inline_comments=None):
+        self.pre_comments = pre_comments or []
+        self.inline_comments = inline_comments or []
+
+    @property
+    def comments(self):
+        return self.pre_comments + self.inline_comments
+
+    def __repr__(self):
+        return str(
+            "<{} {}>"
+            "".format(
+                self.__class__.__name__,
+                (
+                    "\n    "
+                    + ",\n    ".join(
+                        "{}={!r}".format(k, v) for k, v in vars(self).items()
+                    )
+                    if self.strict
+                    else repr(self.as_string())
+                ),
+            )
+        )
+
+
+@total_ordering
 @six.python_2_unicode_compatible
-class ImportLeaf(ComparatorMixin):
+class ImportLeaf(BaseImport):
     """
     Data-structure about each import statement leaf-module.
 
@@ -24,18 +50,15 @@ class ImportLeaf(ComparatorMixin):
     Also aliased modules are supported (e.g. using ``as``).
     """
 
-    def __init__(self, name, comments=None):
-        as_name = None
-
-        if " as " in name:
-            name, as_name = list_strip(name.split(" as "))
-
+    def __init__(self, name, as_name=None, **kwargs):
         if name == as_name:
             as_name = None
 
         self.name = name
         self.as_name = as_name
-        self.comments = comments or []
+        self.strict = kwargs.pop("strict", False)
+
+        super(ImportLeaf, self).__init__(**kwargs)
 
     def as_string(self):
         string = self.name
@@ -46,21 +69,17 @@ class ImportLeaf(ComparatorMixin):
     def __str__(self):
         return self.as_string()
 
-    def __repr__(self):
-        return str(
-            '<{}.{} object - "{}">'
-            "".format(
-                self.__class__.__module__,
-                self.__class__.__name__,
-                self.as_string(),
-            )
-        )
-
     def __hash__(self):
         return hash(self.as_string())
 
     def __eq__(self, other):
-        return all([self.name == other.name, self.as_name == other.as_name])
+        params = [self.name == other.name, self.as_name == other.as_name]
+        if self.strict:
+            params += [
+                self.pre_comments == other.pre_comments,
+                self.inline_comments == other.inline_comments,
+            ]
+        return all(params)
 
     def __gt__(self, other):
         def _type(obj):
@@ -82,8 +101,9 @@ class ImportLeaf(ComparatorMixin):
         return self.name > other.name
 
 
+@total_ordering
 @six.python_2_unicode_compatible
-class ImportStatement(ComparatorMixin):
+class ImportStatement(BaseImport):
     """
     Data-structure to store information about
     each import statement.
@@ -102,23 +122,20 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None, comments=None, **kwargs):
-        as_name = None
-
-        if " as " in stem:
-            stem, as_name = list_strip(stem.split(" as "))
-            if leafs:
-                as_name = None
-
-        if stem == as_name:
+    def __init__(
+        self, stem, as_name=None, leafs=None, line_numbers=None, **kwargs
+    ):
+        if leafs or stem == as_name:
             as_name = None
 
-        self.line_numbers = line_numbers
+        self.line_numbers = line_numbers or []
         self.stem = stem
         self.as_name = as_name
         self.leafs = leafs or []
-        self.comments = comments or []
-        self.file_artifacts = kwargs.get("file_artifacts", {})
+        self.file_artifacts = kwargs.pop("file_artifacts", {})
+        self.strict = kwargs.pop("strict", False)
+
+        super(ImportStatement, self).__init__(**kwargs)
 
     @property
     def full_stem(self):
@@ -161,37 +178,34 @@ class ImportStatement(ComparatorMixin):
     def __str__(self):
         return self.as_string()
 
-    def __repr__(self):
-        return str(
-            '<{}.{} object - "{}">'
-            "".format(
-                self.__class__.__module__,
-                self.__class__.__name__,
-                self.as_string(),
-            )
-        )
-
     def __add__(self, other):
         """
         Combined two import statements into a single statement.
         This requires both import statements to have the same stem.
         """
         assert self.stem == other.stem
+        assert self.as_name == other.as_name
 
         return ImportStatement(
             line_numbers=self.line_numbers + other.line_numbers,
             stem=self.stem,
             leafs=self.leafs + other.leafs,
+            pre_comments=self.pre_comments + other.pre_comments,
+            inline_comments=self.inline_comments + other.inline_comments,
         )
 
     def __eq__(self, other):
-        return all(
-            (
-                self.stem == other.stem,
-                self.as_name == other.as_name,
-                self.unique_leafs == other.unique_leafs,
-            )
-        )
+        params = [
+            self.stem == other.stem,
+            self.as_name == other.as_name,
+            self.unique_leafs == other.unique_leafs,
+        ]
+        if self.strict:
+            params += [
+                self.pre_comments == other.pre_comments,
+                self.inline_comments == other.inline_comments,
+            ]
+        return all(params)
 
     def __gt__(self, other):
         """

@@ -1,242 +1,239 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import unittest
+from functools import partial
 
-import six
-
-from importanize.parser import (
-    Token,
-    find_imports_from_lines,
-    get_text_artifacts,
-    parse_statements,
-    tokenize_import_lines,
-)
+from importanize.parser import Comment, get_text_artifacts, parse_imports
+from importanize.statements import ImportLeaf, ImportStatement
 
 
-TESTING_MODULE = "importanize.parser"
+parse_imports = partial(parse_imports, strict=True)
+ImportStatement = partial(ImportStatement, strict=True)
+ImportLeaf = partial(ImportLeaf, strict=True)
 
 
-class TestToken(unittest.TestCase):
-    def test_is_comment(self):
-        self.assertTrue(Token("# noqa").is_comment)
-        self.assertFalse(Token("foo").is_comment)
-
-    def test_normalized(self):
-        self.assertEqual(Token("foo").normalized, "foo")
-        self.assertEqual(Token("#noqa").normalized, "noqa")
-        self.assertEqual(Token("# noqa").normalized, "noqa")
-        self.assertEqual(Token("#  noqa").normalized, " noqa")
+def test_comment():
+    assert Comment("# foo") == "foo"
+    assert Comment("#foo") == "foo"
+    assert Comment("foo") == "foo"
 
 
-class TestParsing(unittest.TestCase):
-    def test_get_text_artifacts(self):
-        actual = get_text_artifacts("Hello\nWorld\n")
-        self.assertDictEqual(actual, {"sep": "\n"})
+def test_get_text_artifacts():
+    assert get_text_artifacts("Hello\nWorld\n")["sep"] == "\n"
+    assert get_text_artifacts("Hello\r\nWorld\n")["sep"] == "\r\n"
+    assert get_text_artifacts("Hello")["sep"] == "\n"
 
-        actual = get_text_artifacts("Hello\r\nWorld\n")
-        self.assertDictEqual(actual, {"sep": "\r\n"})
 
-        actual = get_text_artifacts("Hello")
-        self.assertDictEqual(actual, {"sep": "\n"})
+def test_parse_imports_no_imports():
+    assert list(parse_imports("''' docstring here '''")) == []
 
-    def _test_import_parsing(self, lines, expected):
-        self.assertListEqual(
-            list(find_imports_from_lines(enumerate(iter(lines)))),
-            [expected] if expected else [],
-        )
 
-    def test_parsing(self):
-        self._test_import_parsing(("import a",), (["import a"], [0]))
-        self._test_import_parsing(("import a, b",), (["import a, b"], [0]))
-        self._test_import_parsing(
-            ("import a, b as c",), (["import a, b as c"], [0])
-        )
-        self._test_import_parsing(
-            ("from a import b",), (["from a import b"], [0])
-        )
-        self._test_import_parsing(
-            ("from a.b import c",), (["from a.b import c"], [0])
-        )
-        self._test_import_parsing(
-            ("from a.b import c,\\", "    d"),
-            (["from a.b import c,\\", "    d"], [0, 1]),
-        )
-        self._test_import_parsing(
-            ("from a.b import c, \\", "    d"),
-            (["from a.b import c, \\", "    d"], [0, 1]),
-        )
-        self._test_import_parsing(
-            ("from a.b \\", "    import c"),
-            (["from a.b \\", "    import c"], [0, 1]),
-        )
-        self._test_import_parsing(
-            ("import a.b \\", "    as c"),
-            (["import a.b \\", "    as c"], [0, 1]),
-        )
-        self._test_import_parsing(
-            ("from a.b import \\", "    c,\\", "    d,"),
-            (["from a.b import \\", "    c,\\", "    d,"], [0, 1, 2]),
-        )
-        self._test_import_parsing(
-            ("from a.b import (c,", "    d)"),
-            (["from a.b import (c,", "    d)"], [0, 1]),
-        )
-        self._test_import_parsing(
-            ("from a.b import (c, ", "    d", ")"),
-            (["from a.b import (c, ", "    d", ")"], [0, 1, 2]),
-        )
-        self._test_import_parsing(
-            (
-                '"""',
-                "from this shall not import",
-                '"""',
-                "from a.b import (",
-                "    c,",
-                "    d,",
-                ")",
-                "foo",
-            ),
-            (["from a.b import (", "    c,", "    d,", ")"], [3, 4, 5, 6]),
-        )
-        self._test_import_parsing(
-            (
-                '""" from this shall not import """',
-                "from a.b import (",
-                "    c,",
-                "    d,",
-                ")",
-                "foo",
-            ),
-            (["from a.b import (", "    c,", "    d,", ")"], [1, 2, 3, 4]),
-        )
-        self._test_import_parsing(
-            (
-                "foo",
-                "from a.b import \\",
-                "    (c, d,",
-                "     e, f,",
-                "     g, h)",
-                "bar",
-            ),
-            (
-                [
-                    "from a.b import \\",
-                    "    (c, d,",
-                    "     e, f,",
-                    "     g, h)",
-                ],
-                [1, 2, 3, 4],
-            ),
-        )
-        self._test_import_parsing(
-            ('"""', "from this shall not import"), tuple()
-        )
-        self._test_import_parsing(
-            ('"""', "from this shall not import" '"""'), tuple()
-        )
-        self._test_import_parsing(
-            ('""" from this shall not import """'), tuple()
-        )
+def test_parse_imports_import_to_from_import():
+    assert list(parse_imports("import .a"))[0].as_string() == "from . import a"
+    assert (
+        list(parse_imports("import ..a"))[0].as_string() == "from .. import a"
+    )
+    assert (
+        list(parse_imports("import .a.b"))[0].as_string() == "from .a import b"
+    )
+    assert (
+        list(parse_imports("import ..a.b"))[0].as_string()
+        == "from ..a import b"
+    )
+    assert (
+        list(parse_imports("import .a.b.c.d"))[0].as_string()
+        == "from .a.b.c import d"
+    )
+    assert (
+        list(parse_imports("import ..a.b.c.d"))[0].as_string()
+        == "from ..a.b.c import d"
+    )
+    assert (
+        list(parse_imports("import .a.b as c"))[0].as_string()
+        == "from .a import b as c"
+    )
+    assert (
+        list(parse_imports("import ..a.b as c"))[0].as_string()
+        == "from ..a import b as c"
+    )
+    assert (
+        list(parse_imports("import .a.b.c.d as e"))[0].as_string()
+        == "from .a.b.c import d as e"
+    )
+    assert (
+        list(parse_imports("import ..a.b.c.d as e"))[0].as_string()
+        == "from ..a.b.c import d as e"
+    )
+    assert (
+        list(parse_imports("import a.b as b"))[0].as_string()
+        == "from a import b"
+    )
+    assert (
+        list(parse_imports("import a.b as c"))[0].as_string()
+        == "from a import b as c"
+    )
+    assert (
+        list(parse_imports("import a.b.c.d as e"))[0].as_string()
+        == "from a.b.c import d as e"
+    )
 
-    def test_tokenize_import_lines(self):
-        data = (
-            (["import a.\\", "    b"], ["import", "a.b"]),
-            (
-                [
-                    "from __future__ import unicode_literals,\\",
-                    "    print_function",
-                ],
-                [
-                    "from",
-                    "__future__",
-                    "import",
-                    "unicode_literals",
-                    ",",
-                    "print_function",
-                ],
-            ),
-            (
-                ["from a import b,  # noqa", "    c"],
-                ["from", "a", "import", "b", "# noqa", ",", "c"],
-            ),
-            (["import a,\\", "    b"], ["import", "a", ",", "b"]),
-            (["from a import\\", "    b"], ["from", "a", "import", "b"]),
-            (["from a\\", "    import b"], ["from", "a", "import", "b"]),
-            (["import a\\", "    as b"], ["import", "a", "as", "b"]),
-            (
-                ["from something import foo, bar  # noqa"],
-                ["from", "something", "import", "foo", ",", "bar", "# noqa"],
-            ),
-        )
-        for _data, expected in data:
-            self.assertListEqual(tokenize_import_lines(iter(_data)), expected)
 
-    def _test_import_string_matches(self, string, expected):
-        data = string if isinstance(string, (list, tuple)) else [string]
-        self.assertEqual(
-            six.text_type(next(parse_statements([(data, [1])]))), expected
-        )
+def test_parse_imports_import():
+    assert list(parse_imports("import a")) == [ImportStatement("a")]
+    assert list(parse_imports("import a.b")) == [ImportStatement("a.b")]
+    assert list(parse_imports("import a.\\\nb")) == [ImportStatement("a.b")]
+    assert list(parse_imports("import a as a")) == [ImportStatement("a")]
+    assert list(parse_imports("import a as b")) == [ImportStatement("a", "b")]
+    assert list(parse_imports("import a\\\nas b")) == [
+        ImportStatement("a", "b")
+    ]
+    assert list(parse_imports("import a, b")) == [
+        ImportStatement("a"),
+        ImportStatement("b"),
+    ]
+    assert list(parse_imports("import a,\\\nb")) == [
+        ImportStatement("a"),
+        ImportStatement("b"),
+    ]
+    assert list(parse_imports("import a, b as c")) == [
+        ImportStatement("a"),
+        ImportStatement("b", "c"),
+    ]
 
-    def test_import_statements(self):
-        """
-        Test that ``import ..`` statements are correctly parsed
-        and that string output of ImportStatement matches
-        expected string.
+    assert list(parse_imports("import a #noqa")) == [
+        ImportStatement("a", inline_comments=["noqa"])
+    ]
+    assert list(parse_imports("#noqa\nimport a")) == [
+        ImportStatement("a", pre_comments=["noqa"])
+    ]
+    assert list(parse_imports("'''docstring'''\n#noqa\nimport a")) == [
+        ImportStatement("a", pre_comments=["noqa"])
+    ]
+    assert list(parse_imports("#comment\n#noqa\nimport a")) == [
+        ImportStatement("a", pre_comments=["comment", "noqa"])
+    ]
+    assert list(parse_imports("#hello\nimport a # noqa")) == [
+        ImportStatement("a", pre_comments=["hello"], inline_comments=["noqa"])
+    ]
+    assert list(parse_imports("#hello\nimport a # comment")) == [
+        ImportStatement(
+            "a", pre_comments=["hello"], inline_comments=["comment"]
+        )
+    ]
 
-        This test is not strictly a unittest.
-        """
-        self._test_import_string_matches("import a", "import a")
-        self._test_import_string_matches("import a as a", "import a")
-        self._test_import_string_matches("import a as b", "import a as b")
-        self._test_import_string_matches("import a.b", "import a.b")
-        self._test_import_string_matches("import a.b as b", "from a import b")
-        self._test_import_string_matches(
-            "import a.b as c", "from a import b as c"
-        )
-        self._test_import_string_matches(
-            "import a.b.c as d", "from a.b import c as d"
-        )
-        self._test_import_string_matches("import a.b.c", "import a.b.c")
-        self._test_import_string_matches("import .a", "from . import a")
-        self._test_import_string_matches("import .a.b", "from .a import b")
-        self._test_import_string_matches("import ..a", "from .. import a")
-        self._test_import_string_matches("import ..a.b", "from ..a import b")
 
-    def test_from_statements(self):
-        """
-        Test that ``from .. import ..`` statements are correctly parsed
-        and that string output of ImportStatement matches
-        expected string.
+def test_parse_imports_from_import():
+    assert list(parse_imports("from .a import b")) == [
+        ImportStatement(".a", leafs=[ImportLeaf("b")])
+    ]
+    assert list(parse_imports("from a import b")) == [
+        ImportStatement("a", leafs=[ImportLeaf("b")])
+    ]
+    assert list(parse_imports("from a.b import c")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c")])
+    ]
+    assert list(parse_imports("from a.b import c as d")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c", "d")])
+    ]
+    assert list(parse_imports("from a.b import c,\\\nd")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
+    assert list(parse_imports("from a.b\\\nimport c")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c")])
+    ]
+    assert list(parse_imports("from a.b import (c)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c")])
+    ]
+    assert list(parse_imports("from a.b import (c, d)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
+    assert list(parse_imports("from a.b import (c, d,)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
+    assert list(parse_imports("from a.b import (c, d as d)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
+    assert list(parse_imports("from a.b import (c, d as e)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d", "e")])
+    ]
+    assert list(parse_imports("from a.b import \\\n(c, d,)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
+    assert list(parse_imports("from a.b import (\nc,\nd,\n)")) == [
+        ImportStatement("a.b", leafs=[ImportLeaf("c"), ImportLeaf("d")])
+    ]
 
-        This test is not strictly a unittest.
-        """
-        self._test_import_string_matches("from a import b", "from a import b")
-        self._test_import_string_matches(
-            "from a.b import c", "from a.b import c"
+    assert list(parse_imports("#comment\nfrom a.b import c")) == [
+        ImportStatement(
+            "a.b", leafs=[ImportLeaf("c")], pre_comments=["comment"]
         )
-        self._test_import_string_matches(
-            "from a.b import c as d", "from a.b import c as d"
+    ]
+    assert list(parse_imports("from a.b import c # noqa")) == [
+        ImportStatement(
+            "a.b", leafs=[ImportLeaf("c")], inline_comments=["noqa"]
         )
-        self._test_import_string_matches(
-            "from a import b,d, c", "from a import b, c, d"
+    ]
+    assert list(parse_imports("#comment\nfrom a.b import c # noqa")) == [
+        ImportStatement(
+            "a.b",
+            leafs=[ImportLeaf("c")],
+            pre_comments=["comment"],
+            inline_comments=["noqa"],
         )
-        self._test_import_string_matches(
-            "from a import b,d as e, c", "from a import b, c, d as e"
+    ]
+    assert list(
+        parse_imports("#comment\nfrom a.b import c # noqa comment")
+    ) == [
+        ImportStatement(
+            "a.b",
+            leafs=[ImportLeaf("c")],
+            pre_comments=["comment"],
+            inline_comments=["noqa comment"],
         )
-        self._test_import_string_matches(
-            "from a import b as e,d as g, c as f",
-            "from a import b as e, c as f, d as g",
+    ]
+    assert list(parse_imports("from a.b import c # comment")) == [
+        ImportStatement(
+            "a.b", leafs=[ImportLeaf("c", inline_comments=["comment"])]
         )
-        self._test_import_string_matches(
-            "from a import b as e,d as g, c as c",
-            "from a import b as e, c, d as g",
-        )
-        self._test_import_string_matches(
-            [
-                "from a import (",
-                "    b as e,  # foo",
-                "    d as g  # noqa",
-                ")",
+    ]
+    assert list(
+        parse_imports("from a.b import (\n#comment\nc,#inline\nd,#noqa\n)")
+    ) == [
+        ImportStatement(
+            "a.b",
+            leafs=[
+                ImportLeaf(
+                    "c", pre_comments=["comment"], inline_comments=["inline"]
+                ),
+                ImportLeaf("d"),
             ],
-            "from a import b as e, d as g",
+            inline_comments=["noqa"],
         )
+    ]
+    assert list(
+        parse_imports("from a.b import (\n#comment\nc,#inline\nd#noqa\n)")
+    ) == [
+        ImportStatement(
+            "a.b",
+            leafs=[
+                ImportLeaf(
+                    "c", pre_comments=["comment"], inline_comments=["inline"]
+                ),
+                ImportLeaf("d"),
+            ],
+            inline_comments=["noqa"],
+        )
+    ]
+    assert list(
+        parse_imports("from a.b import (\n#comment\nc,#inline\nd,#noqa\n)#end")
+    ) == [
+        ImportStatement(
+            "a.b",
+            leafs=[
+                ImportLeaf(
+                    "c", pre_comments=["comment"], inline_comments=["inline"]
+                ),
+                ImportLeaf("d"),
+            ],
+            inline_comments=["noqa", "end"],
+        )
+    ]

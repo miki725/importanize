@@ -1,39 +1,23 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import re
+from functools import partial
 
+import redbaron
 import six
 
-from .statements import DOTS, ImportLeaf, ImportStatement
-from .utils import list_split
+from .statements import ImportLeaf, ImportStatement
+from .utils import isinstance_iter
 
 
+IGNORE_COMMENTS = ("coding=", "coding:")
 STATEMENT_COMMENTS = ("noqa",)
-TOKEN_REGEX = re.compile(r" +|[\(\)]|([,\\])|(#.*)")
-SPECIAL_TOKENS = (",", "import", "from", "as")
 
 
-class Token(six.text_type):
+class Comment(six.text_type):
     def __new__(cls, value, **kwargs):
-        obj = six.text_type.__new__(cls, value)
-        obj.is_comment_first = False
-        for k, v in kwargs.items():
-            setattr(obj, k, v)
-        return obj
-
-    @property
-    def is_comment(self):
-        return self.startswith("#")
-
-    @property
-    def normalized(self):
-        if not self.is_comment:
-            return self
-        else:
-            if self.startswith("# "):
-                return self[2:]
-            else:
-                return self[1:]
+        return six.text_type.__new__(
+            cls, value.lstrip().replace("#", "", 1).lstrip()
+        )
 
 
 def get_text_artifacts(text):
@@ -51,239 +35,189 @@ def get_text_artifacts(text):
         Dictionary of file artifacts which should be
         considered while processing imports.
     """
-    artifacts = {"sep": "\n"}
+    tree = redbaron.RedBaron(text)
 
-    lines = text.splitlines(True)
-    if len(lines) > 1 and lines[0][-2:] == "\r\n":
-        artifacts["sep"] = "\r\n"
-
-    return artifacts
+    return {"sep": getattr(tree.endl, "value", "\n")}
 
 
-def find_imports_from_lines(iterator):
-    """
-    Find only import statements from enumerated iterator of file files.
+def parse_imports(text, **kwargs):
+    tree = redbaron.RedBaron(text)
 
-    Parameters
-    ----------
-    iterator : generator
-        Enumerated iterator which yield items
-        ``(line_number, line_string)``
+    for node in isinstance_iter(
+        tree, redbaron.ImportNode, redbaron.FromImportNode
+    ):
+        pre_comments = []
+        inline_comments = []
+        line_numbers = kwargs.pop("line_numbers", _node_line_numbers(node))
 
-    Returns
-    -------
-    imports : generator
-        Iterator which yields tuple of lines strings composing
-        a single import statement as well as teh line numbers
-        on which the import statement was found.
-    """
-    while True:
-
-        try:
-            line_number, line = next(iterator)
-        except StopIteration:
-            return
-
-        # ignore comment blocks
-        triple_quote = line.find('"""')
-        if triple_quote >= 0 and line.find('"""', triple_quote + 3) < 0:
-            inside_comment = True
-            while inside_comment:
-                try:
-                    line_number, line = next(iterator)
-                except StopIteration:
-                    return
-                inside_comment = not line.endswith('"""')
-            # get the next line since previous is an end of a comment
-            try:
-                line_number, line = next(iterator)
-            except StopIteration:
-                return
-
-        # if no imports found on line, ignore
-        if not any([line.startswith("from "), line.startswith("import ")]):
-            continue
-
-        line_numbers = [line_number]
-        line_imports = [line]
-
-        paren_count = line.count("(") - line.count(")")
-
-        def read_line(paren_count):
-            line_number, line = next(iterator)
-            line_numbers.append(line_number)
-            line_imports.append(line)
-
-            paren_count += line.count("(")
-            paren_count -= line.count(")")
-
-            return line, paren_count
-
-        while paren_count > 0 or line.endswith("\\"):
-            line, paren_count = read_line(paren_count)
-
-        yield line_imports, line_numbers
-
-
-def tokenize_import_lines(import_lines):
-    tokens = []
-
-    for line in import_lines:
-        _tokens = []
-        words = filter(None, TOKEN_REGEX.split(line))
-
-        for i, word in enumerate(words):
-            token = Token(word)
-            # tokenize same-line comments before "," to allow to associate
-            # a comment with specific import since pure Python
-            # syntax does not do that because # has to be after ","
-            # hence when tokenizing, comment will be associated
-            # with next import which is not desired
-            if token.is_comment and _tokens and _tokens[max(i - 1, 0)] == ",":
-                _tokens.insert(i - 1, token)
-            else:
-                _tokens.append(token)
-
-        tokens.extend(_tokens)
-
-    # combine tokens between \\ newline escape
-    segments = list_split(tokens, "\\")
-    tokens = [Token("")]
-    for i, segment in enumerate(segments):
-        # don't add to previous token if it is a ","
-        if all(
-            (
-                tokens[-1] not in SPECIAL_TOKENS,
-                not i or segment[0] not in SPECIAL_TOKENS,
-            )
+        for prev_node in _prev_nodes(
+            node,
+            stop=lambda i: (
+                not isinstance(i, (redbaron.CommentNode, redbaron.EndlNode))
+                or any(j in i.value for j in IGNORE_COMMENTS)
+                or (
+                    isinstance(i, redbaron.CommentNode)
+                    and i.absolute_bounding_box.top_left.column != 1
+                )
+            ),
+            predicate=lambda i: isinstance(i, redbaron.CommentNode),
         ):
-            tokens[-1] += segment[0]
-        else:
-            tokens.append(segment[0])
-        tokens += segment[1:]
+            pre_comments.insert(0, Comment(prev_node.value))
+            line_numbers = list(
+                sorted(set(line_numbers + _node_line_numbers(prev_node)))
+            )
 
-    return [Token(i) for i in tokens]
+        if isinstance(node, redbaron.ImportNode):
+            for next_node in _next_nodes(
+                node,
+                stop=lambda i: (
+                    not set(_node_line_numbers(i)) & set(line_numbers)
+                ),
+                predicate=lambda i: isinstance(i, redbaron.CommentNode),
+            ):
+                inline_comments.append(Comment(next_node.value))
+                line_numbers = list(
+                    sorted(set(line_numbers + _node_line_numbers(next_node)))
+                )
 
+            for imp in isinstance_iter(
+                node.value.node_list, redbaron.DottedAsNameNode
+            ):
+                stem = "".join(
+                    [
+                        "." if isinstance(i, redbaron.DotNode) else i.value
+                        for i in imp.value.node_list
+                    ]
+                )
+                stem_split = stem.rsplit(".", 1)
+                as_name = imp.target or None
+                leafs = []
 
-def parse_import_statement(stem, line_numbers, **kwargs):
-    """
-    Parse single import statement into ``ImportStatement`` instances.
+                # if using local import you cannot refer to import anywhere in file
+                # since symbol starts with a dot therefore it can safely transformed to from..import
+                if stem.startswith("."):
+                    _stem, _as_name = stem_split
+                    stem = (
+                        "." + _stem
+                        if not _stem or _stem.endswith(".")
+                        else _stem
+                    )
+                    leafs.append(ImportLeaf(_as_name, as_name, **kwargs))
+                    as_name = None
 
-    Parameters
-    ----------
-    stem : str
-        Import line stem which excludes ``"import"``.
-        For example for ``import a`` import, simply ``a``
-        should be passed.
-    line_numbers : list
-        List of line numbers which normalized to import stem.
+                # if import has as target but stem can be split to multiple imports
+                # import can be transformed to from..import
+                elif as_name and all(stem_split) and len(stem_split) > 1:
+                    stem = stem_split[0]
+                    leafs.append(ImportLeaf(stem_split[1], as_name))
+                    as_name = None
 
-    Returns
-    -------
-    statement : ImportStatement
-        ``ImportStatement`` instances.
-    """
-    leafs = []
-
-    if stem.startswith("."):
-        stem, leafs_string = DOTS.findall(stem)[0]
-
-        # handle ``import .foo.bar``
-        leafs_split = leafs_string.rsplit(".", 1)
-        if len(leafs_split) == 2:
-            stem += leafs_split[0]
-            leafs_string = leafs_split[1]
-
-        leafs.append(ImportLeaf(leafs_string))
-
-    else:
-        # handle ``import a.b as c``
-        stem_split = stem.rsplit(".", 1)
-        if len(stem_split) == 2 and " as " in stem:
-            stem = stem_split[0]
-            leafs_string = stem_split[1]
-            leafs.append(ImportLeaf(leafs_string))
-
-    # handle when ``as`` is present and is unnecessary
-    # in import without leafs
-    # e.g. ``import foo as foo``
-    # if leaf is present, leaf will take care of normalization
-    if " as " in stem and not leafs:
-        name, as_name = stem.split(" as ")
-        if name == as_name:
-            stem = name
-
-    return ImportStatement(line_numbers, stem, leafs, **kwargs)
-
-
-def parse_statements(iterable, **kwargs):
-    """
-    Parse iterable into ``ImportStatement`` instances.
-
-    Parameters
-    ----------
-    iterable : generator
-        Generator as returned by ``find_imports_from_lines``
-
-    Returns
-    -------
-    statements : generator
-        Generator which yields ``ImportStatement`` instances.
-    """
-
-    def get_comments(j):
-        return filter(lambda i: i.is_comment, j)
-
-    def get_not_comments(j):
-        return filter(lambda i: not i.is_comment, j)
-
-    def get_first_not_comment(j):
-        return next(iter(filter(lambda i: not i.is_comment, j)))
-
-    for import_lines, line_numbers in iterable:
-        tokens = tokenize_import_lines(import_lines)
-
-        if tokens[0] == "import":
-            for _tokens in list_split(tokens[1:], ","):
-                stem = " ".join(get_not_comments(_tokens))
-                comments = get_comments(_tokens)
-                yield parse_import_statement(
+                yield ImportStatement(
                     stem=stem,
+                    as_name=as_name,
+                    leafs=leafs,
                     line_numbers=line_numbers,
-                    comments=list(comments),
+                    pre_comments=pre_comments,
+                    inline_comments=inline_comments,
                     **kwargs
                 )
 
-        else:
-            stem_tokens, leafs_tokens = list_split(tokens[1:], "import")
-            stem = " ".join(get_not_comments(stem_tokens))
-            list_of_leafs = list(list_split(leafs_tokens, ","))
-            statement_comments = set()
+        elif isinstance(node, redbaron.FromImportNode):
             leafs = []
+            seen_comments = []
 
-            for leaf_list in list_of_leafs:
-                first_non_leaf_index = leaf_list.index(
-                    get_first_not_comment(leaf_list)
+            for imp in isinstance_iter(
+                node.targets.node_list,
+                redbaron.NameAsNameNode,
+                redbaron.StarNode,
+            ):
+                imp_pre_comments = []
+                imp_inline_comments = []
+                all_comments = node.find_all("comment")
+
+                for comment in filter(
+                    lambda i: (
+                        i.absolute_bounding_box.top_left.line
+                        <= imp.absolute_bounding_box.top_left.line
+                        and id(i) not in seen_comments
+                    ),
+                    all_comments,
+                ):
+                    target = (
+                        imp_pre_comments
+                        if comment.absolute_bounding_box.top_left.line
+                        < imp.absolute_bounding_box.top_left.line
+                        else imp_inline_comments
+                    )
+                    if any(i in comment.value for i in STATEMENT_COMMENTS):
+                        target = inline_comments
+                    target.insert(0, Comment(comment.value))
+                    seen_comments.append(id(comment))
+
+                leafs.append(
+                    ImportLeaf(
+                        name=imp.value,
+                        as_name=getattr(imp, "target", None) or None,
+                        pre_comments=imp_pre_comments,
+                        inline_comments=imp_inline_comments,
+                        **kwargs
+                    )
                 )
-                leaf_stem = " ".join(get_not_comments(leaf_list))
-                comments = []
-                all_leaf_comments = filter(lambda i: i.is_comment, leaf_list)
 
-                for comment in all_leaf_comments:
-                    if comment.normalized in STATEMENT_COMMENTS:
-                        statement_comments.add(comment)
-                    else:
-                        comment.is_comment_first = (
-                            leaf_list.index(comment) < first_non_leaf_index
-                        )
-                        comments.append(comment)
-
-                leafs.append(ImportLeaf(leaf_stem, comments=comments))
+            for next_node in _next_nodes(
+                node,
+                stop=lambda i: (
+                    not set(_node_line_numbers(i)) & set(line_numbers)
+                ),
+                predicate=lambda i: isinstance(i, redbaron.CommentNode),
+            ):
+                target = leafs[-1].inline_comments
+                if any(
+                    i in next_node.value for i in STATEMENT_COMMENTS
+                ) or not set(_node_line_numbers(imp)) & set(
+                    _node_line_numbers(next_node)
+                ):
+                    target = inline_comments
+                target.append(Comment(next_node.value))
+                line_numbers = list(
+                    sorted(set(line_numbers + _node_line_numbers(next_node)))
+                )
 
             yield ImportStatement(
-                line_numbers=line_numbers,
-                stem=stem,
+                stem="".join(
+                    [
+                        "." if isinstance(i, redbaron.DotNode) else i.value
+                        for i in node.value.node_list
+                    ]
+                ),
                 leafs=leafs,
-                comments=list(statement_comments),
+                line_numbers=line_numbers,
+                pre_comments=pre_comments,
+                inline_comments=inline_comments,
                 **kwargs
             )
+
+
+def _nodes(node, stop=None, predicate=None, direction=None):
+    node = getattr(node, direction)
+    stop = stop or (lambda i: False)
+    predicate = predicate or (lambda i: True)
+    while node:
+        if stop(node):
+            break
+        if predicate(node):
+            yield node
+        node = getattr(node, direction)
+
+
+_prev_nodes = partial(_nodes, direction="previous")
+_next_nodes = partial(_nodes, direction="next")
+
+
+def _node_line_numbers(node):
+    return list(
+        range(
+            node.absolute_bounding_box.top_left.line - 1,
+            node.absolute_bounding_box.bottom_right.line,
+        )
+    )

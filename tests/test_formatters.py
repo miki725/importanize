@@ -10,7 +10,6 @@ from importanize.formatters import (
     GroupedInlineAlignedFormatter,
     LinesFormatter,
 )
-from importanize.parser import Token
 from importanize.statements import ImportLeaf, ImportStatement
 
 
@@ -26,12 +25,20 @@ long_obj2 = obj2 * 13
 class BaseTestFormatter(unittest.TestCase):
     formatter = None
 
-    def _test(self, stem, leafs, expected, sep="\n", comments=None, **kwargs):
+    def _test(
+        self,
+        stem,
+        leafs,
+        expected,
+        sep="\n",
+        inline_comments=None,
+        pre_comments=None,
+        **kwargs
+    ):
         """Facilitate the output tests of formatters"""
         statement = ImportStatement(
-            [],
             stem,
-            list(
+            leafs=list(
                 map(
                     (
                         lambda i: (
@@ -41,7 +48,8 @@ class BaseTestFormatter(unittest.TestCase):
                     leafs,
                 )
             ),
-            comments=comments,
+            inline_comments=inline_comments,
+            pre_comments=pre_comments,
             **kwargs
         )
         self.assertEqual(
@@ -101,30 +109,25 @@ class TestGroupedFormatter(BaseTestFormatter):
 
         # Test imports with comments
         self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
+            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
         )
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
             ["from something import bar, foo  # noqa"],
-            comments=[Token("# noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", pre_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -134,7 +137,7 @@ class TestGroupedFormatter(BaseTestFormatter):
                 "    zz,",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
 
 
@@ -180,30 +183,25 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
 
         # Test imports with comments
         self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
+            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
         )
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
             ["from something import bar, foo  # noqa"],
-            comments=[Token("# noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", pre_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -213,14 +211,14 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                 "    zz,",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf("zzz", comments=[Token("#and lots of sleep")]),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zzz", inline_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -229,7 +227,7 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                 "    zzz,  # and lots of sleep",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
@@ -239,7 +237,7 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                 "                 {},".format(long_obj1),
                 "                 rainbows)",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
 
 
@@ -288,11 +286,11 @@ class TestLinesFormatter(BaseTestFormatter):
 
         # Test imports with comments
         self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
+            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
         )
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
@@ -302,24 +300,19 @@ class TestLinesFormatter(BaseTestFormatter):
                 "from something import bar  # noqa",
                 "from something import foo  # noqa",
             ],
-            comments=[Token("# noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", pre_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import bar  # noqa hello",
                 "from foo import rainbows  # noqa world",
                 "from foo import zz  # noqa and lots of sleep",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )

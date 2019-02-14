@@ -17,11 +17,7 @@ from . import __description__, __version__, formatters
 from .config import IMPORTANIZE_CONFIG, Config
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .groups import ImportGroups
-from .parser import (
-    find_imports_from_lines,
-    get_text_artifacts,
-    parse_statements,
-)
+from .parser import get_text_artifacts, parse_imports
 from .utils import force_text
 
 
@@ -161,8 +157,7 @@ def run_importanize_on_text(text, config, args):
     )
     log.debug("Using {} formatter".format(formatter))
 
-    lines_iterator = enumerate(iter(text.splitlines()))
-    imports = list(parse_statements(find_imports_from_lines(lines_iterator)))
+    imports = list(parse_imports(text))
 
     groups = ImportGroups()
 
@@ -191,7 +186,7 @@ def run_importanize_on_text(text, config, args):
             line = None
 
     for i in config.get("add_imports", []):
-        for j in parse_statements([([i], [first_import_line_number])]):
+        for j in parse_imports(i, line_numbers=[first_import_line_number]):
             groups.add_statement_to_group(j)
 
     formatted_imports = groups.formatted(

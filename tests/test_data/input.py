@@ -15,6 +15,7 @@ from a.b import c
 import flake8 as lint  # in site-package
 from a.b import d
 
+import foo, bar # common comment
 import z
 from z import *
 import coverage  # in site-packages
@@ -25,7 +26,7 @@ import something # with comment
 from other.package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows # noqa
 from other import(
     something, # something comment
-    something_else, # noqa
+    something_else,# noqa
     #lots of happy things below
     and_rainbows
 )

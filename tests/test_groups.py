@@ -43,9 +43,9 @@ class TestBaseImportGroup(unittest.TestCase):
     def test_merged_statements(self):
         group = BaseImportGroup()
         group.statements = [
-            ImportStatement([], "a", [ImportLeaf("b")]),
-            ImportStatement([], "a", [ImportLeaf("c")]),
-            ImportStatement([], "b", [ImportLeaf("c")]),
+            ImportStatement("a", leafs=[ImportLeaf("b")]),
+            ImportStatement("a", leafs=[ImportLeaf("c")]),
+            ImportStatement("b", leafs=[ImportLeaf("c")]),
         ]
 
         actual = group.merged_statements
@@ -53,17 +53,17 @@ class TestBaseImportGroup(unittest.TestCase):
         self.assertListEqual(
             sorted(actual),
             [
-                ImportStatement([], "a", [ImportLeaf("b"), ImportLeaf("c")]),
-                ImportStatement([], "b", [ImportLeaf("c")]),
+                ImportStatement("a", leafs=[ImportLeaf("b"), ImportLeaf("c")]),
+                ImportStatement("b", leafs=[ImportLeaf("c")]),
             ],
         )
 
     def test_merged_statements_leafless(self):
         group = BaseImportGroup()
         group.statements = [
-            ImportStatement([], "a", [ImportLeaf("b")]),
-            ImportStatement([], "a", []),
-            ImportStatement([], "b", [ImportLeaf("c")]),
+            ImportStatement("a", leafs=[ImportLeaf("b")]),
+            ImportStatement("a", leafs=[]),
+            ImportStatement("b", leafs=[ImportLeaf("c")]),
         ]
 
         actual = group.merged_statements
@@ -71,17 +71,17 @@ class TestBaseImportGroup(unittest.TestCase):
         self.assertListEqual(
             sorted(actual),
             [
-                ImportStatement([], "a", []),
-                ImportStatement([], "a", [ImportLeaf("b")]),
-                ImportStatement([], "b", [ImportLeaf("c")]),
+                ImportStatement("a", leafs=[]),
+                ImportStatement("a", leafs=[ImportLeaf("b")]),
+                ImportStatement("b", leafs=[ImportLeaf("c")]),
             ],
         )
 
     def test_merged_statements_special(self):
         group = BaseImportGroup()
         group.statements = [
-            ImportStatement([], "a", [ImportLeaf("*")]),
-            ImportStatement([], "b", [ImportLeaf("c")]),
+            ImportStatement("a", leafs=[ImportLeaf("*")]),
+            ImportStatement("b", leafs=[ImportLeaf("c")]),
         ]
 
         actual = group.merged_statements
@@ -89,14 +89,14 @@ class TestBaseImportGroup(unittest.TestCase):
         self.assertListEqual(
             sorted(actual),
             [
-                ImportStatement([], "a", [ImportLeaf("*")]),
-                ImportStatement([], "b", [ImportLeaf("c")]),
+                ImportStatement("a", leafs=[ImportLeaf("*")]),
+                ImportStatement("b", leafs=[ImportLeaf("c")]),
             ],
         )
 
     def test_all_line_numbers(self):
-        s2 = ImportStatement([2, 7], "b")
-        s1 = ImportStatement([1, 2], "a")
+        s2 = ImportStatement("b", line_numbers=[2, 7])
+        s1 = ImportStatement("a", line_numbers=[1, 2])
 
         group = BaseImportGroup()
         group.statements = [s1, s2]
@@ -129,21 +129,21 @@ class TestBaseImportGroup(unittest.TestCase):
 
     def test_as_string(self):
         group = BaseImportGroup()
-        group.statements = [ImportStatement([], "b"), ImportStatement([], "a")]
+        group.statements = [ImportStatement("b"), ImportStatement("a")]
 
         self.assertEqual(group.as_string(), "import a\n" "import b")
 
     def test_as_string_with_artifacts(self):
         group = BaseImportGroup(file_artifacts={"sep": "\r\n"})
-        group.statements = [ImportStatement([], "b"), ImportStatement([], "a")]
+        group.statements = [ImportStatement("b"), ImportStatement("a")]
 
         self.assertEqual(group.as_string(), "import a\r\n" "import b")
 
     def test_formatted(self):
         group = BaseImportGroup()
         group.statements = [
-            ImportStatement([], "b" * 80, [ImportLeaf("c"), ImportLeaf("d")]),
-            ImportStatement([], "a"),
+            ImportStatement("b" * 80, leafs=[ImportLeaf("c"), ImportLeaf("d")]),
+            ImportStatement("a"),
         ]
 
         self.assertEqual(
@@ -160,12 +160,11 @@ class TestBaseImportGroup(unittest.TestCase):
         group = BaseImportGroup(file_artifacts=artifacts)
         group.statements = [
             ImportStatement(
-                list(),
                 "b" * 80,
-                [ImportLeaf("c"), ImportLeaf("d")],
+                leafs=[ImportLeaf("c"), ImportLeaf("d")],
                 file_artifacts=artifacts,
             ),
-            ImportStatement([], "a", file_artifacts=artifacts),
+            ImportStatement("a", file_artifacts=artifacts),
         ]
 
         self.assertEqual(
@@ -219,23 +218,23 @@ class TestPackagesGroup(unittest.TestCase):
         config = {"packages": ["a"]}
         group = PackagesGroup(config)
 
-        self.assertTrue(group.should_add_statement(ImportStatement([], "a")))
-        self.assertFalse(group.should_add_statement(ImportStatement([], "b")))
+        self.assertTrue(group.should_add_statement(ImportStatement("a")))
+        self.assertFalse(group.should_add_statement(ImportStatement("b")))
 
 
 class TestLocalGroup(unittest.TestCase):
     def test_should_add_statement(self):
         group = LocalGroup()
 
-        self.assertTrue(group.should_add_statement(ImportStatement([], ".a")))
-        self.assertFalse(group.should_add_statement(ImportStatement([], "b")))
+        self.assertTrue(group.should_add_statement(ImportStatement(".a")))
+        self.assertFalse(group.should_add_statement(ImportStatement("b")))
 
 
 class TestRemainderGroup(unittest.TestCase):
     def test_should_add_statement(self):
         group = RemainderGroup()
 
-        self.assertTrue(group.should_add_statement(ImportStatement([], ".a")))
+        self.assertTrue(group.should_add_statement(ImportStatement(".a")))
 
 
 class TestImportGroups(unittest.TestCase):
@@ -281,20 +280,20 @@ class TestImportGroups(unittest.TestCase):
         groups.extend([LocalGroup()])
 
         with self.assertRaises(ValueError):
-            groups.add_statement_to_group(ImportStatement([], "a"))
+            groups.add_statement_to_group(ImportStatement("a"))
 
-        groups.add_statement_to_group(ImportStatement([], ".a"))
+        groups.add_statement_to_group(ImportStatement(".a"))
 
-        self.assertListEqual(groups[0].statements, [ImportStatement([], ".a")])
+        self.assertListEqual(groups[0].statements, [ImportStatement(".a")])
 
     def test_add_statement_to_group_priority(self):
         groups = ImportGroups()
         groups.extend([RemainderGroup(), LocalGroup()])
 
-        groups.add_statement_to_group(ImportStatement([], ".a"))
+        groups.add_statement_to_group(ImportStatement(".a"))
 
         self.assertListEqual(groups[0].statements, [])
-        self.assertListEqual(groups[1].statements, [ImportStatement([], ".a")])
+        self.assertListEqual(groups[1].statements, [ImportStatement(".a")])
 
     def test_as_string(self):
         self.assertEqual(ImportGroups().as_string(), "")
@@ -314,10 +313,10 @@ class TestImportGroups(unittest.TestCase):
         )
 
         groups.add_statement_to_group(
-            ImportStatement([], ".a", file_artifacts=artifacts)
+            ImportStatement(".a", file_artifacts=artifacts)
         )
         groups.add_statement_to_group(
-            ImportStatement([], "foo", file_artifacts=artifacts)
+            ImportStatement("foo", file_artifacts=artifacts)
         )
 
         self.assertEqual(

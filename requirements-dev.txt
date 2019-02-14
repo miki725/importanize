@@ -10,5 +10,9 @@ nose
 pdbpp
 pre-commit
 pre-commit-hooks
+ptpython
+pytest
+pytest-cov
+redbaron
 rednose
 tox

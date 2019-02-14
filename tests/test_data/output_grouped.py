@@ -9,6 +9,8 @@ from os import path as ospath
 import coverage  # in site-packages
 import flake8 as lint  # in site-package
 
+import bar  # common comment
+import foo  # common comment
 import something  # with comment
 import z
 from a import b

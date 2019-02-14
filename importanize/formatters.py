@@ -8,10 +8,6 @@ from copy import deepcopy
 DEFAULT_LENGTH = 80
 
 
-def get_normalized(i):
-    return map(operator.attrgetter("normalized"), i)
-
-
 class Formatter(object):
     """
     Parent class for all formatters
@@ -50,11 +46,12 @@ class GroupedFormatter(Formatter):
 
         self.leafs = self.statement.unique_leafs
         self.stem = self.statement.stem
-        self.comments = self.statement.comments
+        self.pre_comments = self.statement.pre_comments
+        self.inline_comments = self.statement.inline_comments
         self.string = self.statement.as_string()
         self.sep = self.statement.file_artifacts.get("sep", "\n")
 
-        self.all_comments = self.comments + list(
+        self.all_comments = self.inline_comments + list(
             itertools.chain(
                 *list(map(operator.attrgetter("comments"), self.leafs))
             )
@@ -72,21 +69,27 @@ class GroupedFormatter(Formatter):
         return "{}    ".format(self.sep)
 
     def format_as_one_liner(self):
-        string = self.string
+        string = self.format_statement_pre_comments() + self.string
 
         if self.all_comments:
-            string += "  # {}".format(
-                " ".join(get_normalized(self.all_comments))
-            )
+            string += "  # {}".format(" ".join(self.all_comments))
 
         return string
 
     def format_stem(self):
         return "from {} import (".format(self.stem)
 
-    def format_statement_comments(self, sep):
-        if self.comments:
-            return "  # {}".format(" ".join(get_normalized(self.comments)))
+    def format_statement_pre_comments(self):
+        if self.pre_comments:
+            return (
+                self.sep.join("# {}".format(i) for i in self.pre_comments)
+                + self.sep
+            )
+        return ""
+
+    def format_statement_inline_comments(self, sep):
+        if self.inline_comments:
+            return "  # {}".format(" ".join(self.inline_comments))
         return ""
 
     def format_leaf_start(self, leaf, sep):
@@ -95,18 +98,12 @@ class GroupedFormatter(Formatter):
     def format_leaf_end(self, leaf, sep):
         return ""
 
-    def format_leaf_first_comments(self, leaf, sep):
+    def format_leaf_pre_comments(self, leaf, sep):
         string = ""
 
-        first_comments = list(
-            filter(lambda i: i.is_comment_first, leaf.comments)
-        )
-        if first_comments:
+        if leaf.pre_comments:
             string += (
-                sep.join(
-                    "# {}".format(i) for i in get_normalized(first_comments)
-                )
-                + sep
+                sep.join("# {}".format(i) for i in leaf.pre_comments) + sep
             )
 
         return string
@@ -117,11 +114,8 @@ class GroupedFormatter(Formatter):
     def format_leaf_inline_comments(self, leaf, sep):
         string = ""
 
-        inline_comments = list(
-            filter(lambda i: not i.is_comment_first, leaf.comments)
-        )
-        if inline_comments:
-            string += "  # {}".format(" ".join(get_normalized(inline_comments)))
+        if leaf.inline_comments:
+            string += "  # {}".format(" ".join(leaf.inline_comments))
 
         return string
 
@@ -129,13 +123,14 @@ class GroupedFormatter(Formatter):
         return "{})".format(self.sep)
 
     def format_as_grouped(self):
-        string = self.format_stem()
+        string = self.format_statement_pre_comments()
+        string += self.format_stem()
         sep = self.get_leaf_separator(string)
-        string += self.format_statement_comments(sep)
+        string += self.format_statement_inline_comments(sep)
 
         for leaf in self.leafs:
             string += self.format_leaf_start(leaf, sep)
-            string += self.format_leaf_first_comments(leaf, sep)
+            string += self.format_leaf_pre_comments(leaf, sep)
             string += self.format_leaf(leaf, sep)
             string += self.format_leaf_inline_comments(leaf, sep)
             string += self.format_leaf_end(leaf, sep)
@@ -201,8 +196,10 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
             ]
         ):
             statement = deepcopy(statement)
-            statement.leafs[0].comments.extend(statement.comments)
-            statement.comments = []
+            statement.leafs[0].pre_comments.extend(statement.pre_comments)
+            statement.leafs[0].inline_comments.extend(statement.inline_comments)
+            statement.pre_comments = []
+            statement.inline_comments = []
         return statement
 
     def format_leaf_start(self, leaf, sep):

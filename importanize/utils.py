@@ -80,3 +80,7 @@ def force_bytes(data):
         return data.encode("utf-8")
     except AttributeError:
         return data
+
+
+def isinstance_iter(i, *args):
+    return filter(lambda j: isinstance(j, args), i)
