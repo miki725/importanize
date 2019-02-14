@@ -56,3 +56,23 @@ release: clean  ## push release to pypi
 dist: clean  ## create distribution of the library
 	python setup.py sdist bdist_wheel
 	ls -l dist
+
+watch:  ## watch file changes to run a command, e.g. make watch py.test tests/
+	@if ! type "fswatch" 2> /dev/null; then \
+		echo "Please install fswatch" ; \
+	else \
+		echo "Watching $(PWD) to run: $(WATCH_ARGS)" ; \
+		while true; do \
+			$(WATCH_ARGS) ; \
+			fswatch -1 -r --exclude '.*(git|~)' . > /dev/null; \
+			sleep 1; \
+		done \
+	fi;
+
+# If the first argument is "watch"...
+ifeq (watch,$(firstword $(MAKECMDGOALS)))
+  # use the rest as arguments for "watch"
+  WATCH_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  $(eval $(WATCH_ARGS):;@:)
+endif
