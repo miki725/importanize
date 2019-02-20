@@ -4,20 +4,18 @@ import argparse
 import inspect
 import logging
 import os
+import pathlib
 import pprint
 import sys
 from fnmatch import fnmatch
 from itertools import chain
 from stat import S_ISFIFO
 
-import pathlib2 as pathlib
-import six
-
 from . import __description__, __version__, formatters
 from .config import IMPORTANIZE_CONFIG, Config
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .groups import ImportGroups
-from .parser import get_text_artifacts, parse_imports
+from .parser import ParseError, get_text_artifacts, parse_imports
 from .utils import force_text
 
 
@@ -44,7 +42,7 @@ log = logging.getLogger(__name__)
 parser = argparse.ArgumentParser(description=__description__)
 parser.add_argument(
     "path",
-    type=six.text_type,
+    type=str,
     nargs="*",
     help=(
         "Path either to a file or directory where "
@@ -61,13 +59,13 @@ parser.add_argument(
         "or any parent folder, that config "
         "will be used. Otherwise crude default pep8 "
         "config will be used."
-        "".format(", ".join('"{}"'.format(i) for i in IMPORTANIZE_CONFIG))
+        "".format(", ".join(f'"{i}"' for i in IMPORTANIZE_CONFIG))
     ),
 )
 parser.add_argument(
     "-f",
     "--formatter",
-    type=six.text_type,
+    type=str,
     default=DEFAULT_FORMATTER,
     choices=sorted(FORMATTERS.keys()),
     help="Formatter used.",
@@ -155,7 +153,7 @@ def run_importanize_on_text(text, config, args):
     formatter = FORMATTERS.get(
         args.formatter or config.get("formatter"), DEFAULT_FORMATTER
     )
-    log.debug("Using {} formatter".format(formatter))
+    log.debug(f"Using {formatter} formatter")
 
     imports = list(parse_imports(text))
 
@@ -172,7 +170,7 @@ def run_importanize_on_text(text, config, args):
 
     line_numbers = groups.all_line_numbers()
     line = min(line_numbers) if line_numbers else None
-    first_import_line_number = line or 0
+    first_import_line_number = line or file_artifacts["first_line"]
 
     lines = text.splitlines()
     for line_number in sorted(set(groups.all_line_numbers()), reverse=True):
@@ -215,10 +213,10 @@ def run_importanize_on_text(text, config, args):
 
 
 def run(source, config, args, path=None):
-    if isinstance(source, six.string_types):
+    if isinstance(source, str):
         msg = "About to importanize"
         if path:
-            msg += " {}".format(path)
+            msg += f" {path}"
         log.debug(msg)
 
         try:
@@ -227,7 +225,7 @@ def run(source, config, args, path=None):
         except CIFailure:
             msg = "Imports not organized"
             if path:
-                msg += " in {}".format(path)
+                msg += f" in {path}"
             print(msg, file=sys.stderr)
             raise
 
@@ -237,18 +235,18 @@ def run(source, config, args, path=None):
                 return
 
             if args.print and args.header and path:
-                print("=" * len(six.text_type(path)))
-                print(six.text_type(path))
-                print("-" * len(six.text_type(path)))
+                print("=" * len(str(path)))
+                print(str(path))
+                print("-" * len(str(path)))
 
             if args.print:
-                print(organized.encode("utf-8") if not six.PY3 else organized)
+                print(organized)
 
             else:
                 if source == organized:
                     msg = "Nothing to do"
                     if path:
-                        msg += " in {}".format(path)
+                        msg += f" in {path}"
                     log.info(msg)
 
                 else:
@@ -256,7 +254,7 @@ def run(source, config, args, path=None):
 
                     msg = "Successfully importanized"
                     if path:
-                        msg += " {}".format(path)
+                        msg += f" {path}"
                     log.info(msg)
 
             yield organized
@@ -271,20 +269,23 @@ def run(source, config, args, path=None):
             )
 
         if config.get("exclude"):
-            norm = os.path.normpath(os.path.abspath(six.text_type(source)))
+            norm = os.path.normpath(os.path.abspath(str(source)))
             if any(map(lambda i: fnmatch(norm, i), config.get("exclude"))):
-                log.info("Skipping {} as per {}".format(source, config))
+                log.info(f"Skipping {source} as per {config}")
                 return
 
         text = source.read_text("utf-8")
-        for i in run(text, config, args, source):
-            yield i
+        try:
+            yield from run(text, config, args, source)
+        except ParseError:
+            log.exception(f"Skipping {source} as it has invalid Python syntax")
+            raise CIFailure()
 
     elif source.is_dir():
         if config.get("exclude"):
-            norm = os.path.normpath(os.path.abspath(six.text_type(source)))
+            norm = os.path.normpath(os.path.abspath(str(source)))
             if any(map(lambda i: fnmatch(norm, i), config.get("exclude"))):
-                log.info("Skipping {} as per {}".format(source, config))
+                log.info(f"Skipping {source} as per {config}")
                 return
 
         files = (
@@ -296,8 +297,7 @@ def run(source, config, args, path=None):
         all_successes = True
         for f in files:
             try:
-                for i in run(f, config, args, f):
-                    yield i
+                yield from run(f, config, args, f)
             except CIFailure:
                 all_successes = False
 
@@ -315,7 +315,7 @@ def main(args=None):
     # adjust logging level
     (logging.getLogger("").setLevel(VERBOSITY_MAPPING.get(args.verbose, 0)))
 
-    log.debug("Running importanize with {}".format(args))
+    log.debug(f"Running importanize with {args}")
 
     if args.py and args.py != sys.version_info.major:
         log.debug(
@@ -382,7 +382,7 @@ def main(args=None):
             print(g.config["type"])
             print("-" * len(g.config["type"]))
             for s in g.unique_statements:
-                print(six.text_type(s))
+                print(str(s))
             print()
 
     return int(not all_successes)

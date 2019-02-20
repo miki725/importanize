@@ -4,10 +4,9 @@ import json
 import sys
 import unittest
 from copy import deepcopy
+from pathlib import Path
 
 import mock
-import six
-from pathlib2 import Path
 
 from importanize import __version__
 from importanize.__main__ import (
@@ -156,7 +155,7 @@ class TestMain(unittest.TestCase):
             )
         )
 
-        self.assertEqual(actual, self.output_grouped)
+        self.assertEqual(self.output_grouped, actual)
         mock_write_text.assert_called_once_with(self.output_grouped)
 
     @mock.patch.object(Path, "write_text")
@@ -429,16 +428,16 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(mock_print.call_count, 1)
         version = mock_print.mock_calls[0][1][0]
-        self.assertIn("version: {}".format(__version__), version)
+        self.assertIn(f"version: {__version__}", version)
 
     @mock.patch(TESTING_MODULE + ".S_ISFIFO", mock.Mock(return_value=False))
     @mock.patch(TESTING_MODULE + ".print", create=True)
     def test_main_list(self, mock_print):
         actual = main(
             [
-                six.text_type(self.test_data / "input_few_imports.py"),
+                str(self.test_data / "input_few_imports.py"),
                 "--config",
-                six.text_type(self.test_data / "config.json"),
+                str(self.test_data / "config.json"),
                 "--list",
             ]
         )
@@ -482,9 +481,9 @@ class TestMain(unittest.TestCase):
     def test_main_not_piped(self, mock_print):
         actual = main(
             [
-                six.text_type(self.test_data / "input.py"),
+                str(self.test_data / "input.py"),
                 "--config",
-                six.text_type(self.test_data / "config.json"),
+                str(self.test_data / "config.json"),
                 "--print",
                 "--no-header",
             ]
@@ -498,9 +497,9 @@ class TestMain(unittest.TestCase):
     def test_main_not_piped_ci(self, mock_print):
         actual = main(
             [
-                six.text_type(self.test_data / "input.py"),
+                str(self.test_data / "input.py"),
                 "--config",
-                six.text_type(self.test_data / "config.json"),
+                str(self.test_data / "config.json"),
                 "--ci",
             ]
         )
@@ -515,9 +514,9 @@ class TestMain(unittest.TestCase):
 
         actual = main(
             [
-                six.text_type(self.test_data / "input.py"),
+                str(self.test_data / "input.py"),
                 "--config",
-                six.text_type(self.test_data / "config.json"),
+                str(self.test_data / "config.json"),
                 "--ci",
             ]
         )

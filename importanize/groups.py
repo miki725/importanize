@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+import abc
 import itertools
 import operator
 from collections import OrderedDict, defaultdict
 from functools import reduce
 
-import six
-
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 from .utils import is_site_package, is_std_lib
 
 
-@six.python_2_unicode_compatible
-class BaseImportGroup(object):
+class BaseImportGroup(metaclass=abc.ABCMeta):
     def __init__(self, config=None, **kwargs):
         self.config = config or {}
 
@@ -75,8 +73,9 @@ class BaseImportGroup(object):
             )
         )
 
+    @abc.abstractmethod
     def should_add_statement(self, statement):
-        raise NotImplementedError
+        """Subclass must implement"""
 
     def add_statement(self, statement):
         if self.should_add_statement(statement):
@@ -117,7 +116,7 @@ class SitePackagesGroup(BaseImportGroup):
 
 class PackagesGroup(BaseImportGroup):
     def __init__(self, *args, **kwargs):
-        super(PackagesGroup, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         if "packages" not in self.config:
             msg = (
@@ -157,10 +156,9 @@ def sort_groups(groups):
     )
 
 
-@six.python_2_unicode_compatible
 class ImportGroups(list):
     def __init__(self, *args, **kwargs):
-        super(ImportGroups, self).__init__(*args)
+        super().__init__(*args)
         self.file_artifacts = kwargs.get("file_artifacts", {})
 
     def all_line_numbers(self):

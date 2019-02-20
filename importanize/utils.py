@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import imp
-import operator
+import importlib
 import os
 import sys
 
@@ -12,10 +11,8 @@ def _get_module_path(module_name):
         paths.remove(os.getcwd())
 
     try:
-        # TODO deprecated in Py3.
-        # TODO Find better way for py2 and py3 compatibility.
-        return imp.find_module(module_name, paths)[1]
-    except ImportError:
+        return importlib.util.find_spec(module_name).origin
+    except (AttributeError, ModuleNotFoundError):
         return ""
 
 
@@ -40,32 +37,6 @@ def is_site_package(module_name):
     if "site-packages" not in module_path:
         return False
     return "python" in module_path or "pypy" in module_path
-
-
-def list_strip(data):
-    """
-    Return list of stripped strings from given list
-    """
-    return list(map(operator.methodcaller("strip"), data))
-
-
-def read(path):
-    with open(path, "rb") as fid:
-        return fid.read().decode("utf-8")
-
-
-def list_split(iterable, split):
-    segment = []
-
-    for i in iterable:
-        if i == split:
-            yield segment
-            segment = []
-        else:
-            segment.append(i)
-
-    if segment:
-        yield segment
 
 
 def force_text(data):

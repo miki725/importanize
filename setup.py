@@ -37,6 +37,7 @@ setup(
     url="https://github.com/miki725/importanize",
     license="MIT",
     packages=find_packages(exclude=["test", "test.*"]),
+    python_requires=">=3.6",
     install_requires=requirements,
     test_suite="tests",
     tests_require=test_requirements,

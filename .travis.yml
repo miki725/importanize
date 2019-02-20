@@ -2,8 +2,6 @@ language: python
 
 python:
   - "3.6"
-  - "2.7"
-  - "pypy"
   - "pypy3"
 
 sudo: false

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+import configparser
+import io
 import json
 import logging
-
-import pathlib2 as pathlib
-import six
-from six.moves import configparser
+import pathlib
 
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 
@@ -35,11 +34,10 @@ class InvalidConfig(Exception):
     """
 
 
-@six.python_2_unicode_compatible
 class Config(dict):
     def __init__(self, *args, **kwargs):
         self.path = kwargs.pop("path", None)
-        super(Config, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.normalize()
 
     def normalize(self):
@@ -67,7 +65,7 @@ class Config(dict):
 
         try:
             getattr(parser, "read_file", getattr(parser, "readfp", None))(
-                six.StringIO(value)
+                io.StringIO(value)
             )
             config = dict(parser.items("importanize"))
         except (KeyError, configparser.MissingSectionHeaderError):
@@ -143,7 +141,7 @@ class Config(dict):
         return cls.default()
 
     def __str__(self):
-        return six.text_type(self.path or "<default pep8>")
+        return str(self.path or "<default pep8>")
 
     def __bool__(self):
         return bool(self.path)

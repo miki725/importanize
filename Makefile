@@ -1,9 +1,7 @@
 .PHONY: clean-pyc clean-build docs clean
 
-NOSE_FLAGS=-sv --with-doctest --rednose --exclude=test_data
-COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tests --cover-erase
-COVER_REPORT_FLAGS=--cover-html --cover-html-dir=htmlcov
-COVER_FLAGS=${COVER_CONFIG_FLAGS} ${COVER_REPORT_FLAGS}
+PYTEST_FLAGS=-sv --doctest-modules --ignore=tests/test_data
+COVER_FLAGS=--cov=importanize --cov-report=term-missing
 
 help:  ## show help
 	@grep -E '^[a-zA-Z_\-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -40,10 +38,10 @@ lint: clean  ## lint whole library
 	fi
 
 test: clean  ## run all tests
-	nosetests ${NOSE_FLAGS} tests/
+	pytest ${PYTEST_FLAGS} tests/ importanize/
 
 coverage: clean  ## run all tests with coverage
-	nosetests ${NOSE_FLAGS} ${COVER_FLAGS} tests/
+	pytest ${PYTEST_FLAGS} ${COVER_FLAGS} tests/ importanize/
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox

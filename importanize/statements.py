@@ -4,22 +4,29 @@ import operator
 import re
 from functools import total_ordering
 
-import six
-
 from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 
 
 DOTS = re.compile(r"^(\.+)(.*)")
 
 
-class BaseImport(object):
-    def __init__(self, pre_comments=None, inline_comments=None):
-        self.pre_comments = pre_comments or []
+class BaseImport:
+    """
+    Base class for import classes
+
+    Adds common comment arguments and common representation
+    """
+
+    def __init__(self, standalone_comments=None, inline_comments=None):
+        self.standalone_comments = standalone_comments or []
         self.inline_comments = inline_comments or []
 
     @property
     def comments(self):
-        return self.pre_comments + self.inline_comments
+        """
+        Get combined standalone and inline comments
+        """
+        return self.standalone_comments + self.inline_comments
 
     def __repr__(self):
         return str(
@@ -29,7 +36,7 @@ class BaseImport(object):
                 (
                     "\n    "
                     + ",\n    ".join(
-                        "{}={!r}".format(k, v) for k, v in vars(self).items()
+                        f"{k}={v!r}" for k, v in vars(self).items()
                     )
                     if self.strict
                     else repr(self.as_string())
@@ -39,7 +46,6 @@ class BaseImport(object):
 
 
 @total_ordering
-@six.python_2_unicode_compatible
 class ImportLeaf(BaseImport):
     """
     Data-structure about each import statement leaf-module.
@@ -47,7 +53,7 @@ class ImportLeaf(BaseImport):
     For example, if import statement is
     ``from foo.bar import rainbows``, leaf-module is
     ``rainbows``.
-    Also aliased modules are supported (e.g. using ``as``).
+    Also aliased modules are supported (e.g. using ``a as b``).
     """
 
     def __init__(self, name, as_name=None, **kwargs):
@@ -58,12 +64,12 @@ class ImportLeaf(BaseImport):
         self.as_name = as_name
         self.strict = kwargs.pop("strict", False)
 
-        super(ImportLeaf, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def as_string(self):
         string = self.name
         if self.as_name:
-            string += " as {}".format(self.as_name)
+            string += f" as {self.as_name}"
         return string
 
     def __str__(self):
@@ -76,7 +82,7 @@ class ImportLeaf(BaseImport):
         params = [self.name == other.name, self.as_name == other.as_name]
         if self.strict:
             params += [
-                self.pre_comments == other.pre_comments,
+                self.standalone_comments == other.standalone_comments,
                 self.inline_comments == other.inline_comments,
             ]
         return all(params)
@@ -102,7 +108,6 @@ class ImportLeaf(BaseImport):
 
 
 @total_ordering
-@six.python_2_unicode_compatible
 class ImportStatement(BaseImport):
     """
     Data-structure to store information about
@@ -135,13 +140,13 @@ class ImportStatement(BaseImport):
         self.file_artifacts = kwargs.pop("file_artifacts", {})
         self.strict = kwargs.pop("strict", False)
 
-        super(ImportStatement, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     @property
     def full_stem(self):
         stem = self.stem
         if self.as_name:
-            stem += " as {}".format(self.as_name)
+            stem += f" as {self.as_name}"
         return stem
 
     @property
@@ -160,7 +165,7 @@ class ImportStatement(BaseImport):
 
     def as_string(self):
         if not self.leafs:
-            return "import {}".format(self.full_stem)
+            return f"import {self.full_stem}"
         else:
             return "from {} import {}" "".format(
                 self.stem,
@@ -190,7 +195,8 @@ class ImportStatement(BaseImport):
             line_numbers=self.line_numbers + other.line_numbers,
             stem=self.stem,
             leafs=self.leafs + other.leafs,
-            pre_comments=self.pre_comments + other.pre_comments,
+            standalone_comments=self.standalone_comments
+            + other.standalone_comments,
             inline_comments=self.inline_comments + other.inline_comments,
         )
 
@@ -202,7 +208,7 @@ class ImportStatement(BaseImport):
         ]
         if self.strict:
             params += [
-                self.pre_comments == other.pre_comments,
+                self.standalone_comments == other.standalone_comments,
                 self.inline_comments == other.inline_comments,
             ]
         return all(params)

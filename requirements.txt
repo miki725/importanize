@@ -1,3 +1,1 @@
-pathlib2
-redbaron
-six>=1.9
+fissix

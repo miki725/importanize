@@ -1,18 +1,13 @@
 -r requirements.txt
 -e .
-black; python_version >= '3.6'
-coverage
+black
 docutils
 flake8
-flake8-bugbear; python_version >= '3'
-mock
-nose
+flake8-bugbear
 pdbpp
 pre-commit
 pre-commit-hooks
 ptpython
 pytest
 pytest-cov
-redbaron
-rednose
 tox
