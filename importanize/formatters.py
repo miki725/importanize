@@ -1,31 +1,37 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+import abc
 import itertools
-import operator
 import typing
 from contextlib import suppress
 from copy import deepcopy
 
+from .parser import Artifacts
+from .statements import ImportLeaf, ImportStatement
 
-DEFAULT_LENGTH = 80
 
-
-class Formatter:
+class Formatter(metaclass=abc.ABCMeta):
     """
     Parent class for all formatters
-
-    Parameters
-    ----------
-    statement : ImportStatement
-        This is the data-structure which store information about
-        the import statement that must be formatted
     """
 
+    name: str
+
     def __init__(
-        self, statement: "ImportStatement", length: int = DEFAULT_LENGTH
+        self, statement: "ImportStatement", config: "Config", artifacts: "Artifacts"
     ):
-        self.statement = statement
-        self.length = length
+        self.statement = self.normalize_statement(statement)
+        self.config = config
+        self.artifacts = artifacts
+
+    def normalize_statement(self, statement: "ImportStatement") -> "ImportStatement":
+        return statement
+
+    @abc.abstractmethod
+    def format(self) -> str:
+        """
+        Subclasses must implement
+        """
 
 
 class GroupedFormatter(Formatter):
@@ -45,34 +51,31 @@ class GroupedFormatter(Formatter):
 
     name = "grouped"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, statement: "ImportStatement", config: "Config", artifacts: "Artifacts"
+    ):
+        super().__init__(statement=statement, config=config, artifacts=artifacts)
 
         self.leafs: typing.List["ImportLeaf"] = self.statement.unique_leafs
         self.stem: str = self.statement.stem
-        self.standalone_comments: typing.List[
-            str
-        ] = self.statement.standalone_comments
+        self.standalone_comments: typing.List[str] = self.statement.standalone_comments
         self.inline_comments: typing.List[str] = self.statement.inline_comments
         self.string: str = self.statement.as_string()
-        self.sep: str = self.statement.file_artifacts.get("sep", "\n")
 
         self.all_comments: typing.List[str] = self.inline_comments + list(
-            itertools.chain(
-                *list(map(operator.attrgetter("comments"), self.leafs))
-            )
+            itertools.chain(*[i.comments for i in self.leafs])
         )
 
     def do_grouped_formatting(self, one_liner: str) -> bool:
         return any(
             (
-                len(one_liner) > self.length and len(self.leafs) > 1,
+                len(one_liner) > self.config.length and len(self.leafs) > 1,
                 len(self.all_comments) > 1,
             )
         )
 
     def get_leaf_separator(self, stem: str) -> str:
-        return f"{self.sep}    "
+        return f"{self.artifacts.sep}    "
 
     def format_as_one_liner(self) -> str:
         string = self.format_statement_standalone_comments() + self.string
@@ -88,8 +91,8 @@ class GroupedFormatter(Formatter):
     def format_statement_standalone_comments(self) -> str:
         if self.standalone_comments:
             return (
-                self.sep.join(f"# {i}" for i in self.standalone_comments)
-                + self.sep
+                self.artifacts.sep.join(f"# {i}" for i in self.standalone_comments)
+                + self.artifacts.sep
             )
         return ""
 
@@ -104,7 +107,7 @@ class GroupedFormatter(Formatter):
     def format_leaf_end(self, leaf: "ImportLeaf", sep: str) -> str:
         return ""
 
-    def format_leaf_standalone_comments(self, leaf, sep) -> str:
+    def format_leaf_standalone_comments(self, leaf: "ImportLeaf", sep: str) -> str:
         string = ""
 
         if leaf.standalone_comments:
@@ -112,10 +115,10 @@ class GroupedFormatter(Formatter):
 
         return string
 
-    def format_leaf(self, leaf, sep) -> str:
+    def format_leaf(self, leaf: "ImportLeaf", sep: str) -> str:
         return "{},".format(leaf.as_string())
 
-    def format_leaf_inline_comments(self, leaf, sep) -> str:
+    def format_leaf_inline_comments(self, leaf: "ImportLeaf", sep: str) -> str:
         string = ""
 
         if leaf.inline_comments:
@@ -124,7 +127,7 @@ class GroupedFormatter(Formatter):
         return string
 
     def format_wrap_up(self) -> str:
-        return f"{self.sep})"
+        return f"{self.artifacts.sep})"
 
     def format_as_grouped(self) -> str:
         string = self.format_statement_standalone_comments()
@@ -168,27 +171,29 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
 
     name = "inline-grouped"
 
-    def __new__(cls, statement, **kwargs):
+    def __new__(cls, statement: "ImportStatement", **kwargs: typing.Any) -> Formatter:
         """
         Overwrite __new__ to return GroupedFormatter formatter instance
-        when the statement to be formatted has both statement comment and
-        leaf comment. This is a nicer fallback option vs doing super() magic
+        when the statement to be formatted has both statement inline comment and
+        leaf comment. It is necessary since otherwise when parsing import back
+        it will be impossible to separate both comments.
+        This is a nicer fallback option vs doing super() magic
         in each subclassed function. If some criteria is met, simply use
         a different formatter class.
+
+        For example::
+
+            from other.package.subpackage.module.submodule import (  # noqa
+                CONSTANT,  # inline
+            )
         """
         if all(
-            [
-                statement.inline_comments,
-                statement.leafs and statement.leafs[0].comments,
-            ]
+            [statement.inline_comments, statement.leafs and statement.leafs[0].comments]
         ):
             return GroupedFormatter(statement, **kwargs)
-        return super().__new__(cls)
+        return super().__new__(cls)  # type: ignore
 
-    def __init__(self, statement, **kwargs):
-        super().__init__(self.normalize_statement(statement), **kwargs)
-
-    def normalize_statement(self, statement):
+    def normalize_statement(self, statement: "ImportStatement") -> "ImportStatement":
         if all(
             [
                 statement.inline_comments,
@@ -200,18 +205,18 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
             statement.inline_comments = []
         return statement
 
-    def format_leaf_start(self, leaf, sep) -> str:
+    def format_leaf_start(self, leaf: "ImportLeaf", sep: str) -> str:
         return ""
 
-    def format_leaf_end(self, leaf, sep) -> str:
+    def format_leaf_end(self, leaf: "ImportLeaf", sep: str) -> str:
         if leaf != self.leafs[-1]:
             return sep
         return ""
 
     def get_leaf_separator(self, stem: str) -> str:
-        return "{}{}".format(self.sep, " " * len(stem))
+        return "{}{}".format(self.artifacts.sep, " " * len(stem))
 
-    def format_leaf(self, leaf, sep) -> str:
+    def format_leaf(self, leaf: "ImportLeaf", sep: str) -> str:
         if leaf != self.leafs[-1]:
             f = "{},"
         else:
@@ -237,15 +242,16 @@ class LinesFormatter(Formatter):
 
     name = "lines"
 
-    def __init__(self, statement, **kwargs):
-        self.kwargs = kwargs
+    def __init__(
+        self, statement: "ImportStatement", config: "Config", artifacts: "Artifacts"
+    ):
+        super().__init__(statement=statement, config=config, artifacts=artifacts)
 
-        super().__init__(statement, **kwargs)
-
-        self.sep = self.statement.file_artifacts.get("sep", "\n")
         self.statements = self.split_to_statements(self.statement)
 
-    def split_to_statements(self, statement):
+    def split_to_statements(
+        self, statement: "ImportStatement"
+    ) -> typing.List["ImportStatement"]:
         statements = []
 
         for i, leaf in enumerate(statement.unique_leafs):
@@ -258,18 +264,19 @@ class LinesFormatter(Formatter):
         return statements or [statement]
 
     def format(self) -> str:
-        return self.sep.join(
+        return self.artifacts.sep.join(
             [
-                GroupedFormatter(statement, **self.kwargs).format_as_one_liner()
+                GroupedFormatter(
+                    statement=statement, config=self.config, artifacts=self.artifacts
+                ).format_as_one_liner()
                 for statement in self.statements
             ]
         )
 
 
-DEFAULT_FORMATTER = GroupedFormatter
 if True:
     # import necessary objects for type annotations to function
     # can only import at the end of the module to avoid
     # circular relationship
     with suppress(ImportError):
-        from .statements import ImportLeaf, ImportStatement
+        from .config import Config

@@ -261,12 +261,8 @@ and::
         stdlib
         sitepackages
         remainder
-        mypackages
+        packages:my_favorite_package
         local
-
-    [importanize:mypackages]
-    packages:
-        my_favorite_package
 
 CI Mode
 -------

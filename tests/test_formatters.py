@@ -6,7 +6,11 @@ from importanize.formatters import (
     GroupedInlineAlignedFormatter,
     LinesFormatter,
 )
+import typing
 from importanize.statements import ImportLeaf, ImportStatement
+from importanize.formatters import Formatter
+from importanize.config import Config
+from importanize.parser import Artifacts
 
 
 # Define some names for tests purposes
@@ -19,51 +23,51 @@ long_obj2 = obj2 * 13
 
 
 class BaseTestFormatter:
-    formatter = None
+    formatter: typing.Type[Formatter]
 
     def _test(
         self,
-        stem,
-        leafs,
-        expected,
-        sep="\n",
-        inline_comments=None,
-        standalone_comments=None,
-        **kwargs,
-    ):
+        stem: str,
+        leafs: typing.List[ImportLeaf],
+        expected: typing.List[str],
+        sep: str = "\n",
+        inline_comments: typing.List[str] = None,
+        standalone_comments: typing.List[str] = None,
+    ) -> None:
         """Facilitate the output tests of formatters"""
         statement = ImportStatement(
             stem,
-            leafs=[
-                i if isinstance(i, ImportLeaf) else ImportLeaf(i) for i in leafs
-            ],
+            leafs=leafs,
             inline_comments=inline_comments,
             standalone_comments=standalone_comments,
-            **kwargs,
         )
-        assert statement.formatted(formatter=self.formatter) == sep.join(
-            expected
-        )
+        assert self.formatter(
+            statement, config=Config.default(), artifacts=Artifacts(sep=sep)
+        ).format() == sep.join(expected)
 
 
 class TestGroupedFormatter(BaseTestFormatter):
     formatter = GroupedFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
         self._test(module, [], [f"import {module}"])
-        self._test(module, [obj1], [f"from {module} import {obj1}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
-            module, [obj1, obj2], [f"from {module} import {obj1}, {obj2}"]
+            module,
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
+            [f"from {module} import {obj1}, {obj2}"],
         )
         self._test(
-            long_module, [long_obj1], [f"from {long_module} import {long_obj1}"]
+            long_module,
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import (",
                 f"    {long_obj1},",
@@ -75,7 +79,7 @@ class TestGroupedFormatter(BaseTestFormatter):
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import (",
                 f"    {long_obj1},",
@@ -83,13 +87,10 @@ class TestGroupedFormatter(BaseTestFormatter):
                 f")",
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
             [ImportLeaf("bar", inline_comments=["comment"])],
@@ -123,21 +124,25 @@ class TestGroupedFormatter(BaseTestFormatter):
 class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
     formatter = GroupedInlineAlignedFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
         self._test(module, [], [f"import {module}"])
-        self._test(module, [obj1], [f"from {module} import {obj1}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
-            module, [obj1, obj2], [f"from {module} import {obj1}, {obj2}"]
+            module,
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
+            [f"from {module} import {obj1}, {obj2}"],
         )
         self._test(
-            long_module, [long_obj1], [f"from {long_module} import {long_obj1}"]
+            long_module,
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import ({long_obj1},",
                 "{}{})".format(" " * 92, long_obj2),
@@ -147,19 +152,16 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import ({long_obj1},",
                 "{}{})".format(" " * 92, long_obj2),
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
             [ImportLeaf("bar", inline_comments=["comment"])],
@@ -219,23 +221,25 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
 class TestLinesFormatter(BaseTestFormatter):
     formatter = LinesFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
         self._test(module, [], [f"import {module}"])
-        self._test(module, [obj1], [f"from {module} import {obj1}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
             module,
-            [obj1, obj2],
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
             [f"from {module} import {obj1}", f"from {module} import {obj2}"],
         )
         self._test(
-            long_module, [long_obj1], [f"from {long_module} import {long_obj1}"]
+            long_module,
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import {long_obj1}",
                 f"from {long_module} import {long_obj2}",
@@ -245,19 +249,16 @@ class TestLinesFormatter(BaseTestFormatter):
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
                 f"from {long_module} import {long_obj1}",
                 f"from {long_module} import {long_obj2}",
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], inline_comments=["comment"]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
             [ImportLeaf("bar", inline_comments=["comment"])],
@@ -266,10 +267,7 @@ class TestLinesFormatter(BaseTestFormatter):
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
-            [
-                "from something import bar  # noqa",
-                "from something import foo  # noqa",
-            ],
+            ["from something import bar  # noqa", "from something import foo  # noqa"],
             inline_comments=["noqa"],
         )
         self._test(

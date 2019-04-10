@@ -1,7 +1,16 @@
 .PHONY: clean-pyc clean-build docs clean
 
-PYTEST_FLAGS=-sv --doctest-modules --ignore=tests/test_data
-COVER_FLAGS=--cov=importanize --cov-report=term-missing
+PYTEST_FLAGS=-svv --doctest-modules --ignore=tests/test_data
+
+ifeq ($(shell python --version | grep -i pypy | wc -l),1)
+	COVERAGE_FLAGS=--show-missing
+else
+	COVERAGE_FLAGS=--show-missing --fail-under=100
+endif
+
+importanize_files=$(shell find importanize -name "[!_]*.py" -exec basename {} .py \;)
+COVERAGE_TARGETS=$(addprefix coverage-,$(importanize_files))
+
 
 help:  ## show help
 	@grep -E '^[a-zA-Z_\-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -32,16 +41,26 @@ clean-all: clean  ## clean everything including tox
 	rm -rf .tox/
 
 lint: clean  ## lint whole library
-	if python -c "import sys; exit(1) if sys.version[:3] < '3.6' else exit(0)"; \
+	if python -c "import sys; exit(1) if sys.version[:3] < '3.6' or getattr(sys, 'pypy_version_info', None) else exit(0)"; \
 	then \
 		pre-commit run --all-files ; \
 	fi
 
 test: clean  ## run all tests
-	pytest ${PYTEST_FLAGS} tests/ importanize/
+	pytest ${PYTEST_FLAGS} --cov=importanize --cov-report=term-missing tests/ importanize/
+
+coverage-%:
+	pytest ${PYTEST_FLAGS} \
+		--cov=importanize \
+		--cov-append \
+		--cov-report= \
+		importanize/$*.py \
+		tests/test_$*.py
+	coverage report $(COVERAGE_FLAGS) --include=importanize/$*.py
 
 coverage: clean  ## run all tests with coverage
-	pytest ${PYTEST_FLAGS} ${COVER_FLAGS} tests/ importanize/
+	$(MAKE) $(COVERAGE_TARGETS)
+	coverage report $(COVERAGE_FLAGS)
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox
@@ -61,6 +80,7 @@ watch:  ## watch file changes to run a command, e.g. make watch py.test tests/
 	else \
 		echo "Watching $(PWD) to run: $(WATCH_ARGS)" ; \
 		while true; do \
+			reset; \
 			$(WATCH_ARGS) ; \
 			fswatch -1 -r --exclude '.*(git|~)' . > /dev/null; \
 			sleep 1; \
@@ -71,6 +91,4 @@ watch:  ## watch file changes to run a command, e.g. make watch py.test tests/
 ifeq (watch,$(firstword $(MAKECMDGOALS)))
   # use the rest as arguments for "watch"
   WATCH_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-  # ...and turn them into do-nothing targets
-  $(eval $(WATCH_ARGS):;@:)
 endif

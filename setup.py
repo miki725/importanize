@@ -3,17 +3,14 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 
-from setuptools import find_packages, setup
-
 from importanize import __author__, __description__, __version__
+from setuptools import find_packages, setup  # type: ignore
 
 
 def read(fname):
-    return (
-        open(os.path.join(os.path.dirname(__file__), fname), "rb")
-        .read()
-        .decode("utf-8")
-    )
+    # type: (str) -> str
+    with open(os.path.join(os.path.dirname(__file__), fname), "rb") as fid:
+        return fid.read().decode("utf-8")
 
 
 authors = read("AUTHORS.rst")
@@ -41,9 +38,7 @@ setup(
     install_requires=requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    entry_points={
-        "console_scripts": ["importanize = importanize.__main__:main"]
-    },
+    entry_points={"console_scripts": ["importanize = importanize.__main__:cli"]},
     keywords=" ".join(["importanize"]),
     classifiers=[
         "Intended Audience :: Developers",

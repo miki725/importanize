@@ -1,8 +1,14 @@
 language: python
 
+dist: xenial
+branches:
+  only:
+    - master
+
 python:
   - "3.6"
-  - "pypy3"
+  - "3.7"
+  # - "pypy3"  fails to build typed-ast
 
 sudo: false
 

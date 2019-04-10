@@ -1,48 +1,57 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import operator
+import abc
 import re
+import typing
 from functools import total_ordering
-
-from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
 
 
 DOTS = re.compile(r"^(\.+)(.*)")
 
 
-class BaseImport:
+class BaseImport(metaclass=abc.ABCMeta):
     """
     Base class for import classes
 
     Adds common comment arguments and common representation
     """
 
-    def __init__(self, standalone_comments=None, inline_comments=None):
+    def __init__(
+        self,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        strict: bool = False,
+    ):
         self.standalone_comments = standalone_comments or []
         self.inline_comments = inline_comments or []
+        self.strict = strict
 
     @property
-    def comments(self):
+    def comments(self) -> typing.List[str]:
         """
         Get combined standalone and inline comments
         """
         return self.standalone_comments + self.inline_comments
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(
             "<{} {}>"
             "".format(
                 self.__class__.__name__,
                 (
                     "\n    "
-                    + ",\n    ".join(
-                        f"{k}={v!r}" for k, v in vars(self).items()
-                    )
+                    + ",\n    ".join(f"{k}={v!r}" for k, v in vars(self).items())
                     if self.strict
                     else repr(self.as_string())
                 ),
             )
         )
+
+    @abc.abstractmethod
+    def as_string(self) -> str:
+        """
+        Subclasses must implement
+        """
 
 
 @total_ordering
@@ -56,29 +65,39 @@ class ImportLeaf(BaseImport):
     Also aliased modules are supported (e.g. using ``a as b``).
     """
 
-    def __init__(self, name, as_name=None, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        as_name: str = None,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        strict: bool = False,
+    ):
         if name == as_name:
             as_name = None
 
         self.name = name
         self.as_name = as_name
-        self.strict = kwargs.pop("strict", False)
 
-        super().__init__(**kwargs)
+        super().__init__(
+            standalone_comments=standalone_comments,
+            inline_comments=inline_comments,
+            strict=strict,
+        )
 
-    def as_string(self):
+    def as_string(self) -> str:
         string = self.name
         if self.as_name:
             string += f" as {self.as_name}"
         return string
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.as_string()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.as_string())
 
-    def __eq__(self, other):
+    def __eq__(self, other: "ImportLeaf") -> bool:  # type: ignore
         params = [self.name == other.name, self.as_name == other.as_name]
         if self.strict:
             params += [
@@ -87,8 +106,8 @@ class ImportLeaf(BaseImport):
             ]
         return all(params)
 
-    def __gt__(self, other):
-        def _type(obj):
+    def __gt__(self, other: "ImportLeaf") -> bool:
+        def _type(obj: "ImportLeaf") -> str:
             if obj.name.isupper():
                 return "upper"
             elif obj.name.islower():
@@ -128,7 +147,14 @@ class ImportStatement(BaseImport):
     """
 
     def __init__(
-        self, stem, as_name=None, leafs=None, line_numbers=None, **kwargs
+        self,
+        stem: str,
+        as_name: str = None,
+        leafs: typing.List[ImportLeaf] = None,
+        line_numbers: typing.List[int] = None,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        strict: bool = False,
     ):
         if leafs or stem == as_name:
             as_name = None
@@ -137,24 +163,23 @@ class ImportStatement(BaseImport):
         self.stem = stem
         self.as_name = as_name
         self.leafs = leafs or []
-        self.file_artifacts = kwargs.pop("file_artifacts", {})
-        self.strict = kwargs.pop("strict", False)
 
-        super().__init__(**kwargs)
-
-    @property
-    def full_stem(self):
-        stem = self.stem
-        if self.as_name:
-            stem += f" as {self.as_name}"
-        return stem
+        super().__init__(
+            standalone_comments=standalone_comments,
+            inline_comments=inline_comments,
+            strict=strict,
+        )
 
     @property
-    def unique_leafs(self):
+    def full_stem(self) -> str:
+        return f"{self.stem}" if not self.as_name else f"{self.stem} as {self.as_name}"
+
+    @property
+    def unique_leafs(self) -> typing.List[ImportLeaf]:
         return sorted(list(set(self.leafs)))
 
     @property
-    def root_module(self):
+    def root_module(self) -> str:
         """
         Root module being imported.
         This is used to sort imports as well as to
@@ -163,27 +188,25 @@ class ImportStatement(BaseImport):
         """
         return self.stem.split(".", 1)[0]
 
-    def as_string(self):
+    def with_line_numbers(self, line_numbers: typing.List[int]) -> "ImportStatement":
+        self.line_numbers = line_numbers
+        return self
+
+    def as_string(self) -> str:
         if not self.leafs:
             return f"import {self.full_stem}"
         else:
-            return "from {} import {}" "".format(
-                self.stem,
-                ", ".join(
-                    map(operator.methodcaller("as_string"), self.unique_leafs)
-                ),
+            return "from {} import {}".format(
+                self.stem, ", ".join(i.as_string() for i in self.unique_leafs)
             )
 
-    def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
-        return formatter(self, length=length).format()
-
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.as_string())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.as_string()
 
-    def __add__(self, other):
+    def __add__(self, other: "ImportStatement") -> "ImportStatement":
         """
         Combined two import statements into a single statement.
         This requires both import statements to have the same stem.
@@ -195,12 +218,11 @@ class ImportStatement(BaseImport):
             line_numbers=self.line_numbers + other.line_numbers,
             stem=self.stem,
             leafs=self.leafs + other.leafs,
-            standalone_comments=self.standalone_comments
-            + other.standalone_comments,
+            standalone_comments=self.standalone_comments + other.standalone_comments,
             inline_comments=self.inline_comments + other.inline_comments,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: "ImportStatement") -> bool:  # type: ignore
         params = [
             self.stem == other.stem,
             self.as_name == other.as_name,
@@ -213,7 +235,7 @@ class ImportStatement(BaseImport):
             ]
         return all(params)
 
-    def __gt__(self, other):
+    def __gt__(self, other: "ImportStatement") -> bool:
         """
         Follows the following rules:
 

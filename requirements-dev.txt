@@ -1,9 +1,13 @@
 -r requirements.txt
 -e .
 black
+cached-property
 docutils
 flake8
 flake8-bugbear
+flake8-comprehensions
+flake8-typing-imports
+mypy
 pdbpp
 pre-commit
 pre-commit-hooks

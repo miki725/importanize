@@ -47,6 +47,7 @@ docs/_build
 # IDEs
 /.idea
 .venv
+Session.vim
 
 # system
 .DS_Store
