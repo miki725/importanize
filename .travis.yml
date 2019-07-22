@@ -1,16 +1,20 @@
-language: python
-
 dist: xenial
+sudo: false
 branches:
   only:
     - master
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.cache/pre-commit
 
+language: python
 python:
   - "3.6"
   - "3.7"
-  # - "pypy3"  fails to build typed-ast
-
-sudo: false
+  # fails to install typed-ast with:
+  # fatal error: codecs.h: No such file or directory
+  # - "pypy3.6-7.1.1"
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
