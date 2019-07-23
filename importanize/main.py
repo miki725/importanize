@@ -161,7 +161,7 @@ def cli(
     ctx.exit(
         main(
             RuntimeConfig(
-                path_names=path,
+                path_names=path or ["."],
                 formatter_name=formatter,
                 length=length,
                 config_path=config_path,

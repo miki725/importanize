@@ -123,7 +123,7 @@ class ImportLeaf(BaseImport):
         if self_type != other_type:
             return priority.index(self_type) > priority.index(other_type)
 
-        return self.name > other.name
+        return (self.name, self.as_name or "") > (other.name, other.as_name or "")
 
 
 @total_ordering

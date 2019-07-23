@@ -198,7 +198,7 @@ class Config:
             raise InvalidConfig
 
     @classmethod
-    def from_path(cls, path: str = None, log_errors: bool = True) -> "Config":
+    def from_path(cls, path: str = None) -> "Config":
         if not path:
             return cls.default()
 
@@ -210,9 +210,6 @@ class Config:
         with suppress(InvalidConfig):
             return cls.from_ini(parsed_path, data)
 
-        if log_errors:
-            log.error(f"Could not read config {path!r} in either json or ini formats")
-
         raise InvalidConfig
 
     @classmethod
@@ -221,22 +218,48 @@ class Config:
         cwd: pathlib.Path = None,
         root: pathlib.Path = None,
         log_errors: bool = True,
+        cache: typing.Dict[pathlib.Path, "Config"] = None,
     ) -> "Config":
+        cache = cache if cache is not None else {}
         cwd = cwd or pathlib.Path.cwd()
         path = cwd = cwd.resolve()
 
-        while path.resolve() != pathlib.Path(root or cwd.root).resolve():
-            for f in IMPORTANIZE_CONFIG:
-                config_path = path / f
-                if config_path.exists():
-                    try:
-                        return Config.from_path(str(config_path), log_errors=log_errors)
-                    except InvalidConfig:
-                        return cls.default()
+        try:
+            return cache[cwd]
 
-            path = path.parent
+        except KeyError:
+            while path.resolve() != pathlib.Path(root or cwd.root).resolve():
+                try:
+                    return cache[path]
 
-        return cls.default()
+                except KeyError:
+                    config = Config.default()
+                    exists = [
+                        j for j in (path / i for i in IMPORTANIZE_CONFIG) if j.exists()
+                    ]
+
+                    for f in exists:
+                        try:
+                            config = Config.from_path(str(f))
+                        except InvalidConfig:
+                            pass
+
+                    if not config and exists and log_errors:
+                        files = ",".join(str(i.name) for i in exists)
+                        log.debug(
+                            f"Could not read config from "
+                            f"{path}{os.sep}{{{files}}} "
+                            f"in either json or ini formats"
+                        )
+
+                    cache[path] = cache[cwd] = config
+
+                    if config:
+                        return config
+
+                path = path.parent
+
+            return cls.default()
 
     def merge(self, other: "Config") -> "Config":
         self.length = other.length

@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 import typing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -22,7 +22,7 @@ from .parser import (
     parse_to_tree,
 )
 from .statements import ImportStatement
-from .utils import StdPath, generate_diff
+from .utils import StdPath, generate_diff, takeafter
 
 
 log = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ class RuntimeConfig:
     _config: typing.Optional[Config] = None
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
+    found_configs: typing.Dict[Path, Config] = field(default_factory=lambda: {})
 
     verbosity: int = 0
 
@@ -110,6 +111,9 @@ class RuntimeConfig:
             self.show_header = False
             self.should_add_last_line = False
 
+        if self.is_out_piped:
+            self.is_print_mode = True
+
         if self.show_diff:
             self.show_header = False
 
@@ -157,14 +161,7 @@ def replace_imports_in_text(
     first_import_line_number = line or artifacts.first_line
 
     lines = [l for i, l in enumerate(text.splitlines()) if i not in line_numbers]
-
-    # remove blank lines after imports if any
-    # since we insert blank lines below imports
-    while line is not None and len(lines) > line:
-        if not lines[line]:
-            lines.pop(line)
-        else:
-            line = None
+    lines_after = list(takeafter(lambda i: i.strip(), lines[first_import_line_number:]))
 
     formatted_imports = groups.formatted()
 
@@ -173,10 +170,10 @@ def replace_imports_in_text(
         + formatted_imports.splitlines()
         + (
             [""] * config.after_imports_new_lines
-            if lines[first_import_line_number:] and formatted_imports
+            if lines_after and formatted_imports
             else []
         )
-        + lines[first_import_line_number:]
+        + lines_after
         + ([""] if runtime_config.should_add_last_line else [])
     )
 
@@ -232,7 +229,9 @@ def run_importanize_on_file(
 ) -> typing.Iterator[Result]:
     if runtime_config.is_subconfig_allowed:
         subconfig = Config.find(
-            cwd=source.parent, root=getattr(config.path, "parent", None)
+            cwd=source.parent,
+            root=getattr(config.path, "parent", None),
+            cache=runtime_config.found_configs,
         )
         if subconfig:
             config = subconfig
@@ -391,7 +390,7 @@ class PrintAggregator(DiffAggregator):
 class Aggregator(BaseAggregator):
     def update(self, result: Result) -> None:
         if result.has_changes:
-            log.debug(f"Writing importanized output {result.path}")
+            log.info(f"Importanized {result.path}")
             result.path.write_text(result.organized)
         else:
             log.info(f"Nothing to do {result.path}")

@@ -95,6 +95,20 @@ def largest_prefix(strings: typing.Iterable[str]) -> str:
     )
 
 
+T = typing.TypeVar("T")
+
+
+def takeafter(
+    predicate: typing.Callable[[T], typing.Any], iterable: typing.Iterable[T]
+) -> typing.Iterator[T]:
+    found = False
+    for i in iterable:
+        if not found and predicate(i):
+            found = True
+        if found:
+            yield i
+
+
 class TextPrefixSpex(typing.NamedTuple):
     text: str
     prefix: str

@@ -82,6 +82,7 @@ class TestRuntimeConfig:
     def test_normalize(self) -> None:
         r = RuntimeConfig(
             is_in_piped=True,
+            is_out_piped=True,
             show_diff=True,
             path_names=["foo"],
             is_print_mode=False,

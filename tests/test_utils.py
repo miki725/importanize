@@ -12,6 +12,7 @@ from importanize.utils import (
     add_prefix_to_text,
     generate_diff,
     StdPath,
+    takeafter,
     is_piped,
     OpenStringIO,
 )
@@ -99,6 +100,14 @@ def test_force_text() -> None:
 def test_force_bytes() -> None:
     assert force_bytes("foo") == b"foo"
     assert force_bytes(b"foo") == b"foo"
+
+
+def test_takeafter() -> None:
+    assert list(takeafter(lambda i: i.strip(), ["  ", "\t", "foo", "  ", "bar"])) == [
+        "foo",
+        "  ",
+        "bar",
+    ]
 
 
 def test_largest_prefix() -> None:
