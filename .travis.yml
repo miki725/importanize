@@ -12,9 +12,7 @@ language: python
 python:
   - "3.6"
   - "3.7"
-  # fails to install typed-ast with:
-  # fatal error: codecs.h: No such file or directory
-  # - "pypy3.6-7.1.1"
+  - "pypy3.6-7.1.1"
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:

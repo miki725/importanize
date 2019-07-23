@@ -7,7 +7,7 @@ flake8
 flake8-bugbear
 flake8-comprehensions
 flake8-typing-imports
-mypy
+mypy; platform_python_implementation == "CPython"
 pdbpp
 pre-commit
 pre-commit-hooks
