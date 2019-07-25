@@ -30,7 +30,7 @@ import foo as\
 bar
 import something # with comment
 # standalone comment
-from other.package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows # noqa
+from other.package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows, rainbows # noqa
 from other import(
     something, # something comment
     something_else,# noqa

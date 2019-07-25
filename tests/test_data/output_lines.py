@@ -22,14 +22,14 @@ import z
 from a import b
 from a.b import c
 from a.b import d
-from other import and_rainbows  # noqa rainbows haha lots of happy things below
-from other import something  # noqa rainbows haha something comment
+from other import and_rainbows  # rainbows haha lots of happy things below
+from other import something  # rainbows haha something comment
 from other import something_else  # noqa rainbows haha
 # standalone comment
-from other.package.subpackage.module.submodule import CONSTANT  # noqa
-from other.package.subpackage.module.submodule import Klass  # noqa
-from other.package.subpackage.module.submodule import bar  # noqa
-from other.package.subpackage.module.submodule import foo  # noqa
+from other.package.subpackage.module.submodule import CONSTANT
+from other.package.subpackage.module.submodule import Klass
+from other.package.subpackage.module.submodule import bar
+from other.package.subpackage.module.submodule import foo
 from other.package.subpackage.module.submodule import rainbows  # noqa
 from package.subpackage.module.submodule import CONSTANT
 from package.subpackage.module.submodule import Klass

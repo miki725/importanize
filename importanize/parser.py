@@ -408,6 +408,7 @@ def parse_imports_from_import_from_statement(
 
         imp_standalone_comments: typing.List[str] = []
         imp_inline_comments: typing.List[str] = []
+        imp_statement_comments: typing.List[str] = []
 
         combinable_nodes = {
             v: k for k, v in enumerate(leaf_nodes_enumerated) if v.is_combinable
@@ -445,15 +446,21 @@ def parse_imports_from_import_from_statement(
                 )
 
                 if any(j in comment for j in STATEMENT_COMMENTS):
-                    inline_comments.append(comment)
-                else:
-                    if (
-                        inode == 0
-                        and ci == 0
-                        and comment_nodes[node] <= max(combinable_nodes.values())
-                    ):
-                        target = leafs[-1].inline_comments if leafs else inline_comments
-                    target.append(comment)
+                    target = imp_statement_comments
+
+                if (
+                    inode == 0
+                    and ci == 0
+                    and comment_nodes[node] <= max(combinable_nodes.values())
+                ):
+                    target = leafs[-1].inline_comments if leafs else inline_comments
+
+                    if any(j in comment for j in STATEMENT_COMMENTS):
+                        target = (
+                            leafs[-1].statement_comments if leafs else inline_comments
+                        )
+
+                target.append(comment)
 
         leafs.append(
             ImportLeaf(
@@ -461,6 +468,7 @@ def parse_imports_from_import_from_statement(
                 as_name=as_name,
                 standalone_comments=imp_standalone_comments,
                 inline_comments=imp_inline_comments,
+                statement_comments=imp_statement_comments,
                 strict=strict,
             )
         )
@@ -483,12 +491,12 @@ def parse_imports_from_import_from_statement(
         for ci, comment in node.enumerated_comments:
             target = inline_comments
 
-            if any(j in comment for j in STATEMENT_COMMENTS):
-                inline_comments.append(comment)
-            else:
-                if inode == 0 and ci == 0 and imp_rest_nodes[node] <= par_index:
-                    target = leafs[-1].inline_comments
-                target.append(comment)
+            if inode == 0 and ci == 0 and imp_rest_nodes[node] <= par_index:
+                target = leafs[-1].inline_comments
+                if any(j in comment for j in STATEMENT_COMMENTS):
+                    target = leafs[-1].statement_comments
+
+            target.append(comment)
 
     yield ImportStatement(
         stem=stem,

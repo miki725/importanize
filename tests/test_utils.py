@@ -14,6 +14,7 @@ from importanize.utils import (
     StdPath,
     takeafter,
     is_piped,
+    list_set,
     OpenStringIO,
 )
 
@@ -108,6 +109,10 @@ def test_takeafter() -> None:
         "  ",
         "bar",
     ]
+
+
+def test_list_set() -> None:
+    assert list_set(["hello", "world", "hello", "mars"]) == ["hello", "world", "mars"]
 
 
 def test_largest_prefix() -> None:

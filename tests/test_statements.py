@@ -48,11 +48,6 @@ class TestImportStatement:
             [3, 4]
         ).line_numbers == [3, 4]
 
-    def test_comments(self) -> None:
-        assert ImportStatement(
-            "a", standalone_comments=["standalone"], inline_comments=["inline"]
-        ).comments == ["standalone", "inline"]
-
     def test_root_module(self) -> None:
         assert ImportStatement("a").root_module == "a"
         assert ImportStatement("a.b.c").root_module == "a"

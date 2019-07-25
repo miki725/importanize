@@ -52,18 +52,20 @@ class GroupedFormatter(Formatter):
     name = "grouped"
 
     def __init__(
-        self, statement: "ImportStatement", config: "Config", artifacts: "Artifacts"
+        self, statement: ImportStatement, config: "Config", artifacts: "Artifacts"
     ):
         super().__init__(statement=statement, config=config, artifacts=artifacts)
 
-        self.leafs: typing.List["ImportLeaf"] = self.statement.unique_leafs
+        self.leafs: typing.List[ImportLeaf] = self.statement.unique_leafs
         self.stem: str = self.statement.stem
         self.standalone_comments: typing.List[str] = self.statement.standalone_comments
-        self.inline_comments: typing.List[str] = self.statement.inline_comments
+        self.all_inline_comments: typing.List[str] = self.statement.all_inline_comments
         self.string: str = self.statement.as_string()
 
-        self.all_comments: typing.List[str] = self.inline_comments + list(
-            itertools.chain(*[i.comments for i in self.leafs])
+        self.all_comments: typing.List[str] = self.all_inline_comments + list(
+            itertools.chain(
+                *[i.standalone_comments + i.inline_comments for i in self.leafs]
+            )
         )
 
     def do_grouped_formatting(self, one_liner: str) -> bool:
@@ -97,8 +99,8 @@ class GroupedFormatter(Formatter):
         return ""
 
     def format_statement_inline_comments(self, sep: str) -> str:
-        if self.inline_comments:
-            return "  # {}".format(" ".join(self.inline_comments))
+        if self.all_inline_comments:
+            return "  # {}".format(" ".join(self.all_inline_comments))
         return ""
 
     def format_leaf_start(self, leaf: "ImportLeaf", sep: str) -> str:
@@ -188,7 +190,16 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
             )
         """
         if all(
-            [statement.inline_comments, statement.leafs and statement.leafs[0].comments]
+            [
+                statement.all_inline_comments,
+                (
+                    statement.leafs
+                    and (
+                        statement.leafs[0].standalone_comments
+                        or statement.leafs[0].inline_comments
+                    )
+                ),
+            ]
         ):
             return GroupedFormatter(statement, **kwargs)
         return super().__new__(cls)  # type: ignore
@@ -196,13 +207,19 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
     def normalize_statement(self, statement: "ImportStatement") -> "ImportStatement":
         if all(
             [
-                statement.inline_comments,
-                statement.leafs and not statement.leafs[0].comments,
+                statement.all_inline_comments,
+                (
+                    statement.leafs
+                    and not statement.leafs[0].standalone_comments
+                    and not statement.leafs[0].inline_comments
+                ),
             ]
         ):
             statement = deepcopy(statement)
-            statement.leafs[0].inline_comments.extend(statement.inline_comments)
+            statement.leafs[0].inline_comments.extend(statement.all_inline_comments)
             statement.inline_comments = []
+            for i in statement.leafs:
+                i.statement_comments = []
         return statement
 
     def format_leaf_start(self, leaf: "ImportLeaf", sep: str) -> str:

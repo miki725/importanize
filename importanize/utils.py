@@ -109,6 +109,14 @@ def takeafter(
             yield i
 
 
+def list_set(iterable: typing.Iterable[T]) -> typing.List[T]:
+    items: typing.List[T] = []
+    for i in iterable:
+        if i not in items:
+            items.append(i)
+    return items
+
+
 class TextPrefixSpex(typing.NamedTuple):
     text: str
     prefix: str

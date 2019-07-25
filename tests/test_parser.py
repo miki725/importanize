@@ -250,17 +250,15 @@ def test_parse_imports_from_import() -> None:
     assert list(parse_imports("from a.b import c # noqa", strict=True)) == [
         ImportStatement(
             "a.b",
-            leafs=[ImportLeaf("c", strict=True)],
-            inline_comments=["noqa"],
+            leafs=[ImportLeaf("c", statement_comments=["noqa"], strict=True)],
             strict=True,
         )
     ]
     assert list(parse_imports("#comment\nfrom a.b import c # noqa", strict=True)) == [
         ImportStatement(
             "a.b",
-            leafs=[ImportLeaf("c", strict=True)],
+            leafs=[ImportLeaf("c", statement_comments=["noqa"], strict=True)],
             standalone_comments=["comment"],
-            inline_comments=["noqa"],
             strict=True,
         )
     ]
@@ -269,9 +267,8 @@ def test_parse_imports_from_import() -> None:
     ) == [
         ImportStatement(
             "a.b",
-            leafs=[ImportLeaf("c", strict=True)],
+            leafs=[ImportLeaf("c", statement_comments=["noqa comment"], strict=True)],
             standalone_comments=["comment"],
-            inline_comments=["noqa comment"],
             strict=True,
         )
     ]
@@ -289,9 +286,9 @@ def test_parse_imports_from_import() -> None:
             "a.b",
             leafs=[
                 ImportLeaf("c", inline_comments=["inline"], strict=True),
-                ImportLeaf("d", strict=True),
+                ImportLeaf("d", statement_comments=["noqa"], strict=True),
             ],
-            inline_comments=["comment", "noqa"],
+            inline_comments=["comment"],
             strict=True,
         )
     ]
@@ -307,9 +304,8 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", strict=True),
+                ImportLeaf("d", statement_comments=["noqa"], strict=True),
             ],
-            inline_comments=["noqa"],
             strict=True,
         )
     ]
@@ -325,9 +321,8 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", strict=True),
+                ImportLeaf("d", statement_comments=["noqa"], strict=True),
             ],
-            inline_comments=["noqa"],
             strict=True,
         )
     ]
@@ -345,9 +340,13 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", standalone_comments=["another"], strict=True),
+                ImportLeaf(
+                    "d",
+                    standalone_comments=["another"],
+                    statement_comments=["noqa"],
+                    strict=True,
+                ),
             ],
-            inline_comments=["noqa"],
             strict=True,
         )
     ]
@@ -366,9 +365,13 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", standalone_comments=["another"], strict=True),
+                ImportLeaf(
+                    "d",
+                    standalone_comments=["another"],
+                    statement_comments=["noqa"],
+                    strict=True,
+                ),
             ],
-            inline_comments=["noqa"],
             strict=True,
         )
     ]
@@ -386,9 +389,9 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", strict=True),
+                ImportLeaf("d", statement_comments=["noqa"], strict=True),
             ],
-            inline_comments=["noqa", "end"],
+            inline_comments=["end"],
             strict=True,
         )
     ]
@@ -427,9 +430,9 @@ def test_parse_imports_from_import() -> None:
                     inline_comments=["inline"],
                     strict=True,
                 ),
-                ImportLeaf("d", strict=True),
+                ImportLeaf("d", statement_comments=["noqa"], strict=True),
             ],
-            inline_comments=["noqa", "statement", "end"],
+            inline_comments=["statement", "end"],
             strict=True,
         )
     ]
@@ -467,6 +470,27 @@ def test_parse_imports_from_import() -> None:
                     "c",
                     standalone_comments=["comment"],
                     inline_comments=["inline"],
+                    strict=True,
+                ),
+                ImportLeaf("d", inline_comments=["foo"], strict=True),
+            ],
+            inline_comments=["generic", "statement", "end"],
+            strict=True,
+        )
+    ]
+    assert list(
+        parse_imports(
+            "from a.b import (#generic\n#comment\nc,#noqa\nd,#foo\n#statement\n)#end",
+            strict=True,
+        )
+    ) == [
+        ImportStatement(
+            "a.b",
+            leafs=[
+                ImportLeaf(
+                    "c",
+                    standalone_comments=["comment"],
+                    statement_comments=["noqa"],
                     strict=True,
                 ),
                 ImportLeaf("d", inline_comments=["foo"], strict=True),

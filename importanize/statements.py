@@ -3,7 +3,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import abc
 import re
 import typing
-from functools import total_ordering
+import itertools
+from functools import total_ordering, reduce
+from .utils import list_set
 
 
 DOTS = re.compile(r"^(\.+)(.*)")
@@ -25,13 +27,6 @@ class BaseImport(metaclass=abc.ABCMeta):
         self.standalone_comments = standalone_comments or []
         self.inline_comments = inline_comments or []
         self.strict = strict
-
-    @property
-    def comments(self) -> typing.List[str]:
-        """
-        Get combined standalone and inline comments
-        """
-        return self.standalone_comments + self.inline_comments
 
     def __repr__(self) -> str:
         return str(
@@ -71,6 +66,7 @@ class ImportLeaf(BaseImport):
         as_name: str = None,
         standalone_comments: typing.List[str] = None,
         inline_comments: typing.List[str] = None,
+        statement_comments: typing.List[str] = None,
         strict: bool = False,
     ):
         if name == as_name:
@@ -78,6 +74,8 @@ class ImportLeaf(BaseImport):
 
         self.name = name
         self.as_name = as_name
+
+        self.statement_comments = statement_comments or []
 
         super().__init__(
             standalone_comments=standalone_comments,
@@ -97,12 +95,27 @@ class ImportLeaf(BaseImport):
     def __hash__(self) -> int:
         return hash(self.as_string())
 
+    def __add__(self, other: "ImportLeaf") -> "ImportLeaf":
+        return ImportLeaf(
+            name=self.name,
+            as_name=self.as_name,
+            standalone_comments=list_set(
+                self.standalone_comments + other.standalone_comments
+            ),
+            inline_comments=list_set(self.inline_comments + other.inline_comments),
+            statement_comments=list_set(
+                self.statement_comments + other.statement_comments
+            ),
+            strict=self.strict,
+        )
+
     def __eq__(self, other: "ImportLeaf") -> bool:  # type: ignore
         params = [self.name == other.name, self.as_name == other.as_name]
         if self.strict:
             params += [
                 self.standalone_comments == other.standalone_comments,
                 self.inline_comments == other.inline_comments,
+                self.statement_comments == other.statement_comments,
             ]
         return all(params)
 
@@ -120,7 +133,7 @@ class ImportLeaf(BaseImport):
 
         priority = ("upper", "mixed", "lower")
 
-        if self_type != other_type:
+        if self_type is not other_type:
             return priority.index(self_type) > priority.index(other_type)
 
         return (self.name, self.as_name or "") > (other.name, other.as_name or "")
@@ -162,7 +175,7 @@ class ImportStatement(BaseImport):
         self.line_numbers = line_numbers or []
         self.stem = stem
         self.as_name = as_name
-        self.leafs = leafs or []
+        self.leafs: typing.List[ImportLeaf] = leafs or []
 
         super().__init__(
             standalone_comments=standalone_comments,
@@ -176,7 +189,19 @@ class ImportStatement(BaseImport):
 
     @property
     def unique_leafs(self) -> typing.List[ImportLeaf]:
-        return sorted(list(set(self.leafs)))
+        return [
+            reduce(lambda a, b: a + b, leafs)
+            for _, leafs in itertools.groupby(
+                sorted(self.leafs), key=lambda i: (i.name, i.as_name)
+            )
+        ]
+
+    @property
+    def all_inline_comments(self) -> typing.List[str]:
+        return (
+            list_set(itertools.chain(*[i.statement_comments for i in self.leafs]))
+            + self.inline_comments
+        )
 
     @property
     def root_module(self) -> str:
