@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 import abc
+import itertools
 import re
 import typing
-import itertools
-from functools import total_ordering, reduce
+from functools import reduce, total_ordering
+
 from .utils import list_set
 
 

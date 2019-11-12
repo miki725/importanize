@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
 from pathlib import Path
 
 from click.testing import CliRunner
 
 from importanize.__main__ import click_cli as cli
-from importanize.config import IMPORTANIZE_JSON_CONFIG
+from importanize.config import IMPORTANIZE_INI_CONFIG
 from importanize.importanize import RuntimeConfig
 from importanize.main import main
 
@@ -23,7 +24,7 @@ def test_ci() -> None:
     assert (
         main(
             RuntimeConfig(
-                config_path=str(TEST_DATA / "subconfig" / IMPORTANIZE_JSON_CONFIG),
+                config_path=str(TEST_DATA / "subconfig" / IMPORTANIZE_INI_CONFIG),
                 path_names=[str(TEST_DATA / "input.py")],
                 is_ci_mode=True,
                 is_subconfig_allowed=False,

@@ -47,6 +47,7 @@ docs/_build
 # IDEs
 /.idea
 .venv
+.vim
 Session.vim
 
 # system

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-
 import io
+
 from importanize.utils import (
+    OpenStringIO,
+    StdPath,
+    add_prefix_to_text,
     force_bytes,
     force_text,
+    generate_diff,
+    is_piped,
     is_site_package,
     is_std_lib,
     largest_prefix,
-    remove_largest_whitespace_prefix,
-    add_prefix_to_text,
-    generate_diff,
-    StdPath,
-    takeafter,
-    is_piped,
     list_set,
-    OpenStringIO,
+    remove_largest_whitespace_prefix,
+    takeafter,
 )
 
 
@@ -137,15 +137,13 @@ def test_generate_diff() -> None:
         "hello\nworld", "hello\nmars", "test.py", color=False
     ) == "\n".join(
         [
-            "*** test.py",
+            # preserve multiline
             "--- test.py",
-            "***************",
-            "*** 1,2 ****",
-            "  hello",
-            "! world",
-            "--- 1,2 ----",
-            "  hello",
-            "! mars",
+            "+++ test.py",
+            "@@ -1,2 +1,2 @@",
+            " hello",
+            "-world",
+            "+mars",
         ]
     )
 

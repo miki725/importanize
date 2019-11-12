@@ -38,7 +38,6 @@ ROOT_CONFIG = Config.find(log_errors=False)
     type=click.Path(
         exists=True, file_okay=True, dir_okay=False, allow_dash=False, path_type=str
     ),
-    default=str(ROOT_CONFIG.path or "") or None,
     help=(
         "Path to importanize config file. "
         "By default config {} is searched for in working "
@@ -164,6 +163,7 @@ def cli(
                 path_names=path or ["."],
                 formatter_name=formatter,
                 length=length,
+                root_config=ROOT_CONFIG,
                 config_path=config_path,
                 is_subconfig_allowed=is_subconfig_allowed,
                 verbosity=verbosity,

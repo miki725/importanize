@@ -8,20 +8,21 @@ import logging
 import os
 import pathlib
 import typing
-from contextlib import suppress
 from dataclasses import dataclass
 
 from . import formatters
 from .groups import GROUPS
-from .parser import parse_imports
+from .parser import parse_imports, ParseError
 from .statements import ImportStatement
 
 
-IMPORTANIZE_JSON_CONFIG = ".importanizerc"
+IMPORTANIZE_HIDDEN_CONFIG = ".importanizerc"
+IMPORTANIZE_JSON_CONFIG = "importanize.json"
 IMPORTANIZE_INI_CONFIG = "importanize.ini"
 IMPORTANIZE_SETUP_CONFIG = "setup.cfg"
 IMPORTANIZE_TOX_CONFIG = "tox.ini"
 IMPORTANIZE_CONFIG = [
+    IMPORTANIZE_HIDDEN_CONFIG,
     IMPORTANIZE_JSON_CONFIG,
     IMPORTANIZE_INI_CONFIG,
     IMPORTANIZE_SETUP_CONFIG,
@@ -39,6 +40,12 @@ FORMATTERS: typing.Dict[str, typing.Type[formatters.Formatter]] = {
 }
 
 log = logging.getLogger(__name__)
+
+
+class NoImportanizeConfig(Exception):
+    """
+    Exception to indicate importanize configuration is not present
+    """
 
 
 class InvalidConfig(Exception):
@@ -87,50 +94,104 @@ class Config:
         return os.path.relpath(self.path) if self.path else "<default pep8>"
 
     @classmethod
+    def _parse_group(
+        cls, group_type: str, packages: typing.Iterable[str]
+    ) -> GroupConfig:
+        try:
+            return GROUPS[group_type.strip()].validate_group_config(
+                GroupConfig(type=group_type, packages=packages)
+            )
+        except KeyError as e:
+            raise InvalidConfig(
+                f"{group_type!r} is unsupported group type. "
+                f'Only {", ".join(GROUPS.keys())} are supported.'
+            ) from e
+        except ValueError as e:
+            raise InvalidConfig(f"{e}") from e
+
+    @classmethod
+    def _parse_add_imports(
+        cls, add_imports: typing.List[str]
+    ) -> typing.List[ImportStatement]:
+        try:
+            return list(
+                itertools.chain(
+                    *[
+                        [s.with_line_numbers([]) for s in parse_imports(i.strip())]
+                        for i in add_imports
+                        if i.strip()
+                    ]
+                )
+            )
+        except ParseError as e:
+            raise InvalidConfig(
+                "'add_imports' has invalid Python import statement"
+            ) from e
+
+    @classmethod
+    def _parse_formatter(
+        cls, formatter: typing.Optional[str]
+    ) -> typing.Type[formatters.Formatter]:
+        try:
+            return FORMATTERS[formatter] if formatter else cls.formatter
+        except KeyError as e:
+            raise InvalidConfig(
+                f"{formatter!r} is unsupported formatter. "
+                f'Only {", ".join(FORMATTERS.keys())} are supported.'
+            ) from e
+
+    @classmethod
+    def _parse_length(cls, length: str) -> int:
+        try:
+            result = int(length)
+        except ValueError as e:
+            raise InvalidConfig(f"{length!r} is not an integer") from e
+        if 10 <= result <= 200:
+            return result
+        raise InvalidConfig("Length must be between 10 and 200")
+
+    @classmethod
+    def _parse_after_imports_new_lines(cls, new_lines: str) -> int:
+        try:
+            result = int(new_lines)
+        except ValueError as e:
+            raise InvalidConfig(f"{new_lines!r} is not an integer") from e
+        if 0 <= result <= 5:
+            return result
+        raise InvalidConfig("Can only add between 0 and 5 new lines after imports")
+
+    @classmethod
     def from_json(cls, path: pathlib.Path, data: str) -> "Config":
+        # not a json file altogether
+        if not data.strip().startswith("{") or not data.strip().endswith("}"):
+            raise NoImportanizeConfig("Not a json file")
+
+        # looks like a json file but syntax could be incorrect
         try:
             loaded_data = json.loads(data)
-        except ValueError:
-            raise InvalidConfig
+        except ValueError as e:
+            raise InvalidConfig(f"{type(e).__name__}: not a json file") from e
 
-        try:
-            return cls(
-                path=path,
-                after_imports_new_lines=int(
-                    loaded_data.get(
-                        "after_imports_new_lines", cls.after_imports_new_lines
-                    )
-                ),
-                length=int(loaded_data.get("length", cls.length)),
-                formatter=(
-                    FORMATTERS[loaded_data.get("formatter")]
-                    if "formatter" in loaded_data
-                    else cls.formatter
-                ),
-                groups=(
-                    [
-                        GROUPS[i.get("type")].validate_group_config(
-                            GroupConfig(
-                                type=i.get("type"), packages=i.get("packages") or ()
-                            )
-                        )
-                        for i in loaded_data.get("groups", [])
-                    ]
-                    or cls.groups
-                ),
-                exclude=loaded_data.get("exclude", cls.exclude),
-                add_imports=list(
-                    itertools.chain(
-                        *[
-                            [s.with_line_numbers([]) for s in parse_imports(i)]
-                            for i in loaded_data.get("add_imports", [])
-                        ]
-                    )
+        groups = []
+        for i in loaded_data.get("groups", []):
+            groups.append(cls._parse_group(i.get("type"), i.get("packages") or ()))
+
+        return cls(
+            path=path,
+            after_imports_new_lines=cls._parse_after_imports_new_lines(
+                loaded_data.get(
+                    "after_imports_new_lines", str(cls.after_imports_new_lines)
                 )
-                or cls.add_imports,
-            )
-        except Exception as e:
-            raise InvalidConfig from e
+            ),
+            length=cls._parse_length(loaded_data.get("length", str(cls.length))),
+            formatter=cls._parse_formatter(loaded_data.get("formatter", "")),
+            groups=groups or cls.groups,
+            exclude=loaded_data.get("exclude", cls.exclude),
+            add_imports=(
+                cls._parse_add_imports(loaded_data.get("add_imports", []))
+                or cls.add_imports
+            ),
+        )
 
     @classmethod
     def from_ini(cls, path: pathlib.Path, data: str) -> "Config":
@@ -145,72 +206,81 @@ class Config:
             KeyError,
             configparser.MissingSectionHeaderError,
             configparser.NoSectionError,
-        ):
-            raise InvalidConfig
+        ) as e:
+            raise NoImportanizeConfig(f"{type(e).__name__}: {e}") from e
 
-        try:
-            return cls(
-                path=path,
-                after_imports_new_lines=int(
-                    loaded_data.get(
-                        "after_imports_new_lines", cls.after_imports_new_lines
-                    )
-                ),
-                length=int(loaded_data.get("length", cls.length)),
-                formatter=FORMATTERS.get(
-                    loaded_data.get("formatter", ""), cls.formatter
-                ),
-                groups=(
-                    [
-                        GROUPS[i.split(":")[0].strip()].validate_group_config(
-                            GroupConfig(
-                                type=i.split(":")[0].strip(),
-                                packages=[
-                                    j.strip() for j in i.split(":", 1)[1].split(",")
-                                ]
-                                if ":" in i
-                                else [],
-                            )
-                        )
-                        for i in loaded_data.get("groups", "").split("\n")
-                        if i.strip()
-                    ]
-                    or cls.groups
-                ),
-                exclude=[
+        groups: typing.List[GroupConfig] = []
+        for i in (i for i in loaded_data.get("groups", "").split("\n") if i.strip()):
+            try:
+                group_type, packages_str = i.split(":", 1)
+                packages = packages_str.split(",")
+            except ValueError:
+                group_type, packages = i.split(":")[0], []
+            finally:
+                groups.append(cls._parse_group(group_type, packages))
+
+        return cls(
+            path=path,
+            after_imports_new_lines=cls._parse_after_imports_new_lines(
+                loaded_data.get(
+                    "after_imports_new_lines", str(cls.after_imports_new_lines)
+                )
+            ),
+            length=cls._parse_length(loaded_data.get("length", str(cls.length))),
+            formatter=cls._parse_formatter(loaded_data.get("formatter", "")),
+            groups=groups or cls.groups,
+            exclude=(
+                [
                     i.strip()
                     for i in loaded_data.get("exclude", "").split("\n")
                     if i.strip()
                 ]
-                or cls.exclude,
-                add_imports=list(
-                    itertools.chain(
-                        *[
-                            [s.with_line_numbers([]) for s in parse_imports(i.strip())]
-                            for i in loaded_data.get("add_imports", "").split("\n")
-                            if i.strip()
-                        ]
-                    )
-                )
-                or cls.add_imports,
-            )
-        except Exception:
-            raise InvalidConfig
+                or cls.exclude
+            ),
+            add_imports=(
+                cls._parse_add_imports(loaded_data.get("add_imports", "").split("\n"))
+                or cls.add_imports
+            ),
+        )
 
     @classmethod
-    def from_path(cls, path: str = None) -> "Config":
+    def from_path(cls, path: str = None, strict: bool = False) -> "Config":
         if not path:
             return cls.default()
 
         parsed_path = pathlib.Path(path)
         data = parsed_path.read_text("utf-8")
+        no_config_errors = []
+        errors = []
 
-        with suppress(InvalidConfig):
+        json_prefix = f"{os.path.relpath(path)}[json] - "
+        try:
             return cls.from_json(parsed_path, data)
-        with suppress(InvalidConfig):
-            return cls.from_ini(parsed_path, data)
+        except NoImportanizeConfig as e:
+            msg = f"{json_prefix}{type(e).__name__}: {e}"
+            no_config_errors.append(msg)
+            if not strict:
+                log.debug(msg)
+        except Exception as e:
+            errors.append(f"{json_prefix}{type(e).__name__}: {e}")
 
-        raise InvalidConfig
+        ini_prefix = f"{os.path.relpath(path)}[ini] - "
+        try:
+            return cls.from_ini(parsed_path, data)
+        except NoImportanizeConfig as e:
+            msg = f"{ini_prefix}{type(e).__name__}: {e}"
+            no_config_errors.append(msg)
+            if not strict:
+                log.debug(msg)
+        except Exception as e:
+            errors.append(f"{ini_prefix}{type(e).__name__}: {e}")
+
+        if errors:
+            raise InvalidConfig("\n".join(errors))
+        elif strict:
+            raise NoImportanizeConfig("\n".join(no_config_errors))
+        else:
+            return cls.default()
 
     @classmethod
     def find(
@@ -241,16 +311,11 @@ class Config:
                     for f in exists:
                         try:
                             config = Config.from_path(str(f))
-                        except InvalidConfig:
-                            pass
-
-                    if not config and exists and log_errors:
-                        files = ",".join(str(i.name) for i in exists)
-                        log.debug(
-                            f"Could not read config from "
-                            f"{path}{os.sep}{{{files}}} "
-                            f"in either json or ini formats"
-                        )
+                            if config:
+                                break
+                        except InvalidConfig as e:
+                            if log_errors:
+                                log.error(f"{e}")
 
                     cache[path] = cache[cwd] = config
 
@@ -259,7 +324,8 @@ class Config:
 
                 path = path.parent
 
-            return cls.default()
+            default = cls.default()
+            return default
 
     def merge(self, other: "Config") -> "Config":
         self.length = other.length

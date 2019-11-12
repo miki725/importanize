@@ -173,7 +173,9 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
 
     name = "inline-grouped"
 
-    def __new__(cls, statement: "ImportStatement", **kwargs: typing.Any) -> Formatter:
+    def __new__(  # type: ignore
+        cls, statement: "ImportStatement", **kwargs: typing.Any
+    ) -> Formatter:
         """
         Overwrite __new__ to return GroupedFormatter formatter instance
         when the statement to be formatted has both statement inline comment and
@@ -202,7 +204,7 @@ class GroupedInlineAlignedFormatter(GroupedFormatter):
             ]
         ):
             return GroupedFormatter(statement, **kwargs)
-        return super().__new__(cls)  # type: ignore
+        return typing.cast(GroupedInlineAlignedFormatter, super().__new__(cls))
 
     def normalize_statement(self, statement: "ImportStatement") -> "ImportStatement":
         if all(

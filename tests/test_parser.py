@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-
 import lib2to3
+
 from importanize.parser import (
-    get_text_artifacts,
-    parse_imports,
-    normalize_comment,
-    Leaf,
     Artifacts,
+    Leaf,
+    get_text_artifacts,
+    normalize_comment,
+    parse_imports,
 )
 from importanize.statements import ImportLeaf, ImportStatement
 

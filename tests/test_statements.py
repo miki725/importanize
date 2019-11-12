@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-
-from importanize.statements import ImportLeaf, ImportStatement
 import typing
 
 import pytest  # type: ignore
+
+from importanize.statements import ImportLeaf, ImportStatement
 
 
 class TestImportLeaf:

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 from pathlib import Path
 
@@ -318,6 +319,19 @@ class TestPrintAggregator:
 
 
 class TestAggregator:
+    def test_invalid_config(self) -> None:
+        stdin = OpenStringIO((TEST_DATA / "output_grouped.py").read_text())
+        stdout = OpenStringIO()
+        result = Aggregator(
+            RuntimeConfig(
+                config_path=__file__,
+                _paths=[StdPath("-").with_streams(stdin=stdin, stdout=stdout)],
+                show_header=True,
+            )
+        )()
+        assert result == 1
+        assert stdout.read() == ""
+
     def test_aggregator_has_changes(self) -> None:
         stdin = OpenStringIO((TEST_DATA / "input.py").read_text())
         stdout = OpenStringIO()

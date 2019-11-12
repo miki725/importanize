@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+import typing
 
+from importanize.config import Config
 from importanize.formatters import (
+    Formatter,
     GroupedFormatter,
     GroupedInlineAlignedFormatter,
     LinesFormatter,
 )
-import typing
-from importanize.statements import ImportLeaf, ImportStatement
-from importanize.formatters import Formatter
-from importanize.config import Config
 from importanize.parser import Artifacts
+from importanize.statements import ImportLeaf, ImportStatement
 
 
 # Define some names for tests purposes

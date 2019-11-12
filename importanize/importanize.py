@@ -5,13 +5,14 @@ import logging
 import os
 import sys
 import typing
+from contextlib import suppress
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
 
 import click
 
-from .config import FORMATTERS, Config
+from .config import FORMATTERS, Config, InvalidConfig, NoImportanizeConfig
 from .formatters import Formatter
 from .groups import ImportGroups
 from .parser import (
@@ -38,6 +39,7 @@ class RuntimeConfig:
     should_add_last_line: bool = True
 
     _config: typing.Optional[Config] = None
+    root_config: Config = Config.default()
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
     found_configs: typing.Dict[Path, Config] = field(default_factory=lambda: {})
@@ -67,7 +69,7 @@ class RuntimeConfig:
         self._config = (
             self._config
             if self._config is not None
-            else Config.from_path(self.config_path)
+            else Config.from_path(self.config_path, strict=True) or self.root_config
         )
         return self._config
 
@@ -237,8 +239,7 @@ def run_importanize_on_file(
             config = subconfig
             log.info(f"Found subconfig {subconfig}")
 
-    norm = os.path.normpath(os.path.abspath(str(source)))
-    if any(fnmatch(norm, i) for i in config.exclude):
+    if should_skip(source, config):
         log.info(f"Skipping {source} as per {config}")
         return
 
@@ -248,10 +249,9 @@ def run_importanize_on_file(
 
 
 def run_importanize_on_dir(
-    source: Path, config: Config, runtime_config: RuntimeConfig, path: Path = None
+    source: Path, config: Config, runtime_config: RuntimeConfig,
 ) -> typing.Iterator[Result]:
-    norm = os.path.normpath(os.path.abspath(str(source)))
-    if any(fnmatch(norm, i) for i in config.exclude):
+    if should_skip(source, config):
         log.info(f"Skipping {source} as per {config}")
         return
 
@@ -282,6 +282,18 @@ def run_importanize_on_source(
         )
 
 
+def should_skip(source: Path, config: Config) -> bool:
+    norm = relative = os.path.normpath(os.path.abspath(str(source)))
+    norm_path = Path(norm)
+    with suppress(ValueError):
+        relative = str(
+            norm_path.relative_to(getattr(config.path, "parent", norm_path.root))
+        )
+    absolute_match = any(fnmatch(norm, i) for i in config.exclude)
+    relative_match = any(fnmatch(relative, i,) for i in config.exclude)
+    return absolute_match or relative_match
+
+
 class BaseAggregator(metaclass=abc.ABCMeta):
     def __init__(self, runtime_config: RuntimeConfig):
         self.runtime_config = runtime_config
@@ -302,11 +314,14 @@ class BaseAggregator(metaclass=abc.ABCMeta):
         return 0
 
     def __call__(self) -> int:
+        try:
+            merged_config = self.runtime_config.merged_config
+        except (NoImportanizeConfig, InvalidConfig) as e:
+            log.error(f"{e}")
+            return 1
         for source in self.runtime_config.paths:
             for result in run_importanize_on_source(
-                source=source,
-                runtime_config=self.runtime_config,
-                config=self.runtime_config.merged_config,
+                source=source, runtime_config=self.runtime_config, config=merged_config
             ):
                 if result.is_success:
                     self.update(result)

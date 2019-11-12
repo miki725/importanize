@@ -10,6 +10,7 @@ from importanize.config import (
     IMPORTANIZE_SETUP_CONFIG,
     Config,
     GroupConfig,
+    NoImportanizeConfig,
     InvalidConfig,
 )
 from importanize.formatters import LinesFormatter
@@ -34,12 +35,10 @@ class TestConfig:
         assert "*/.tox/*" in Config.default().exclude
 
     def test_json_invalid_json(self) -> None:
-        with pytest.raises(InvalidConfig):
+        with pytest.raises(NoImportanizeConfig):
             Config.from_json(StdPath("invalid.json"), "invalid data")
-
-    def test_json_invalid_data(self) -> None:
         with pytest.raises(InvalidConfig):
-            Config.from_json(StdPath("invalid.json"), '{"length": "a"}')
+            Config.from_json(StdPath("invalid.json"), "{'length': 'a'}")
 
     def test_json(self) -> None:
         assert Config.from_json(StdPath("config.json"), "{}") == Config(
@@ -68,13 +67,56 @@ class TestConfig:
         )
 
     def test_ini_no_section(self) -> None:
-        with pytest.raises(InvalidConfig):
+        with pytest.raises(NoImportanizeConfig):
             Config.from_ini(StdPath("invalid.ini"), "")
 
-    def test_ini_invalid_data(self) -> None:
+    def test_ini_invalid_group_name(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "groups=", "  foo"]),
+            )
+
+    def test_ini_invalid_require_packages(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "groups=", "  packages"]),
+            )
+
+    def test_ini_invalid_add_imports(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "add_imports=", "  from foo from bar"]),
+            )
+
+    def test_ini_invalid_formatter(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"), "\n".join(["[importanize]", "formatter=foo"]),
+            )
+
+    def test_ini_invalid_length(self) -> None:
         with pytest.raises(InvalidConfig):
             Config.from_ini(
                 StdPath("invalid.ini"), "\n".join(["[importanize]", "length=a"])
+            )
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"), "\n".join(["[importanize]", "length=1"])
+            )
+
+    def test_ini_invalid_new_lines(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "after_imports_new_lines=a"]),
+            )
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "after_imports_new_lines=10"]),
             )
 
     def test_ini(self) -> None:
@@ -113,6 +155,14 @@ class TestConfig:
     def test_from_path_no_path(self) -> None:
         assert not Config.from_path(None)
 
+    def test_from_path_strict(self) -> None:
+        with pytest.raises(NoImportanizeConfig):
+            Config.from_path(__file__, strict=True)
+
+    def test_find_invalid(self) -> None:
+        path = Path(__file__).parent / "test_data" / "invalid"
+        assert not Config.find(path, root=path.parent)
+
     def test_find_config(self) -> None:
         config = Config.find(Path(__file__))
         expected_config = Path(__file__).parent.parent / IMPORTANIZE_SETUP_CONFIG
@@ -124,7 +174,7 @@ class TestConfig:
         # subconfig, and we dont find the config for the file, return the
         # passed config.
         config = Config.find(Path("tests/test_main.py"))
-        # Instead of the absolute path, assume, user is running importanize
+        # Instead of thekabsolute path, assume, user is running importanize
         # from the current directory.
         expected_config = Path(__file__).parent.parent / IMPORTANIZE_SETUP_CONFIG
 
@@ -132,9 +182,7 @@ class TestConfig:
 
     @mock.patch.object(Path, "read_text", mock.Mock(return_value="invalid data"))
     def test_find_config_current_dir_invalid(self) -> None:
-        config = Config.find(StdPath("tests/test_main.py"))
-
-        assert not config
+        assert not Config.find(StdPath("tests/test_main.py"))
 
     def test_find_config_nonfound(self) -> None:
         assert not Config.find(Path(Path(__file__).root))

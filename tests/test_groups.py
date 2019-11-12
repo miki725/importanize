@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest  # type: ignore
+
+from importanize.config import Config, GroupConfig
 from importanize.groups import (
     BaseImportGroup as _BaseImportGroup,
     ImportGroups,
@@ -10,11 +13,8 @@ from importanize.groups import (
     SitePackagesGroup,
     StdLibGroup,
 )
-from importanize.config import GroupConfig, Config
-from importanize.statements import ImportLeaf, ImportStatement
 from importanize.parser import Artifacts
-
-import pytest  # type: ignore
+from importanize.statements import ImportLeaf, ImportStatement
 
 
 class BaseImportGroup(_BaseImportGroup):

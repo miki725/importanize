@@ -3,8 +3,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 
-from importanize import __author__, __description__, __version__
 from setuptools import find_packages, setup  # type: ignore
+
+from importanize import __author__, __description__, __version__
 
 
 def read(fname):

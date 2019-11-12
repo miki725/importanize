@@ -136,7 +136,7 @@ class PackagesGroup(BaseImportGroup):
     @classmethod
     def validate_group_config(cls, group: "GroupConfig") -> "GroupConfig":
         if not group.packages:
-            msg = '"package" config must be supplied with packages import group'
+            msg = f'"{cls.name}" config group must define at least one Python package'
             raise ValueError(msg)
         return super().validate_group_config(group)
 
