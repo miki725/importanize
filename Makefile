@@ -1,5 +1,5 @@
 .PHONY: clean-pyc clean-build docs clean
-
+INSTALL_FILE ?= requirements-dev.txt
 PYTEST_FLAGS=-svv --doctest-modules --ignore=tests/test_data
 
 ifeq ($(shell python --version | grep -i pypy | wc -l),1)
@@ -18,8 +18,9 @@ help:  ## show help
 		sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-install:  ## install all dependecies
-	pip install -U -r requirements-dev.txt
+install: ## install all requirements including for testing
+	pip install -U -r $(INSTALL_FILE)
+	pip freeze
 
 clean: clean-build clean-pyc clean-test  ## clean everything except tox
 
@@ -47,7 +48,7 @@ lint: clean  ## lint whole library
 	fi
 
 test: clean  ## run all tests
-	pytest ${PYTEST_FLAGS} --cov=importanize --cov-report=term-missing tests/ importanize/
+	pytest ${PYTEST_FLAGS} tests/ importanize/
 
 coverage-%:
 	pytest ${PYTEST_FLAGS} \
@@ -61,18 +62,19 @@ coverage-%:
 coverage: clean  ## run all tests with coverage
 	$(MAKE) $(COVERAGE_TARGETS)
 	coverage report $(COVERAGE_FLAGS)
+	coverage xml
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox
 
 check: lint clean coverage   ## check library which runs lint and tests
 
-release: clean  ## push release to pypi
-	python setup.py sdist bdist_wheel upload
-
-dist: clean  ## create distribution of the library
+dist: clean  ## build python package ditribution
 	python setup.py sdist bdist_wheel
 	ls -l dist
+
+release: clean dist  ## package and upload a release
+	twine upload dist/*
 
 watch:  ## watch file changes to run a command, e.g. make watch py.test tests/
 	@if ! type "fswatch" 2> /dev/null; then \

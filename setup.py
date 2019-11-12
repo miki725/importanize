@@ -23,7 +23,7 @@ requirements = read("requirements.txt").splitlines() + ["setuptools"]
 
 test_requirements = (
     read("requirements.txt").splitlines()
-    + read("requirements-dev.txt").splitlines()[2:]
+    + read("requirements-dev.txt").splitlines()[3:]
 )
 
 setup(
@@ -32,6 +32,7 @@ setup(
     author=__author__,
     description=__description__,
     long_description="\n\n".join([readme, history, authors, licence]),
+    long_description_content_type="text/x-rst",
     url="https://github.com/miki725/importanize",
     license="MIT",
     packages=find_packages(exclude=["test", "test.*"]),
@@ -46,9 +47,7 @@ setup(
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Development Status :: 2 - Pre-Alpha",
     ],
 )

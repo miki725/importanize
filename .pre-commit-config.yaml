@@ -16,6 +16,7 @@ repos:
       - id: check-merge-conflict
       - id: check-xml
       - id: check-yaml
+        args: [--allow-multiple-documents]
       - id: debug-statements
         exclude: test_data/.*$
       - id: end-of-file-fixer
@@ -27,20 +28,14 @@ repos:
 
   - repo: local
     hooks:
-    - id: mypy
-      name: mypy
-      entry: python -m mypy
-      language: system
-      language_version: python3
-      types: [python]
-      exclude: test_data/.*$
-    - id: importanize
-      name: importanize
-      entry: python -m importanize
-      language: system
-      language_version: python3
-      types: [python]
-      args: [-v]
+      - id: importanize
+        name: importanize
+        entry: python -m importanize
+        language: python
+        language_version: python3
+        types: [python]
+        args: [-v]
+        additional_dependencies: [click]
 
   - repo: https://github.com/python/black
     rev: 'master'
@@ -49,3 +44,21 @@ repos:
         args: [--line-length=88, --safe]
         language_version: python3
         exclude: test_data/.*$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'master'
+    hooks:
+      - id: mypy
+        language_version: python3
+        args: []
+        exclude: test_data/.*$
+
+  - repo: https://github.com/mgedmin/check-manifest
+    rev: 'master'
+    hooks:
+      - id: check-manifest
+
+  - repo: https://github.com/miki725/pre-commit-twine-check
+    rev: 'master'
+    hooks:
+      - id: twine-check

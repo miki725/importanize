@@ -2,14 +2,17 @@
 Importanize (import organize)
 =============================
 
-.. image:: https://badge.fury.io/py/importanize.png
+.. image:: https://badge.fury.io/py/importanize.svg
     :target: http://badge.fury.io/py/importanize
 
-.. image:: https://travis-ci.org/miki725/importanize.png?branch=master
-    :target: https://travis-ci.org/miki725/importanize
+.. image:: https://drone.miki725.com/api/badges/miki725/importanize/status.svg
+    :target: https://drone.miki725.com/miki725/importanize
 
 .. image:: https://coveralls.io/repos/miki725/importanize/badge.png?branch=master
     :target: https://coveralls.io/r/miki725/importanize?branch=master
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
 
 Utility for organizing Python imports using PEP8 or custom rules
 
@@ -161,8 +164,8 @@ Configuration Options
       .. code-block:: json
 
           {
-              "type": "packages",
-              "packages": ["foo", "bar"]
+            "type": "packages",
+            "packages": ["foo", "bar"]
           }
 
     * ``remaining`` - all remaining imports which did not satisfy requirements
@@ -231,14 +234,16 @@ Configuration Options
           path/to/file
           path/to/files/ignore_*.py
 
-   or:
+    or:
 
-   .. code-block:: json
+    .. code-block:: json
 
-        "exclude": [
+        {
+          "exclude": [
             "path/to/file",
             "path/to/files/ignore_*.py"
-        ]
+          ]
+        }
 
     Can only be specified in configuration file.
 
@@ -260,9 +265,11 @@ Configuration Options
 
     .. code-block:: json
 
-        "add_imports": [
+        {
+          "add_imports": [
             "from __future__ import absolute_import, print_function, unicode_literals"
-        ]
+          ]
+        }
 
     Can only be specified in configuration file.
 
@@ -282,10 +289,10 @@ Specific configuration is:
 
     [importanize]
     groups=
-        stdlib
-        sitepackages
-        remainder
-        local
+      stdlib
+      sitepackages
+      remainder
+      local
 
 Configuration Styles
 ++++++++++++++++++++
@@ -301,26 +308,26 @@ The following configurations are identical:
     [importanize]
     formatter=grouped
     groups=
-        stdlib
-        sitepackages
-        remainder
-        packages:my_favorite_package,least_favorite_package
-        local
+      stdlib
+      sitepackages
+      remainder
+      packages:my_favorite_package,least_favorite_package
+      local
 
 and:
 
 .. code-block:: json
 
     {
-        "formatter": "grouped",
-        "groups": [
-            {"type": "stdlib"},
-            {"type": "sitepackages"},
-            {"type": "remainder"},
-            {"type": "packages",
-             "packages": ["my_favorite_package", "least_favorite_package"]},
-            {"type": "local"}
-        ]
+      "formatter": "grouped",
+      "groups": [
+        {"type": "stdlib"},
+        {"type": "sitepackages"},
+        {"type": "remainder"},
+        {"type": "packages",
+         "packages": ["my_favorite_package", "least_favorite_package"]},
+        {"type": "local"}
+      ]
     }
 
 CI Mode
