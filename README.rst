@@ -8,8 +8,8 @@ Importanize (import organize)
 .. image:: https://drone.miki725.com/api/badges/miki725/importanize/status.svg
     :target: https://drone.miki725.com/miki725/importanize
 
-.. image:: https://coveralls.io/repos/miki725/importanize/badge.png?branch=master
-    :target: https://coveralls.io/r/miki725/importanize?branch=master
+.. image:: https://codecov.io/gh/miki725/importanize/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/miki725/importanize
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
@@ -123,6 +123,7 @@ default files:
 
 * ``.importanizerc``
 * ``importanize.ini``
+* ``importanize.json``
 * ``setup.cfg``
 * ``tox.ini``
 
@@ -132,9 +133,8 @@ repository itself at
 
 Additionally multiple configurations are supported within a single repository
 via sub-configurations.
-Simply place any of supported config files ``.importanizerc``, ``importanize.ini``,
-``setup.cfg`` or ``tox.ini`` within a sub-folder and all imports will be
-reconfigured under that folder with the subconfiguration.
+Simply place any of supported config files (see above) within a sub-folder and
+all imports will be reconfigured under that folder with the subconfiguration.
 
 Configuration Options
 +++++++++++++++++++++
@@ -273,6 +273,14 @@ Configuration Options
 
     Can only be specified in configuration file.
 
+    Note that this option is ignored when input is provided via ``stdin`` pipe.
+    This is on purpose to allow to importanize selected text in editors such as
+    ``vim``.
+
+    .. code-block:: bash
+
+        cat test.py | importanize
+
 To view all additional run-time options you can use ``--help`` parameter:
 
 .. code-block:: bash
@@ -339,14 +347,6 @@ Sometimes it is useful to check if imports are already organized in a file:
 
     ❯❯❯ importanize --ci
 
-In addition since some imports change order between Python 2/3 due to different
-stdlibs, ``--py`` can be used to enable ``importanize`` only for specific
-Python versions:
-
-.. code-block:: bash
-
-    ❯❯❯ importanize --ci --py=3
-
 Diff
 ----
 
@@ -354,11 +354,13 @@ It is possible to directly see the diff between original and organized file
 
 .. code-block:: diff
 
-    ❯❯❯ cat tests/test_data/input_readme.py | python -m importanize --diff
-    --- -
-    +++ -
-    @@ -1 +1,7 @@
+    ❯❯❯ importanize --print --diff tests/test_data/input_readme_diff.py
+    --- tests/test_data/input_readme_diff.py
+    +++ tests/test_data/input_readme_diff.py
+    @@ -1 +1,9 @@
     -from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+    +from __future__ import absolute_import, print_function, unicode_literals
+    +
     +from package.subpackage.module.submodule import (
     +    CONSTANT,
     +    Klass,
@@ -383,6 +385,46 @@ All found imports can be aggregated with ``--list`` parameter:
     sitepackages
     ------------
     click
+
+Pipe Support
+------------
+
+Pipes for both ``stdin`` and ``stdout`` are supported:
+
+.. code-block:: python
+
+    ❯❯❯ cat tests/test_data/input_readme_diff.py | importanize
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
+
+.. code-block:: python
+
+    ❯❯❯ importanize --no-header tests/test_data/input_readme_diff.py | cat
+    from __future__ import absolute_import, print_function, unicode_literals
+
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
+
+As mentioned above note that ``stdin`` did not honor ``add_imports`` which
+allows to use importanize on selected lines in editors such as ``vim``.
+To facilitate that feature even further, if selected lines are not module
+level (e.g. inside function), any whitespace prefix will be honored:
+
+.. code-block:: python
+
+    ❯❯❯ echo -e "    import sys\n    import os" | importanize
+        import os
+        import sys
 
 Pre-Commit
 ----------

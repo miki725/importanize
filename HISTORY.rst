@@ -7,16 +7,29 @@ History
 +++++++++++
 
 * Added support for ``.ini`` files configuration style.
-  In addition to ``.importanizerc`` can read config from ``setup.cfg`` and ``importanize.ini``.
-* Added ``--py`` option to only run importanize with specific python version.
-  Useful when combined with ``--ci``.
-* Added ``lines`` formatter which formats all imports on individual lines::
+* In addition to ``.importanizerc`` config can be read from ``setup.cfg``,
+  ``importanize.ini`` and ``importanize.json``.
+* Added ``lines`` formatter which formats all imports on individual lines
+
+  .. code-block:: python
 
       from package.subpackage.module.submodule import CONSTANT
       from package.subpackage.module.submodule import Klass
       from package.subpackage.module.submodule import bar
       from package.subpackage.module.submodule import foo
       from package.subpackage.module.submodule import rainbows
+
+* Complete refactor of parsing imports. No more string splitting.
+  Advantage is that comments around imports are now fully supported:
+
+  .. code-block:: python
+
+      # standalone comment
+      from foo import bar  # inline comment
+
+* Importanize itself can only run on Python 3 but it can importanize
+  Python 2 files.
+* ``mypy`` is used to check complete repository.
 
 0.7.0 (2018-06-06)
 ++++++++++++++++++
