@@ -1,289 +1,538 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import re
+import itertools
+import lib2to3
+import lib2to3.pgen2.driver
+import lib2to3.pgen2.parse
+import lib2to3.pgen2.token
+import lib2to3.pygram
+import lib2to3.pytree
+import typing
+from dataclasses import dataclass
 
-import six
-
-from .statements import DOTS, ImportLeaf, ImportStatement
-from .utils import list_split
+from .statements import ImportLeaf, ImportStatement
 
 
-STATEMENT_COMMENTS = ("noqa",)
-TOKEN_REGEX = re.compile(r" +|[\(\)]|([,\\])|(#.*)")
-SPECIAL_TOKENS = (",", "import", "from", "as")
+ENCODING_COMMENTS = ("coding=", "coding:")
+STATEMENT_COMMENTS = ("noqa", "type:")
+GRAMMARS = [
+    lib2to3.pygram.python_grammar_no_print_statement,
+    lib2to3.pygram.python_grammar,
+]
 
 
-class Token(six.text_type):
-    def __new__(cls, value, **kwargs):
-        obj = six.text_type.__new__(cls, value)
-        obj.is_comment_first = False
-        for k, v in kwargs.items():
-            setattr(obj, k, v)
-        return obj
+def normalize_comment(value: str) -> str:
+    """
+    Normalize a comment to remove all the #
+    """
+    return value.lstrip().replace("#", "", 1).lstrip()
 
-    @property
-    def is_comment(self):
-        return self.startswith("#")
 
-    @property
-    def normalized(self):
-        if not self.is_comment:
-            return self
+def is_comment(value: str) -> bool:
+    return value.strip().startswith("#")
+
+
+def is_comment_encoding(comment: str) -> bool:
+    return any(
+        [
+            any(i in comment for i in ENCODING_COMMENTS),
+            normalize_comment(comment).startswith("!"),
+        ]
+    )
+
+
+class ParseError(Exception):
+    """
+    Exception to indicate code text cannot be parsed
+    """
+
+
+@dataclass
+class Artifacts:
+    sep: str = "\n"
+    """
+    Line separator
+    """
+    first_line: int = 0
+    """
+    First line where imports should be placed
+    if no imports are already present in file
+    """
+
+    @classmethod
+    def default(cls) -> "Artifacts":
+        return cls()
+
+
+def parse_to_tree(text: str) -> lib2to3.pytree.Node:
+    """
+    Parse given code text to lib2to3 ``Node`` tree
+    """
+    text = text.rstrip("\n") + "\n"
+
+    error = None
+    for grammar in GRAMMARS:
+        try:
+            node = lib2to3.pgen2.driver.Driver(
+                grammar, lib2to3.pytree.convert
+            ).parse_string(text)
+        except lib2to3.pgen2.parse.ParseError as e:
+            error = e
         else:
-            if self.startswith("# "):
-                return self[2:]
-            else:
-                return self[1:]
+            if isinstance(node, lib2to3.pytree.Leaf):
+                return lib2to3.pytree.Node(
+                    lib2to3.pygram.python_symbols.simple_stmt, [node]
+                )
+            return node
+    raise ParseError(str(error)) from error
 
 
-def get_text_artifacts(text):
+def get_tree_artifacts(tree: lib2to3.pytree.Node) -> Artifacts:
+    """
+    Get artifacts for the given parsed file tree
+    """
+    pre_order = [i for i in tree.pre_order() if isinstance(i, lib2to3.pytree.Leaf)]
+
+    sep = next(
+        filter(lambda i: i.type == lib2to3.pgen2.token.NEWLINE, pre_order),
+        lib2to3.pytree.Leaf(lib2to3.pgen2.token.NEWLINE, "\n"),
+    ).value
+
+    first_node = next(
+        filter(
+            lambda i: (
+                i.type not in {lib2to3.pgen2.token.NEWLINE, lib2to3.pgen2.token.STRING}
+            ),
+            pre_order,
+        )
+    )
+
+    # node prefix includes comments hence to calculate first line
+    # we need to get node lineno and subtract number of
+    # non-empty lines in the prefix
+    non_empty_offset = len(
+        list(
+            itertools.takewhile(
+                lambda i: i.strip()
+                and not any(c in i for c in ENCODING_COMMENTS)
+                and not i.strip().startswith("#!"),
+                reversed(first_node.prefix.splitlines()),
+            )
+        )
+    )
+    # there could be empty lines immeately before comments
+    # so we need to offset those as well
+    empty_offset = len(
+        list(
+            itertools.takewhile(
+                lambda i: not i.strip(),
+                list(reversed(first_node.prefix.splitlines()))[non_empty_offset:],
+            )
+        )
+    )
+
+    first_line = (
+        first_node.get_lineno()
+        - 1  # lines are 1-index based
+        - non_empty_offset
+        - empty_offset
+    )
+
+    return Artifacts(sep=sep, first_line=max(first_line, 0))
+
+
+def get_text_artifacts(text: str) -> Artifacts:
     """
     Get artifacts for the given file.
-
-    Parameters
-    ----------
-    path : str
-        File content to analyze
-
-    Returns
-    -------
-    artifacts : dict
-        Dictionary of file artifacts which should be
-        considered while processing imports.
     """
-    artifacts = {"sep": "\n"}
-
-    lines = text.splitlines(True)
-    if len(lines) > 1 and lines[0][-2:] == "\r\n":
-        artifacts["sep"] = "\r\n"
-
-    return artifacts
-
-
-def find_imports_from_lines(iterator):
-    """
-    Find only import statements from enumerated iterator of file files.
-
-    Parameters
-    ----------
-    iterator : generator
-        Enumerated iterator which yield items
-        ``(line_number, line_string)``
-
-    Returns
-    -------
-    imports : generator
-        Iterator which yields tuple of lines strings composing
-        a single import statement as well as teh line numbers
-        on which the import statement was found.
-    """
-    while True:
-
-        try:
-            line_number, line = next(iterator)
-        except StopIteration:
-            return
-
-        # ignore comment blocks
-        triple_quote = line.find('"""')
-        if triple_quote >= 0 and line.find('"""', triple_quote + 3) < 0:
-            inside_comment = True
-            while inside_comment:
-                try:
-                    line_number, line = next(iterator)
-                except StopIteration:
-                    return
-                inside_comment = not line.endswith('"""')
-            # get the next line since previous is an end of a comment
-            try:
-                line_number, line = next(iterator)
-            except StopIteration:
-                return
-
-        # if no imports found on line, ignore
-        if not any([line.startswith("from "), line.startswith("import ")]):
-            continue
-
-        line_numbers = [line_number]
-        line_imports = [line]
-
-        paren_count = line.count("(") - line.count(")")
-
-        def read_line(paren_count):
-            line_number, line = next(iterator)
-            line_numbers.append(line_number)
-            line_imports.append(line)
-
-            paren_count += line.count("(")
-            paren_count -= line.count(")")
-
-            return line, paren_count
-
-        while paren_count > 0 or line.endswith("\\"):
-            line, paren_count = read_line(paren_count)
-
-        yield line_imports, line_numbers
-
-
-def tokenize_import_lines(import_lines):
-    tokens = []
-
-    for line in import_lines:
-        _tokens = []
-        words = filter(None, TOKEN_REGEX.split(line))
-
-        for i, word in enumerate(words):
-            token = Token(word)
-            # tokenize same-line comments before "," to allow to associate
-            # a comment with specific import since pure Python
-            # syntax does not do that because # has to be after ","
-            # hence when tokenizing, comment will be associated
-            # with next import which is not desired
-            if token.is_comment and _tokens and _tokens[max(i - 1, 0)] == ",":
-                _tokens.insert(i - 1, token)
-            else:
-                _tokens.append(token)
-
-        tokens.extend(_tokens)
-
-    # combine tokens between \\ newline escape
-    segments = list_split(tokens, "\\")
-    tokens = [Token("")]
-    for i, segment in enumerate(segments):
-        # don't add to previous token if it is a ","
-        if all(
-            (
-                tokens[-1] not in SPECIAL_TOKENS,
-                not i or segment[0] not in SPECIAL_TOKENS,
-            )
-        ):
-            tokens[-1] += segment[0]
-        else:
-            tokens.append(segment[0])
-        tokens += segment[1:]
-
-    return [Token(i) for i in tokens]
-
-
-def parse_import_statement(stem, line_numbers, **kwargs):
-    """
-    Parse single import statement into ``ImportStatement`` instances.
-
-    Parameters
-    ----------
-    stem : str
-        Import line stem which excludes ``"import"``.
-        For example for ``import a`` import, simply ``a``
-        should be passed.
-    line_numbers : list
-        List of line numbers which normalized to import stem.
-
-    Returns
-    -------
-    statement : ImportStatement
-        ``ImportStatement`` instances.
-    """
-    leafs = []
-
-    if stem.startswith("."):
-        stem, leafs_string = DOTS.findall(stem)[0]
-
-        # handle ``import .foo.bar``
-        leafs_split = leafs_string.rsplit(".", 1)
-        if len(leafs_split) == 2:
-            stem += leafs_split[0]
-            leafs_string = leafs_split[1]
-
-        leafs.append(ImportLeaf(leafs_string))
-
+    try:
+        tree = parse_to_tree(text)
+    except ParseError:
+        return Artifacts(sep="\n", first_line=0)
     else:
-        # handle ``import a.b as c``
+        return get_tree_artifacts(tree)
+
+
+class Leaf:
+    """
+    Wrapper around ``lib2to3.pytree.Leaf`` with useful shortcuts for parsing imports
+    """
+
+    IMPORT_FROM_COMBINABLE_TYPES: typing.Set[int] = {
+        lib2to3.pgen2.token.NAME,
+        lib2to3.pgen2.token.DOT,
+        lib2to3.pgen2.token.STAR,
+    }
+    IMPORT_COMBINABLE_TYPES: typing.Set[int] = IMPORT_FROM_COMBINABLE_TYPES | {
+        lib2to3.pgen2.token.COMMA
+    }
+
+    def __init__(
+        self, leaf: lib2to3.pytree.Leaf, combinable_types: typing.Set[int] = None
+    ):
+        self.leaf: lib2to3.pytree.Leaf = leaf
+        self.previous: typing.Union["Leaf", None]
+        self.next: typing.Union["Leaf", None]
+
+        self.type: int = self.leaf.type
+        self.prefix: str = self.leaf.prefix
+        self.value: str = self.leaf.value
+
+        self.combinable_types: typing.Set[
+            int
+        ] = combinable_types or self.IMPORT_COMBINABLE_TYPES
+        self.combinable_value: str = f" {self.leaf.value} " if self.leaf.value in {
+            "as"
+        } else self.leaf.value
+
+        self.prefix_lines: typing.List[str] = self.prefix.splitlines()
+        self.relevant_prefix_lines: typing.List[str] = list(
+            reversed(
+                [
+                    l
+                    for l in itertools.takewhile(
+                        lambda k: not is_comment_encoding(k),
+                        reversed(self.prefix.splitlines()),
+                    )
+                ]
+            )
+        )
+
+        # literally immediate comments before node itself
+        # in other words consecutive comments without
+        # any blank lines in between them
+        self.immediate_comments: typing.List[str] = list(
+            reversed(
+                [
+                    normalize_comment(l)
+                    for l in itertools.takewhile(
+                        lambda k: is_comment(k), reversed(self.relevant_prefix_lines)
+                    )
+                ]
+            )
+        )
+
+        self.enumerated_comments: typing.List[typing.Tuple[int, str]] = list(
+            reversed(
+                [
+                    (i, normalize_comment(l))
+                    for i, l in itertools.takewhile(
+                        lambda k: not is_comment_encoding(k[1]),
+                        reversed(list(enumerate(self.relevant_prefix_lines))),
+                    )
+                    if is_comment(l)
+                ]
+            )
+        )
+        self.comments: typing.List[str] = [l for i, l in self.enumerated_comments]
+
+    def get_lineno(self) -> int:
+        return self.leaf.get_lineno() - 1
+
+    @property
+    def is_combinable(self) -> bool:
+        return self.type in self.combinable_types and self.value not in {"import"}
+
+    def until(
+        self, until: typing.Union[typing.List[typing.Union[str, int]], None] = None
+    ) -> typing.Iterable["Leaf"]:
+        """
+        Generate all next leaf nodes while ``until`` condition is not met if given
+        """
+        node = self
+        yield node
+        while node.next and (all(node.next != i for i in until) if until else True):
+            node = node.next
+            yield node
+
+    def split_until(
+        self, sep: typing.List[typing.Union[str, int]]
+    ) -> typing.Iterable[typing.List["Leaf"]]:
+        """
+        Split all next leafs by separator if split contains any combinable leafs
+        """
+        node = self
+        while node:
+            elements = list(node.until(sep))
+            if any(i.is_combinable for i in elements):
+                yield elements
+            node = getattr(elements[-1].next, "next", None)
+
+    def __eq__(self, other: object) -> bool:
+        return self.type == other if isinstance(other, int) else self.value == other
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __repr__(self) -> str:
+        return repr(self.leaf)
+
+
+class Statement:
+    """
+    Wrapper around ``lib2to3.pytree.Node`` which handles file top-level statements
+    """
+
+    IMPORT_TYPES = {
+        v
+        for k, v in vars(lib2to3.pygram.python_symbols).items()
+        if k.startswith("import")
+    }
+
+    def __init__(self, node: lib2to3.pytree.Node):
+        self.node: lib2to3.pytree.Node = node
+
+    @property
+    def is_import(self) -> bool:
+        return (
+            self.node.type == lib2to3.pygram.python_symbols.simple_stmt
+            and self.node.children[0].type in self.IMPORT_TYPES
+        )
+
+    @property
+    def import_type(self) -> str:
+        return self.leafs[0].value
+
+    @property
+    def leafs(self) -> typing.List[Leaf]:
+        try:
+            return self._leafs
+        except AttributeError:
+            self._leafs: typing.List[Leaf] = []
+            _leafs = [
+                i for i in self.node.pre_order() if isinstance(i, lib2to3.pytree.Leaf)
+            ]
+
+            combinable_types_mapping = {
+                "from": Leaf.IMPORT_FROM_COMBINABLE_TYPES,
+                "import": Leaf.IMPORT_COMBINABLE_TYPES,
+            }
+            combinable_types = combinable_types_mapping[_leafs[0].value]
+
+            self._leafs = [Leaf(i, combinable_types=combinable_types) for i in _leafs]
+            for i, _leaf in enumerate(self._leafs):
+                _leaf.previous = self._leafs[i - 1] if i else None
+                _leaf.next = self._leafs[i + 1] if i < len(self._leafs) - 1 else None
+
+            return self._leafs
+
+    @property
+    def standalone_comments(self) -> typing.List[str]:
+        return self.leafs[0].immediate_comments
+
+    @property
+    def line_numbers(self) -> typing.List[int]:
+        line_numbers = {l.get_lineno() for l in self.leafs}
+        return list(
+            range(
+                min(line_numbers) - len(self.standalone_comments), max(line_numbers) + 1
+            )
+        )
+
+    @property
+    def nodes(self) -> typing.List[Leaf]:
+        return self.leafs[1:]
+
+
+def parse_imports_from_import_statement(
+    statement: Statement, strict: bool = False
+) -> typing.Iterable[ImportStatement]:
+    """
+    Parse import statements
+    """
+    # import statement standalone_comments are the only possible possible
+    standalone_comments = statement.standalone_comments
+
+    # import statement has only inline comments
+    # in all nodes within a statment so we can immediatly
+    # add all of them to inline_comments
+    inline_comments = list(itertools.chain(*[i.comments for i in statement.nodes]))
+
+    # much simpler to do splits on string and since
+    # comments are already handled this is much simpler route
+    # compared to inspecting tree structure
+    # go string parsing!
+    data = "".join(n.combinable_value for n in statement.nodes if n.is_combinable)
+
+    # loop to handle multiple comma delimited imports
+    for imp in data.split(","):
+        leafs: typing.List[ImportLeaf] = []
+        as_name: typing.Union[str, None] = None
+        try:
+            stem, as_name = imp.split(" as ")
+        except ValueError:
+            stem, as_name = imp, None
+
         stem_split = stem.rsplit(".", 1)
-        if len(stem_split) == 2 and " as " in stem:
+        # if import has "as" name and stem can be split to multiple imports
+        # import can be transformed to from..import
+        # e.g. import a.b.c as d -> from a.b import c as d
+        # no need to handle local imports (e.g. import .a)
+        # since that is invalid python syntax
+        if as_name and all(stem_split) and len(stem_split) > 1:
             stem = stem_split[0]
-            leafs_string = stem_split[1]
-            leafs.append(ImportLeaf(leafs_string))
+            leafs.append(ImportLeaf(stem_split[1], as_name))
+            as_name = None
 
-    # handle when ``as`` is present and is unnecessary
-    # in import without leafs
-    # e.g. ``import foo as foo``
-    # if leaf is present, leaf will take care of normalization
-    if " as " in stem and not leafs:
-        name, as_name = stem.split(" as ")
-        if name == as_name:
-            stem = name
+        yield ImportStatement(
+            stem=stem,
+            as_name=as_name,
+            leafs=leafs,
+            line_numbers=statement.line_numbers,
+            standalone_comments=standalone_comments,
+            inline_comments=inline_comments,
+            strict=strict,
+        )
 
-    return ImportStatement(line_numbers, stem, leafs, **kwargs)
 
+def parse_imports_from_import_from_statement(
+    statement: Statement, strict: bool = False
+) -> typing.Iterable[ImportStatement]:
+    leafs: typing.List[ImportLeaf] = []
 
-def parse_statements(iterable, **kwargs):
-    """
-    Parse iterable into ``ImportStatement`` instances.
+    # import statement standalone_comments are the only possibility
+    standalone_comments = statement.standalone_comments
+    inline_comments: typing.List[str] = []
 
-    Parameters
-    ----------
-    iterable : generator
-        Generator as returned by ``find_imports_from_lines``
+    stem_nodes = list(statement.nodes[0].until(["import"]))
+    stem = "".join(n.combinable_value for n in stem_nodes if n.is_combinable)
 
-    Returns
-    -------
-    statements : generator
-        Generator which yields ``ImportStatement`` instances.
-    """
+    # get all nodes after "import" node
+    # and split them by comma to hand parse multiple import leafs
+    last_node: Leaf
+    for leaf_nodes in (
+        stem_nodes[-1].next.split_until([",", ")"]) if stem_nodes[-1].next else []
+    ):
+        last_node = leaf_nodes[-1]
+        leaf_nodes_enumerated = {v: k for k, v in enumerate(leaf_nodes)}
 
-    def get_comments(j):
-        return filter(lambda i: i.is_comment, j)
+        imp_standalone_comments: typing.List[str] = []
+        imp_inline_comments: typing.List[str] = []
+        imp_statement_comments: typing.List[str] = []
 
-    def get_not_comments(j):
-        return filter(lambda i: not i.is_comment, j)
+        combinable_nodes = {
+            v: k for k, v in enumerate(leaf_nodes_enumerated) if v.is_combinable
+        }
 
-    def get_first_not_comment(j):
-        return next(iter(filter(lambda i: not i.is_comment, j)))
+        # instead of parsing nodes to get leaf leaf name as as_name
+        # much simpler to simply parse a string
+        complete_name = "".join(n.combinable_value for n in combinable_nodes)
+        name: str
+        as_name: typing.Optional[str]
+        try:
+            name, as_name = complete_name.split(" as ")
+        except ValueError:
+            name, as_name = complete_name, None
 
-    for import_lines, line_numbers in iterable:
-        tokens = tokenize_import_lines(import_lines)
-
-        if tokens[0] == "import":
-            for _tokens in list_split(tokens[1:], ","):
-                stem = " ".join(get_not_comments(_tokens))
-                comments = get_comments(_tokens)
-                yield parse_import_statement(
-                    stem=stem,
-                    line_numbers=line_numbers,
-                    comments=list(comments),
-                    **kwargs
+        # find all comments within leaf nodes
+        # and add to appropriate target either leaf comments
+        # or to overall import statement inline comments
+        # for comments such as "noqa"
+        #
+        # only exception here is handling comments
+        # directly after a comma
+        # in that case comment is added to next node
+        # hence will be part of next import leaf which is not desired
+        # therefore it manually needs to be added to previous leaf
+        comment_nodes = {
+            v: k for k, v in enumerate(leaf_nodes_enumerated) if v.comments
+        }
+        for inode, node in enumerate(comment_nodes):
+            for ci, comment in node.enumerated_comments:
+                target = (
+                    imp_standalone_comments
+                    if node.is_combinable
+                    else imp_inline_comments
                 )
+
+                if any(j in comment for j in STATEMENT_COMMENTS):
+                    target = imp_statement_comments
+
+                if (
+                    inode == 0
+                    and ci == 0
+                    and comment_nodes[node] <= max(combinable_nodes.values())
+                ):
+                    target = leafs[-1].inline_comments if leafs else inline_comments
+
+                    if any(j in comment for j in STATEMENT_COMMENTS):
+                        target = (
+                            leafs[-1].statement_comments if leafs else inline_comments
+                        )
+
+                target.append(comment)
+
+        leafs.append(
+            ImportLeaf(
+                name=name,
+                as_name=as_name,
+                standalone_comments=imp_standalone_comments,
+                inline_comments=imp_inline_comments,
+                statement_comments=imp_statement_comments,
+                strict=strict,
+            )
+        )
+
+    # possible to have more nodes after all leafs are exhausted
+    # e.g. if last leaf is a comma
+    # so those comments need to be accounted for
+    # there are 2 possibilities
+    # 1) comment belongs to last leaf
+    # 2) unless comment is after newline or ")" in which case belogs
+    #    as statement inline comment
+    imp_rest_nodes = {
+        v: k for k, v in enumerate(getattr(last_node.next, "until", list)())
+    }
+    try:
+        par_index = list(imp_rest_nodes).index(")")
+    except ValueError:
+        par_index = len(imp_rest_nodes)
+    for inode, node in enumerate(i for i in imp_rest_nodes if i.comments):
+        for ci, comment in node.enumerated_comments:
+            target = inline_comments
+
+            if inode == 0 and ci == 0 and imp_rest_nodes[node] <= par_index:
+                target = leafs[-1].inline_comments
+                if any(j in comment for j in STATEMENT_COMMENTS):
+                    target = leafs[-1].statement_comments
+
+            target.append(comment)
+
+    yield ImportStatement(
+        stem=stem,
+        as_name=None,
+        leafs=leafs,
+        line_numbers=statement.line_numbers,
+        standalone_comments=standalone_comments,
+        inline_comments=inline_comments,
+        strict=strict,
+    )
+
+
+def parse_imports_from_tree(
+    tree: lib2to3.pytree.Node, strict: bool = False
+) -> typing.Iterable[ImportStatement]:
+    """
+    Parse imports from given tree
+    """
+    for statement in filter(
+        lambda i: i.is_import,
+        (Statement(i) for i in tree.children if isinstance(i, lib2to3.pytree.Node)),
+    ):
+        if statement.import_type == "import":
+            yield from parse_imports_from_import_statement(
+                statement=statement, strict=strict
+            )
 
         else:
-            stem_tokens, leafs_tokens = list_split(tokens[1:], "import")
-            stem = " ".join(get_not_comments(stem_tokens))
-            list_of_leafs = list(list_split(leafs_tokens, ","))
-            statement_comments = set()
-            leafs = []
-
-            for leaf_list in list_of_leafs:
-                first_non_leaf_index = leaf_list.index(
-                    get_first_not_comment(leaf_list)
-                )
-                leaf_stem = " ".join(get_not_comments(leaf_list))
-                comments = []
-                all_leaf_comments = filter(lambda i: i.is_comment, leaf_list)
-
-                for comment in all_leaf_comments:
-                    if comment.normalized in STATEMENT_COMMENTS:
-                        statement_comments.add(comment)
-                    else:
-                        comment.is_comment_first = (
-                            leaf_list.index(comment) < first_non_leaf_index
-                        )
-                        comments.append(comment)
-
-                leafs.append(ImportLeaf(leaf_stem, comments=comments))
-
-            yield ImportStatement(
-                line_numbers=line_numbers,
-                stem=stem,
-                leafs=leafs,
-                comments=list(statement_comments),
-                **kwargs
+            yield from parse_imports_from_import_from_statement(
+                statement=statement, strict=strict
             )
+
+
+def parse_imports(text: str, strict: bool = False) -> typing.Iterable[ImportStatement]:
+    """
+    Parse imports from given code text
+    """
+    tree = parse_to_tree(text)
+    return parse_imports_from_tree(tree, strict=strict)

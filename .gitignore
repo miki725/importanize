@@ -1,4 +1,6 @@
 *.py[cod]
+*.sw[po]
+.mypy_cache
 
 # C extensions
 *.so
@@ -23,6 +25,7 @@ pip-log.txt
 
 # Unit test / coverage reports
 .coverage
+coverage.xml
 .tox
 nosetests.xml
 htmlcov
@@ -45,6 +48,8 @@ docs/_build
 # IDEs
 /.idea
 .venv
+.vim
+Session.vim
 
 # system
 .DS_Store

@@ -5,3 +5,6 @@ import flake8 as lint  # in site-package
 from a.b import d
 import z
 import datetime as mydatetime
+
+def code():
+    pass

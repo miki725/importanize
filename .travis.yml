@@ -1,12 +1,18 @@
-language: python
+dist: xenial
+sudo: false
+branches:
+  only:
+    - master
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.cache/pre-commit
 
+language: python
 python:
   - "3.6"
-  - "2.7"
-  - "pypy"
-  - "pypy3"
-
-sudo: false
+  - "3.7"
+  - "pypy3.6-7.1.1"
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:

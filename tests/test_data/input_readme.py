@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, print_function
-import os.path as ospath
+import os.path as ospath  # ospath is great
 from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
-import datetime
-from .module import foo, bar
+# UTC all the things
+import datetime # pytz
+from .module import foo, bar  # baz
 from ..othermodule import rainbows

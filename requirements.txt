@@ -1,2 +1,2 @@
-six>=1.9
-pathlib2
+click
+dataclasses; python_version < '3.7'

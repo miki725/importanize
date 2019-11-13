@@ -1,12 +1,13 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    sha: 'master'
+    rev: 'master'
     hooks:
       - id: check-added-large-files
         args: [--maxkb=1024]
       - id: check-byte-order-marker
       - id: check-builtin-literals
+        exclude: test_data/.*$
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-executables-have-shebangs
@@ -15,28 +16,49 @@ repos:
       - id: check-merge-conflict
       - id: check-xml
       - id: check-yaml
+        args: [--allow-multiple-documents]
       - id: debug-statements
+        exclude: test_data/.*$
       - id: end-of-file-fixer
       - id: fix-encoding-pragma
-        exclude: test_data/.*\.py$
+        exclude: test_data/.*$
       - id: flake8
       - id: mixed-line-ending
       - id: trailing-whitespace
 
   - repo: local
     hooks:
-    - id: importanize
-      name: importanize
-      entry: python -m importanize
-      language: system
-      language_version: python3
-      types: [python]
-      args: [--py=3, -v]
+      - id: importanize
+        name: importanize
+        entry: python -m importanize
+        language: python
+        language_version: python3
+        types: [python]
+        args: [-v]
+        additional_dependencies: [click]
 
-  - repo: https://github.com/ambv/black
-    sha: 'master'
+  - repo: https://github.com/python/black
+    rev: 'master'
     hooks:
       - id: black
-        args: [--line-length=80, --safe]
+        args: [--line-length=88, --safe]
         language_version: python3
-        exclude: test_data/.*\.py$
+        exclude: test_data/.*$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'master'
+    hooks:
+      - id: mypy
+        language_version: python3
+        args: []
+        exclude: test_data/.*$
+
+  - repo: https://github.com/mgedmin/check-manifest
+    rev: 'master'
+    hooks:
+      - id: check-manifest
+
+  - repo: https://github.com/miki725/pre-commit-twine-check
+    rev: 'master'
+    hooks:
+      - id: twine-check

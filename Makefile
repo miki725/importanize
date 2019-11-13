@@ -1,9 +1,16 @@
 .PHONY: clean-pyc clean-build docs clean
+INSTALL_FILE ?= requirements-dev.txt
+PYTEST_FLAGS=-svv --doctest-modules --ignore=tests/test_data
 
-NOSE_FLAGS=-sv --with-doctest --rednose --exclude=test_data
-COVER_CONFIG_FLAGS=--with-coverage --cover-package=importanize,tests --cover-tests --cover-erase
-COVER_REPORT_FLAGS=--cover-html --cover-html-dir=htmlcov
-COVER_FLAGS=${COVER_CONFIG_FLAGS} ${COVER_REPORT_FLAGS}
+ifeq ($(shell python --version | grep -i pypy | wc -l),1)
+	COVERAGE_FLAGS=--show-missing
+else
+	COVERAGE_FLAGS=--show-missing --fail-under=100
+endif
+
+importanize_files=$(shell find importanize -name "[!_]*.py" -exec basename {} .py \;)
+COVERAGE_TARGETS=$(addprefix coverage-,$(importanize_files))
+
 
 help:  ## show help
 	@grep -E '^[a-zA-Z_\-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -11,10 +18,11 @@ help:  ## show help
 		sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-install:  ## install all dependecies
-	pip install -U -r requirements-dev.txt
+install: ## install all requirements including for testing
+	pip install -U -r $(INSTALL_FILE)
+	pip freeze
 
-clean: clean-build clean-pyc clean-test  ## clean everything except tox
+clean: clean-build clean-pyc  ## clean everything except tox
 
 clean-build:  ## clean build and distribution artifacts
 	@rm -rf build/
@@ -26,7 +34,7 @@ clean-pyc:  ## clean pyc files
 	-@find . -path ./.tox -prune -o -name '*.pyo' -follow -print0 | xargs -0 rm -f
 	-@find . -path ./.tox -prune -o -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
 
-clean-test:  ## clean test artifacts like converage
+clean-coverage: clean  ## clean test artifacts like converage
 	rm -rf .coverage coverage*
 	rm -rf htmlcov/
 
@@ -34,25 +42,55 @@ clean-all: clean  ## clean everything including tox
 	rm -rf .tox/
 
 lint: clean  ## lint whole library
-	if python -c "import sys; exit(1) if sys.version[:3] < '3.6' else exit(0)"; \
+	if python -c "import sys; exit(1) if sys.version[:3] < '3.6' or getattr(sys, 'pypy_version_info', None) else exit(0)"; \
 	then \
 		pre-commit run --all-files ; \
 	fi
 
 test: clean  ## run all tests
-	nosetests ${NOSE_FLAGS} tests/
+	pytest ${PYTEST_FLAGS} tests/ importanize/
 
-coverage: clean  ## run all tests with coverage
-	nosetests ${NOSE_FLAGS} ${COVER_FLAGS} tests/
+coverage-%:
+	pytest ${PYTEST_FLAGS} \
+		--cov=importanize \
+		--cov-append \
+		--cov-report= \
+		importanize/$*.py \
+		tests/test_$*.py
+	coverage report $(COVERAGE_FLAGS) --include=importanize/$*.py
+
+coverage: clean-coverage  ## run all tests with coverage
+	$(MAKE) $(COVERAGE_TARGETS)
+	coverage report $(COVERAGE_FLAGS)
+	coverage xml
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox
 
-check: lint clean coverage   ## check library which runs lint and tests
+check: lint coverage   ## check library which runs lint and tests
 
-release: clean  ## push release to pypi
-	python setup.py sdist bdist_wheel upload
-
-dist: clean  ## create distribution of the library
+dist: clean  ## build python package ditribution
 	python setup.py sdist bdist_wheel
 	ls -l dist
+
+release: clean dist  ## package and upload a release
+	twine upload dist/*
+
+watch:  ## watch file changes to run a command, e.g. make watch py.test tests/
+	@if ! type "fswatch" 2> /dev/null; then \
+		echo "Please install fswatch" ; \
+	else \
+		echo "Watching $(PWD) to run: $(WATCH_ARGS)" ; \
+		while true; do \
+			reset; \
+			$(WATCH_ARGS) ; \
+			fswatch -1 -r --exclude '.*(git|~)' . > /dev/null; \
+			sleep 1; \
+		done \
+	fi;
+
+# If the first argument is "watch"...
+ifeq (watch,$(firstword $(MAKECMDGOALS)))
+  # use the rest as arguments for "watch"
+  WATCH_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+endif

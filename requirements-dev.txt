@@ -1,14 +1,20 @@
 -r requirements.txt
+-r requirements-release.txt
 -e .
-black; python_version >= '3.6'
-coverage
+black; platform_python_implementation == "CPython"
+cached-property
 docutils
 flake8
-flake8-bugbear; python_version >= '3'
-mock
-nose
+flake8-bugbear
+flake8-comprehensions
+flake8-typing-imports
+mypy; platform_python_implementation == "CPython"
 pdbpp
 pre-commit
 pre-commit-hooks
-rednose
+ptpython
+pytest
+pytest-cov
 tox
+tox-pyenv
+twine

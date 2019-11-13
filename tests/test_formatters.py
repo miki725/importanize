@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import unittest
+import typing
 
-import mock
-
+from importanize.config import Config
 from importanize.formatters import (
     Formatter,
     GroupedFormatter,
     GroupedInlineAlignedFormatter,
     LinesFormatter,
 )
-from importanize.parser import Token
+from importanize.parser import Artifacts
 from importanize.statements import ImportLeaf, ImportStatement
 
 
@@ -23,108 +22,92 @@ long_obj1 = obj1 * 13
 long_obj2 = obj2 * 13
 
 
-class BaseTestFormatter(unittest.TestCase):
-    formatter = None
+class BaseTestFormatter:
+    formatter: typing.Type[Formatter]
 
-    def _test(self, stem, leafs, expected, sep="\n", comments=None, **kwargs):
+    def _test(
+        self,
+        stem: str,
+        leafs: typing.List[ImportLeaf],
+        expected: typing.List[str],
+        sep: str = "\n",
+        inline_comments: typing.List[str] = None,
+        standalone_comments: typing.List[str] = None,
+    ) -> None:
         """Facilitate the output tests of formatters"""
         statement = ImportStatement(
-            [],
             stem,
-            list(
-                map(
-                    (
-                        lambda i: (
-                            i if isinstance(i, ImportLeaf) else ImportLeaf(i)
-                        )
-                    ),
-                    leafs,
-                )
-            ),
-            comments=comments,
-            **kwargs
+            leafs=leafs,
+            inline_comments=inline_comments,
+            standalone_comments=standalone_comments,
         )
-        self.assertEqual(
-            statement.formatted(formatter=self.formatter), sep.join(expected)
-        )
-
-
-class TestFormatter(BaseTestFormatter):
-    def test_init(self):
-        actual = Formatter(mock.sentinel.statement)
-        self.assertEqual(actual.statement, mock.sentinel.statement)
+        assert self.formatter(
+            statement, config=Config.default(), artifacts=Artifacts(sep=sep)
+        ).format() == sep.join(expected)
 
 
 class TestGroupedFormatter(BaseTestFormatter):
     formatter = GroupedFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
-        self._test(module, [], ["import {}".format(module)])
-        self._test(module, [obj1], ["from {} import {}".format(module, obj1)])
+        self._test(module, [], [f"import {module}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
             module,
-            [obj1, obj2],
-            ["from {} import {}, {}".format(module, obj1, obj2)],
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
+            [f"from {module} import {obj1}, {obj2}"],
         )
         self._test(
             long_module,
-            [long_obj1],
-            ["from {} import {}".format(long_module, long_obj1)],
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import (".format(long_module),
-                "    {},".format(long_obj1),
-                "    {},".format(long_obj2),
-                ")",
+                f"from {long_module} import (",
+                f"    {long_obj1},",
+                f"    {long_obj2},",
+                f")",
             ],
         )
 
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import (".format(long_module),
-                "    {},".format(long_obj1),
-                "    {},".format(long_obj2),
-                ")",
+                f"from {long_module} import (",
+                f"    {long_obj1},",
+                f"    {long_obj2},",
+                f")",
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
             ["from something import bar, foo  # noqa"],
-            comments=[Token("# noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", standalone_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -134,34 +117,34 @@ class TestGroupedFormatter(BaseTestFormatter):
                 "    zz,",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
 
 
 class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
     formatter = GroupedInlineAlignedFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
-        self._test(module, [], ["import {}".format(module)])
-        self._test(module, [obj1], ["from {} import {}".format(module, obj1)])
+        self._test(module, [], [f"import {module}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
             module,
-            [obj1, obj2],
-            ["from {} import {}, {}".format(module, obj1, obj2)],
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
+            [f"from {module} import {obj1}, {obj2}"],
         )
         self._test(
             long_module,
-            [long_obj1],
-            ["from {} import {}".format(long_module, long_obj1)],
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import ({},".format(long_module, long_obj1),
+                f"from {long_module} import ({long_obj1},",
                 "{}{})".format(" " * 92, long_obj2),
             ],
         )
@@ -169,41 +152,33 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import ({},".format(long_module, long_obj1),
+                f"from {long_module} import ({long_obj1},",
                 "{}{})".format(" " * 92, long_obj2),
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
             ["from something import bar, foo  # noqa"],
-            comments=[Token("# noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", standalone_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -213,14 +188,14 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                 "    zz,",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf("zzz", comments=[Token("#and lots of sleep")]),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zzz", inline_comments=["and lots of sleep"]),
             ],
             [
                 "from foo import (  # noqa",
@@ -229,97 +204,102 @@ class TestGroupedInlineAlignedFormatter(BaseTestFormatter):
                 "    zzz,  # and lots of sleep",
                 ")",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [ImportLeaf("bar"), ImportLeaf("rainbows"), ImportLeaf(long_obj1)],
             [
-                "from foo import (bar,  # noqa",
-                "                 {},".format(long_obj1),
-                "                 rainbows)",
+                f"from foo import (bar,  # noqa",
+                f"                 {long_obj1},",
+                f"                 rainbows)",
             ],
-            comments=[Token("#noqa")],
+            inline_comments=["noqa"],
         )
 
 
 class TestLinesFormatter(BaseTestFormatter):
     formatter = LinesFormatter
 
-    def test_formatted(self):
+    def test_formatted(self) -> None:
         # Test one-line imports
-        self._test(module, [], ["import {}".format(module)])
-        self._test(module, [obj1], ["from {} import {}".format(module, obj1)])
+        self._test(module, [], [f"import {module}"])
+        self._test(module, [ImportLeaf(obj1)], [f"from {module} import {obj1}"])
         self._test(
             module,
-            [obj1, obj2],
-            [
-                "from {} import {}".format(module, obj1),
-                "from {} import {}".format(module, obj2),
-            ],
+            [ImportLeaf(obj1), ImportLeaf(obj2)],
+            [f"from {module} import {obj1}", f"from {module} import {obj2}"],
         )
         self._test(
             long_module,
-            [long_obj1],
-            ["from {} import {}".format(long_module, long_obj1)],
+            [ImportLeaf(long_obj1)],
+            [f"from {long_module} import {long_obj1}"],
         )
 
         # Test multi-lines imports
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import {}".format(long_module, long_obj1),
-                "from {} import {}".format(long_module, long_obj2),
+                f"from {long_module} import {long_obj1}",
+                f"from {long_module} import {long_obj2}",
             ],
         )
 
         # Test file_artifacts
         self._test(
             long_module,
-            [long_obj1, long_obj2],
+            [ImportLeaf(long_obj1), ImportLeaf(long_obj2)],
             [
-                "from {} import {}".format(long_module, long_obj1),
-                "from {} import {}".format(long_module, long_obj2),
+                f"from {long_module} import {long_obj1}",
+                f"from {long_module} import {long_obj2}",
             ],
             sep="\r\n",
-            file_artifacts={"sep": "\r\n"},
         )
 
         # Test imports with comments
-        self._test(
-            "foo", [], ["import foo  # comment"], comments=[Token("# comment")]
-        )
+        self._test("foo", [], ["import foo  # comment"], inline_comments=["comment"])
         self._test(
             "foo",
-            [ImportLeaf("bar", comments=[Token("#comment")])],
+            [ImportLeaf("bar", inline_comments=["comment"])],
             ["from foo import bar  # comment"],
         )
         self._test(
             "something",
             [ImportLeaf("foo"), ImportLeaf("bar")],
-            [
-                "from something import bar  # noqa",
-                "from something import foo  # noqa",
-            ],
-            comments=[Token("# noqa")],
+            ["from something import bar  # noqa", "from something import foo  # noqa"],
+            inline_comments=["noqa"],
         )
         self._test(
             "foo",
             [
-                ImportLeaf("bar", comments=[Token("#hello")]),
-                ImportLeaf("rainbows", comments=[Token("#world")]),
-                ImportLeaf(
-                    "zz",
-                    comments=[
-                        Token("#and lots of sleep", is_comment_first=True)
-                    ],
-                ),
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", standalone_comments=["and lots of sleep"]),
             ],
             [
+                "# comment",
                 "from foo import bar  # noqa hello",
                 "from foo import rainbows  # noqa world",
                 "from foo import zz  # noqa and lots of sleep",
             ],
-            comments=[Token("#noqa")],
+            standalone_comments=["comment"],
+            inline_comments=["noqa"],
+        )
+        self._test(
+            "foo",
+            [
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf(
+                    "rainbows", inline_comments=["world"], statement_comments=["noqa"]
+                ),
+                ImportLeaf("zz", standalone_comments=["and lots of sleep"]),
+            ],
+            [
+                "# comment",
+                "from foo import bar  # hello",
+                "from foo import rainbows  # noqa world",
+                "from foo import zz  # and lots of sleep",
+            ],
+            standalone_comments=["comment"],
         )

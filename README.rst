@@ -2,14 +2,17 @@
 Importanize (import organize)
 =============================
 
-.. image:: https://badge.fury.io/py/importanize.png
+.. image:: https://badge.fury.io/py/importanize.svg
     :target: http://badge.fury.io/py/importanize
 
-.. image:: https://travis-ci.org/miki725/importanize.png?branch=master
-    :target: https://travis-ci.org/miki725/importanize
+.. image:: https://drone.miki725.com/api/badges/miki725/importanize/status.svg
+    :target: https://drone.miki725.com/miki725/importanize
 
-.. image:: https://coveralls.io/repos/miki725/importanize/badge.png?branch=master
-    :target: https://coveralls.io/r/miki725/importanize?branch=master
+.. image:: https://codecov.io/gh/miki725/importanize/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/miki725/importanize
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
 
 Utility for organizing Python imports using PEP8 or custom rules
 
@@ -19,25 +22,25 @@ Utility for organizing Python imports using PEP8 or custom rules
 Installing
 ----------
 
-You can install ``importanize`` using pip::
+You can install ``importanize`` using pip:
+
+.. code-block:: bash
 
     ❯❯❯ pip install importanize
 
 Why?
 ----
 
-I think imports are important in Python. I also think PEP8 is awesome
-(if you disagree, read some PHP) and there are many tools to help
-developers reformat code to match PEP8. There are however fewer tools
-for organizing imports either by following PEP8 or custom rules.
-There is `isort <http://isort.readthedocs.org/en/latest/>`_
-(which unfortunately I found out about after writing this lib)
-however it seems to do lots of magic to determine which packages
-are 3rd party, local packages, etc. I wanted the imports configuration
-to be simple and explicit.
-This is where ``importanize`` comes in. It allows to organize
-Python imports using PEP8 or your custom rules. Read on for
-more information.
+I think imports are important in Python. There are some tools to reformat code
+(`black <https://black.readthedocs.io/en/stable/>`_ is amazing). However they
+usually dont organize imports very well following PEP8 or custom rules. Top
+import organizers are `isort <http://isort.readthedocs.org/en/latest/>`_ and
+`zimports <https://github.com/sqlalchemyorg/zimports>`_. ``importanize`` is
+similar to them in a sense that it too organizes imports using either PEP8
+or custom rules except it also preserves any comments surrounding imports.
+In addition it supports some nifty features like full pipe support (yes you
+can run ``:'<,'>!importanize`` - your welcome my fellow ``vim`` users :D) or
+it can natively output a diff between original and organized file(s).
 
 Example
 -------
@@ -45,25 +48,27 @@ Example
 Before
 ++++++
 
-::
+.. code-block:: python
 
     ❯❯❯ cat tests/test_data/input_readme.py
     from __future__ import unicode_literals, print_function
-    import os.path as ospath
+    import os.path as ospath  # ospath is great
     from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
-    import datetime
-    from .module import foo, bar
+    # UTC all the things
+    import datetime # pytz
+    from .module import foo, bar  # baz
     from ..othermodule import rainbows
 
 After
 +++++
 
-::
+.. code-block:: python
 
     ❯❯❯ cat tests/test_data/input_readme.py | importanize
-    from __future__ import absolute_import, print_function, unicode_literals
-    import datetime
-    from os import path as ospath
+    from __future__ import unicode_literals, print_function
+    # UTC all the things
+    import datetime  # pytz
+    from os import path as ospath  # ospath is great
 
     from package.subpackage.module.submodule import (
         CONSTANT,
@@ -74,7 +79,7 @@ After
     )
 
     from ..othermodule import rainbows
-    from .module import bar, foo
+    from .module import bar, foo  # baz⏎
 
 ``importanize`` did:
 
@@ -87,7 +92,9 @@ After
 Using
 -----
 
-Using ``importanize`` is super easy. Just run::
+Using ``importanize`` is super easy. Just run:
+
+.. code-block:: bash
 
     ❯❯❯ importanize file_to_organize.py
 
@@ -105,16 +112,20 @@ Configuration
 -------------
 
 To help ``importanize`` distinguish between different import groups in most
-cases it would be recommended to use custom config file::
+cases it would be recommended to use custom config file:
+
+.. code-block:: bash
 
     ❯❯❯ importanize file_to_organize.py --config=config.json
 
-Alternatively ``importanize`` attempts to find configuration in couple of
+Alternatively ``importanize`` attempts to find configuration in a couple of
 default files:
 
 * ``.importanizerc``
-* ``setup.cfg``
 * ``importanize.ini``
+* ``importanize.json``
+* ``setup.cfg``
+* ``tox.ini``
 
 As a matter of fact you can see the config file for the importanize
 repository itself at
@@ -122,15 +133,14 @@ repository itself at
 
 Additionally multiple configurations are supported within a single repository
 via sub-configurations.
-Simply place any of supported config files ``.importanizerc``, ``setup.cfg``
-or ``importanize.ini`` within a sub-folder and all imports will be
-reconfigured under that folder.
+Simply place any of supported config files (see above) within a sub-folder and
+all imports will be reconfigured under that folder with the subconfiguration.
 
 Configuration Options
 +++++++++++++++++++++
 
 :``groups``:
-    List of import group definition.
+    List of import groups.
     ``importanize`` will use these group definitions
     to organize imports and will output import groups in the same order
     as defined. Supported group types are:
@@ -141,11 +151,21 @@ Configuration Options
       for example ``from .foo import bar``
     * ``packages`` - if this group is specified, additional key ``packages``
       is required within import group definition which should list
-      all Python packages (root level) which should be included in that group::
+      all Python packages (root level) which should be included in that group:
+
+      .. code-block:: ini
+
+          [importanize]
+          groups=
+            packages:foo,bar
+
+      or:
+
+      .. code-block:: json
 
           {
-              "type": "packages",
-              "packages": ["foo", "bar"]
+            "type": "packages",
+            "packages": ["foo", "bar"]
           }
 
     * ``remaining`` - all remaining imports which did not satisfy requirements
@@ -157,7 +177,9 @@ Configuration Options
     Select how to format long multiline imports.
     Supported formatters:
 
-    * ``grouped`` (default)::
+    * ``grouped`` (default):
+
+      .. code-block:: python
 
           from package.subpackage.module.submodule import (
               CONSTANT,
@@ -167,7 +189,9 @@ Configuration Options
               rainbows,
           )
 
-    * ``inline-grouped``::
+    * ``inline-grouped``:
+
+      .. code-block:: python
 
           from package.subpackage.module.submodule import (CONSTANT,
                                                            Klass,
@@ -175,7 +199,9 @@ Configuration Options
                                                            foo,
                                                            rainbows)
 
-    * ``lines``::
+    * ``lines``:
+
+      .. code-block:: python
 
           from package.subpackage.module.submodule import CONSTANT
           from package.subpackage.module.submodule import Klass
@@ -183,24 +209,41 @@ Configuration Options
           from package.subpackage.module.submodule import foo
           from package.subpackage.module.submodule import rainbows
 
-    Can be specified in CLI with ``-f`` or ``--formatter`` parameter::
+    Can be specified in CLI with ``-f`` or ``--formatter`` parameter:
+
+    .. code-block:: bash
 
         ❯❯❯ importanize --formatter=grouped
 
 :``length``:
     Line length after which the formatter will split imports.
 
-    Can be specified in CLI with ``-l`` or ``--length`` parameter::
+    Can be specified in CLI with ``-l`` or ``--length`` parameter:
+
+    .. code-block:: bash
 
         ❯❯❯ importanize --length=120
 
 :``exclude``:
-    List of glob patterns of files which should be excluded from organizing::
+    List of glob patterns of files which should be excluded from organizing:
 
-        "exclude": [
+    .. code-block:: ini
+
+        [importanize]
+        exclude=
+          path/to/file
+          path/to/files/ignore_*.py
+
+    or:
+
+    .. code-block:: json
+
+        {
+          "exclude": [
             "path/to/file",
             "path/to/files/ignore_*.py"
-        ]
+          ]
+        }
 
     Can only be specified in configuration file.
 
@@ -210,15 +253,37 @@ Configuration Options
     Can only be specified in configuration file.
 
 :``add_imports``:
-    List of imports to add to every file::
+    List of imports to add to every file:
 
-        "add_imports": [
+    .. code-block:: ini
+
+        [importanize]
+        add_imports=
+          from __future__ import absolute_import, print_function, unicode_literals
+
+    or:
+
+    .. code-block:: json
+
+        {
+          "add_imports": [
             "from __future__ import absolute_import, print_function, unicode_literals"
-        ]
+          ]
+        }
 
     Can only be specified in configuration file.
 
-To view all additional run-time options you can use ``--help`` parameter::
+    Note that this option is ignored when input is provided via ``stdin`` pipe.
+    This is on purpose to allow to importanize selected text in editors such as
+    ``vim``.
+
+    .. code-block:: bash
+
+        cat test.py | importanize
+
+To view all additional run-time options you can use ``--help`` parameter:
+
+.. code-block:: bash
 
     ❯❯❯ importanize --help
 
@@ -226,67 +291,147 @@ Default Configuration
 +++++++++++++++++++++
 
 As mentioned previously default configuration attempts to mimic PEP8.
-Specific configuration is::
+Specific configuration is:
+
+.. code-block:: ini
 
     [importanize]
     groups=
-        stdlib
-        sitepackages
-        remainder
-        local
+      stdlib
+      sitepackages
+      remainder
+      local
 
 Configuration Styles
 ++++++++++++++++++++
 
-Configuration file can either be ``json`` or ``ini`` file.
-The following configurations are identical::
+Configuration file can either be ``ini`` or ``json`` file. Previously ``json``
+was the only supported style however since ``ini`` is easier to read and can
+be combined with other configurations like ``flake8`` in ``setup.cfg``, going
+forward it is the preferred configuration format.
+The following configurations are identical:
 
-    {
-        "formatter": "grouped",
-        "groups": [
-            {"type": "stdlib"},
-            {"type": "sitepackages"},
-            {"type": "remainder"},
-            {"type": "packages",
-             "packages": ["my_favorite_package"]},
-            {"type": "local"}
-        ]
-    }
-
-and::
+.. code-block:: ini
 
     [importanize]
     formatter=grouped
     groups=
-        stdlib
-        sitepackages
-        remainder
-        mypackages
-        local
+      stdlib
+      sitepackages
+      remainder
+      packages:my_favorite_package,least_favorite_package
+      local
 
-    [importanize:mypackages]
-    packages:
-        my_favorite_package
+and:
+
+.. code-block:: json
+
+    {
+      "formatter": "grouped",
+      "groups": [
+        {"type": "stdlib"},
+        {"type": "sitepackages"},
+        {"type": "remainder"},
+        {"type": "packages",
+         "packages": ["my_favorite_package", "least_favorite_package"]},
+        {"type": "local"}
+      ]
+    }
 
 CI Mode
 -------
 
-Sometimes it is useful to check if imports are already organized in a file::
+Sometimes it is useful to check if imports are already organized in a file:
+
+.. code-block:: bash
 
     ❯❯❯ importanize --ci
 
-In addition since some imports change order between Python 2/3 due to different
-stdlibs, ``--py`` can be used to enable ``importanize`` only for specific
-Python versions::
+Diff
+----
 
-    ❯❯❯ importanize --ci --py=3
+It is possible to directly see the diff between original and organized file
+
+.. code-block:: diff
+
+    ❯❯❯ importanize --print --diff tests/test_data/input_readme_diff.py
+    --- tests/test_data/input_readme_diff.py
+    +++ tests/test_data/input_readme_diff.py
+    @@ -1 +1,9 @@
+    -from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
+    +from __future__ import absolute_import, print_function, unicode_literals
+    +
+    +from package.subpackage.module.submodule import (
+    +    CONSTANT,
+    +    Klass,
+    +    bar,
+    +    foo,
+    +    rainbows,
+    +)
+
+List All Imports
+----------------
+
+All found imports can be aggregated with ``--list`` parameter:
+
+.. code-block:: bash
+
+    ❯❯❯ importanize --list
+    stdlib
+    ------
+    from __future__ import absolute_import, print_function, unicode_literals
+    import os
+
+    sitepackages
+    ------------
+    click
+
+Pipe Support
+------------
+
+Pipes for both ``stdin`` and ``stdout`` are supported:
+
+.. code-block:: python
+
+    ❯❯❯ cat tests/test_data/input_readme_diff.py | importanize
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
+
+.. code-block:: python
+
+    ❯❯❯ importanize --no-header tests/test_data/input_readme_diff.py | cat
+    from __future__ import absolute_import, print_function, unicode_literals
+
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
+
+As mentioned above note that ``stdin`` did not honor ``add_imports`` which
+allows to use importanize on selected lines in editors such as ``vim``.
+To facilitate that feature even further, if selected lines are not module
+level (e.g. inside function), any whitespace prefix will be honored:
+
+.. code-block:: python
+
+    ❯❯❯ echo -e "    import sys\n    import os" | importanize
+        import os
+        import sys
 
 Pre-Commit
 ----------
 
 Importanize integrates with pre-commit_. You can use the following config
 
-::
+.. code-block:: yaml
 
     repos:
     - repo: https://github.com/miki725/importanize/
@@ -298,11 +443,15 @@ Importanize integrates with pre-commit_. You can use the following config
 Testing
 -------
 
-To run the tests you need to install testing requirements first::
+To run the tests you need to install testing requirements first:
+
+.. code-block:: bash
 
     ❯❯❯ make install
 
-Then to run tests, you can use ``nosetests`` or simply use Makefile command::
+Then to run tests, you can use ``nosetests`` or simply use Makefile command:
+
+.. code-block:: bash
 
     ❯❯❯ nosetests -sv
     # or

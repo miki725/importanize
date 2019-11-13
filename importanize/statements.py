@@ -1,69 +1,127 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-import operator
+import abc
+import itertools
 import re
+import typing
+from functools import reduce, total_ordering
 
-import six
-
-from .formatters import DEFAULT_FORMATTER, DEFAULT_LENGTH
-from .mixin import ComparatorMixin
-from .utils import list_strip
+from .utils import list_set
 
 
 DOTS = re.compile(r"^(\.+)(.*)")
 
 
-@six.python_2_unicode_compatible
-class ImportLeaf(ComparatorMixin):
+class BaseImport(metaclass=abc.ABCMeta):
+    """
+    Base class for import classes
+
+    Adds common comment arguments and common representation
+    """
+
+    def __init__(
+        self,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        strict: bool = False,
+    ):
+        self.standalone_comments = standalone_comments or []
+        self.inline_comments = inline_comments or []
+        self.strict = strict
+
+    def __repr__(self) -> str:
+        return str(
+            "<{} {}>"
+            "".format(
+                self.__class__.__name__,
+                (
+                    "\n    "
+                    + ",\n    ".join(f"{k}={v!r}" for k, v in vars(self).items())
+                    if self.strict
+                    else repr(self.as_string())
+                ),
+            )
+        )
+
+    @abc.abstractmethod
+    def as_string(self) -> str:
+        """
+        Subclasses must implement
+        """
+
+
+@total_ordering
+class ImportLeaf(BaseImport):
     """
     Data-structure about each import statement leaf-module.
 
     For example, if import statement is
     ``from foo.bar import rainbows``, leaf-module is
     ``rainbows``.
-    Also aliased modules are supported (e.g. using ``as``).
+    Also aliased modules are supported (e.g. using ``a as b``).
     """
 
-    def __init__(self, name, comments=None):
-        as_name = None
-
-        if " as " in name:
-            name, as_name = list_strip(name.split(" as "))
-
+    def __init__(
+        self,
+        name: str,
+        as_name: str = None,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        statement_comments: typing.List[str] = None,
+        strict: bool = False,
+    ):
         if name == as_name:
             as_name = None
 
         self.name = name
         self.as_name = as_name
-        self.comments = comments or []
 
-    def as_string(self):
-        string = self.name
-        if self.as_name:
-            string += " as {}".format(self.as_name)
-        return string
+        self.statement_comments = statement_comments or []
 
-    def __str__(self):
-        return self.as_string()
-
-    def __repr__(self):
-        return str(
-            '<{}.{} object - "{}">'
-            "".format(
-                self.__class__.__module__,
-                self.__class__.__name__,
-                self.as_string(),
-            )
+        super().__init__(
+            standalone_comments=standalone_comments,
+            inline_comments=inline_comments,
+            strict=strict,
         )
 
-    def __hash__(self):
+    def as_string(self) -> str:
+        string = self.name
+        if self.as_name:
+            string += f" as {self.as_name}"
+        return string
+
+    def __str__(self) -> str:
+        return self.as_string()
+
+    def __hash__(self) -> int:
         return hash(self.as_string())
 
-    def __eq__(self, other):
-        return all([self.name == other.name, self.as_name == other.as_name])
+    def __add__(self, other: "ImportLeaf") -> "ImportLeaf":
+        return ImportLeaf(
+            name=self.name,
+            as_name=self.as_name,
+            standalone_comments=list_set(
+                self.standalone_comments + other.standalone_comments
+            ),
+            inline_comments=list_set(self.inline_comments + other.inline_comments),
+            statement_comments=list_set(
+                self.statement_comments + other.statement_comments
+            ),
+            strict=self.strict,
+        )
 
-    def __gt__(self, other):
-        def _type(obj):
+    def __eq__(self, other: "ImportLeaf") -> bool:  # type: ignore
+        params = [self.name == other.name, self.as_name == other.as_name]
+        if self.strict:
+            params += [
+                self.standalone_comments == other.standalone_comments,
+                self.inline_comments == other.inline_comments,
+                self.statement_comments == other.statement_comments,
+            ]
+        return all(params)
+
+    def __gt__(self, other: "ImportLeaf") -> bool:
+        def _type(obj: "ImportLeaf") -> str:
             if obj.name.isupper():
                 return "upper"
             elif obj.name.islower():
@@ -76,14 +134,14 @@ class ImportLeaf(ComparatorMixin):
 
         priority = ("upper", "mixed", "lower")
 
-        if self_type != other_type:
+        if self_type is not other_type:
             return priority.index(self_type) > priority.index(other_type)
 
-        return self.name > other.name
+        return (self.name, self.as_name or "") > (other.name, other.as_name or "")
 
 
-@six.python_2_unicode_compatible
-class ImportStatement(ComparatorMixin):
+@total_ordering
+class ImportStatement(BaseImport):
     """
     Data-structure to store information about
     each import statement.
@@ -102,37 +160,52 @@ class ImportStatement(ComparatorMixin):
         List of ``ImportLeaf`` instances
     """
 
-    def __init__(self, line_numbers, stem, leafs=None, comments=None, **kwargs):
-        as_name = None
-
-        if " as " in stem:
-            stem, as_name = list_strip(stem.split(" as "))
-            if leafs:
-                as_name = None
-
-        if stem == as_name:
+    def __init__(
+        self,
+        stem: str,
+        as_name: str = None,
+        leafs: typing.List[ImportLeaf] = None,
+        line_numbers: typing.List[int] = None,
+        standalone_comments: typing.List[str] = None,
+        inline_comments: typing.List[str] = None,
+        strict: bool = False,
+    ):
+        if leafs or stem == as_name:
             as_name = None
 
-        self.line_numbers = line_numbers
+        self.line_numbers = line_numbers or []
         self.stem = stem
         self.as_name = as_name
-        self.leafs = leafs or []
-        self.comments = comments or []
-        self.file_artifacts = kwargs.get("file_artifacts", {})
+        self.leafs: typing.List[ImportLeaf] = leafs or []
+
+        super().__init__(
+            standalone_comments=standalone_comments,
+            inline_comments=inline_comments,
+            strict=strict,
+        )
 
     @property
-    def full_stem(self):
-        stem = self.stem
-        if self.as_name:
-            stem += " as {}".format(self.as_name)
-        return stem
+    def full_stem(self) -> str:
+        return f"{self.stem}" if not self.as_name else f"{self.stem} as {self.as_name}"
 
     @property
-    def unique_leafs(self):
-        return sorted(list(set(self.leafs)))
+    def unique_leafs(self) -> typing.List[ImportLeaf]:
+        return [
+            reduce(lambda a, b: a + b, leafs)
+            for _, leafs in itertools.groupby(
+                sorted(self.leafs), key=lambda i: (i.name, i.as_name)
+            )
+        ]
 
     @property
-    def root_module(self):
+    def all_inline_comments(self) -> typing.List[str]:
+        return (
+            list_set(itertools.chain(*[i.statement_comments for i in self.leafs]))
+            + self.inline_comments
+        )
+
+    @property
+    def root_module(self) -> str:
         """
         Root module being imported.
         This is used to sort imports as well as to
@@ -141,59 +214,54 @@ class ImportStatement(ComparatorMixin):
         """
         return self.stem.split(".", 1)[0]
 
-    def as_string(self):
+    def with_line_numbers(self, line_numbers: typing.List[int]) -> "ImportStatement":
+        self.line_numbers = line_numbers
+        return self
+
+    def as_string(self) -> str:
         if not self.leafs:
-            return "import {}".format(self.full_stem)
+            return f"import {self.full_stem}"
         else:
-            return "from {} import {}" "".format(
-                self.stem,
-                ", ".join(
-                    map(operator.methodcaller("as_string"), self.unique_leafs)
-                ),
+            return "from {} import {}".format(
+                self.stem, ", ".join(i.as_string() for i in self.unique_leafs)
             )
 
-    def formatted(self, formatter=DEFAULT_FORMATTER, length=DEFAULT_LENGTH):
-        return formatter(self, length=length).format()
-
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.as_string())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.as_string()
 
-    def __repr__(self):
-        return str(
-            '<{}.{} object - "{}">'
-            "".format(
-                self.__class__.__module__,
-                self.__class__.__name__,
-                self.as_string(),
-            )
-        )
-
-    def __add__(self, other):
+    def __add__(self, other: "ImportStatement") -> "ImportStatement":
         """
         Combined two import statements into a single statement.
         This requires both import statements to have the same stem.
         """
         assert self.stem == other.stem
+        assert self.as_name == other.as_name
 
         return ImportStatement(
             line_numbers=self.line_numbers + other.line_numbers,
             stem=self.stem,
             leafs=self.leafs + other.leafs,
+            standalone_comments=self.standalone_comments + other.standalone_comments,
+            inline_comments=self.inline_comments + other.inline_comments,
         )
 
-    def __eq__(self, other):
-        return all(
-            (
-                self.stem == other.stem,
-                self.as_name == other.as_name,
-                self.unique_leafs == other.unique_leafs,
-            )
-        )
+    def __eq__(self, other: "ImportStatement") -> bool:  # type: ignore
+        params = [
+            self.stem == other.stem,
+            self.as_name == other.as_name,
+            self.unique_leafs == other.unique_leafs,
+        ]
+        if self.strict:
+            params += [
+                self.standalone_comments == other.standalone_comments,
+                self.inline_comments == other.inline_comments,
+            ]
+        return all(params)
 
-    def __gt__(self, other):
+    def __gt__(self, other: "ImportStatement") -> bool:
         """
         Follows the following rules:
 
