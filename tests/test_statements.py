@@ -43,6 +43,13 @@ class TestImportLeaf:
 
 
 class TestImportStatement:
+    def test_all_inline_comments(self) -> None:
+        assert ImportStatement(
+            "a",
+            inline_comments=["statement"],
+            leafs=[ImportLeaf("b", statement_comments=["leaf"])],
+        ).all_inline_comments == ["leaf", "statement"]
+
     def test_with_line_numbers(self) -> None:
         assert ImportStatement("a", line_numbers=[1, 2]).with_line_numbers(
             [3, 4]
