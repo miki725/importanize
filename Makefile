@@ -22,7 +22,7 @@ install: ## install all requirements including for testing
 	pip install -U -r $(INSTALL_FILE)
 	pip freeze
 
-clean: clean-build clean-pyc clean-test  ## clean everything except tox
+clean: clean-build clean-pyc  ## clean everything except tox
 
 clean-build:  ## clean build and distribution artifacts
 	@rm -rf build/
@@ -34,7 +34,7 @@ clean-pyc:  ## clean pyc files
 	-@find . -path ./.tox -prune -o -name '*.pyo' -follow -print0 | xargs -0 rm -f
 	-@find . -path ./.tox -prune -o -name '__pycache__' -type d -follow -print0 | xargs -0 rm -rf
 
-clean-test:  ## clean test artifacts like converage
+clean-coverage: clean  ## clean test artifacts like converage
 	rm -rf .coverage coverage*
 	rm -rf htmlcov/
 
@@ -59,7 +59,7 @@ coverage-%:
 		tests/test_$*.py
 	coverage report $(COVERAGE_FLAGS) --include=importanize/$*.py
 
-coverage: clean  ## run all tests with coverage
+coverage: clean-coverage  ## run all tests with coverage
 	$(MAKE) $(COVERAGE_TARGETS)
 	coverage report $(COVERAGE_FLAGS)
 	coverage xml
@@ -67,7 +67,7 @@ coverage: clean  ## run all tests with coverage
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox
 
-check: lint clean coverage   ## check library which runs lint and tests
+check: lint coverage   ## check library which runs lint and tests
 
 dist: clean  ## build python package ditribution
 	python setup.py sdist bdist_wheel
