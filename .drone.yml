@@ -44,10 +44,6 @@ steps:
   image: pypy:3
   commands:
     - pip install tox
-    # ignore django latest as pypy3.6 does not have updated sqlite yet
-    # and django fails to correctly create db in earlier sqlite versions
-    # >>> sqlite3.sqlite_version_info
-    # (3, 16, 2)
     - tox -e $(tox -l | grep pypy3 | paste -sd ",")
   depends_on:
     - clone
