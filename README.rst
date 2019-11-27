@@ -26,7 +26,7 @@ You can install ``importanize`` using pip:
 
 .. code-block:: bash
 
-    ❯❯❯ pip install importanize
+    pip install importanize
 
 Why?
 ----
@@ -50,7 +50,7 @@ Before
 
 .. code-block:: python
 
-    ❯❯❯ cat tests/test_data/input_readme.py
+    $ cat tests/test_data/input_readme.py
     from __future__ import unicode_literals, print_function
     import os.path as ospath  # ospath is great
     from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
@@ -64,8 +64,8 @@ After
 
 .. code-block:: python
 
-    ❯❯❯ cat tests/test_data/input_readme.py | importanize
-    from __future__ import unicode_literals, print_function
+    $ cat tests/test_data/input_readme.py | importanize
+    from __future__ import print_function, unicode_literals
     # UTC all the things
     import datetime  # pytz
     from os import path as ospath  # ospath is great
@@ -96,7 +96,7 @@ Using ``importanize`` is super easy. Just run:
 
 .. code-block:: bash
 
-    ❯❯❯ importanize file_to_organize.py
+    importanize file_to_organize.py
 
 That will re-format all imports in the given file.
 As part of the default configuration, ``importanize`` will try
@@ -116,7 +116,7 @@ cases it would be recommended to use custom config file:
 
 .. code-block:: bash
 
-    ❯❯❯ importanize file_to_organize.py --config=config.json
+    importanize file_to_organize.py --config=config.json
 
 Alternatively ``importanize`` attempts to find configuration in a couple of
 default files:
@@ -213,7 +213,7 @@ Configuration Options
 
     .. code-block:: bash
 
-        ❯❯❯ importanize --formatter=grouped
+        importanize --formatter=grouped
 
 :``length``:
     Line length after which the formatter will split imports.
@@ -222,7 +222,7 @@ Configuration Options
 
     .. code-block:: bash
 
-        ❯❯❯ importanize --length=120
+        importanize --length=120
 
 :``exclude``:
     List of glob patterns of files which should be excluded from organizing:
@@ -281,11 +281,36 @@ Configuration Options
 
         cat test.py | importanize
 
+:``allow_plugins``:
+    Whether to allow plugins:
+
+    .. code-block:: ini
+
+        [importanize]
+        allow_plugins=True
+
+    or:
+
+    .. code-block:: json
+
+        {
+            "allow_plugins": true
+        }
+
+    Can also be specified with ``--plugins/--no-plugins`` parameter.
+
+    .. code-block:: bash
+
+        importanize --no-plugins
+
+    Note that this configuration is only global and is not honored in
+    subconfigurations.
+
 To view all additional run-time options you can use ``--help`` parameter:
 
 .. code-block:: bash
 
-    ❯❯❯ importanize --help
+    importanize --help
 
 Default Configuration
 +++++++++++++++++++++
@@ -345,7 +370,7 @@ Sometimes it is useful to check if imports are already organized in a file:
 
 .. code-block:: bash
 
-    ❯❯❯ importanize --ci
+    importanize --ci
 
 Diff
 ----
@@ -354,9 +379,9 @@ It is possible to directly see the diff between original and organized file
 
 .. code-block:: diff
 
-    ❯❯❯ importanize --print --diff tests/test_data/input_readme_diff.py
-    --- tests/test_data/input_readme_diff.py
-    +++ tests/test_data/input_readme_diff.py
+    $ importanize --print --diff --no-subconfig --no-plugins tests/test_data/input_readme_diff.py
+    --- original/tests/test_data/input_readme_diff.py
+    +++ importanized/tests/test_data/input_readme_diff.py
     @@ -1 +1,9 @@
     -from package.subpackage.module.submodule import CONSTANT, Klass, foo, bar, rainbows
     +from __future__ import absolute_import, print_function, unicode_literals
@@ -376,15 +401,29 @@ All found imports can be aggregated with ``--list`` parameter:
 
 .. code-block:: bash
 
-    ❯❯❯ importanize --list
+    $ importanize --list .
     stdlib
     ------
     from __future__ import absolute_import, print_function, unicode_literals
-    import os
+    import abc
+    ...
 
     sitepackages
     ------------
-    click
+    import click
+    ...
+
+    remainder
+    ---------
+
+    packages
+    --------
+    import importanize
+    ...
+
+    local
+    -----
+    ...
 
 Pipe Support
 ------------
@@ -393,7 +432,7 @@ Pipes for both ``stdin`` and ``stdout`` are supported:
 
 .. code-block:: python
 
-    ❯❯❯ cat tests/test_data/input_readme_diff.py | importanize
+    $ cat tests/test_data/input_readme_diff.py | importanize
     from package.subpackage.module.submodule import (
         CONSTANT,
         Klass,
@@ -404,7 +443,7 @@ Pipes for both ``stdin`` and ``stdout`` are supported:
 
 .. code-block:: python
 
-    ❯❯❯ importanize --no-header tests/test_data/input_readme_diff.py | cat
+    $ importanize --no-header --no-subconfig --no-plugins tests/test_data/input_readme_diff.py | cat
     from __future__ import absolute_import, print_function, unicode_literals
 
     from package.subpackage.module.submodule import (
@@ -422,7 +461,7 @@ level (e.g. inside function), any whitespace prefix will be honored:
 
 .. code-block:: python
 
-    ❯❯❯ echo -e "    import sys\n    import os" | importanize
+    $ python -c "print('    import sys\n    import os')" | importanize
         import os
         import sys
 
@@ -447,14 +486,70 @@ To run the tests you need to install testing requirements first:
 
 .. code-block:: bash
 
-    ❯❯❯ make install
+    make install
 
 Then to run tests, you can use ``nosetests`` or simply use Makefile command:
 
 .. code-block:: bash
 
-    ❯❯❯ nosetests -sv
+    nosetests -sv
     # or
-    ❯❯❯ make test
+    make test
 
 .. _pre-commit: https://pre-commit.com/
+
+Plugins
+-------
+
+There is rudimentarry support for plugins. Currently plugin interface
+only allows to skip specific imports which allows for removing
+unused imports. Plugins can be dynamically registered via `pluggy
+<https://pluggy.readthedocs.io/en/latest/>`_ however ``importanize`` ships with
+some bundled-in plugins at ``importanize/contrib``.
+
+To create a plugin simply implement ``ImportanizePlugin`` class.
+Note that example below does not implement all supported methods.
+
+.. code-block:: python
+
+    from importanize.plugins import ImportanizePlugin, hookimpl
+
+    class MyPlugin(ImportanizePlugin):
+        version = '0.1'
+        @hookimpl
+        def should_include_statement(self, group, statement):
+            return True
+
+    plugin = MyPlugin()
+
+Then register the plugin in ``setup.py``:
+
+.. code-block:: python
+
+    setup(
+        ...
+        entry_points={
+            "importanize": ["my_plugin = my_plugin:plugin"],
+        },
+    )
+
+Bundled Plugins
++++++++++++++++
+
+Unused Imports
+~~~~~~~~~~~~~~
+
+Uses ``pyflakes`` to remove unused imports:
+
+.. code-block:: bash
+
+    $ importanize tests/test_data/input_unused_imports.py --print --diff --no-subconfig
+    --- original/tests/test_data/input_unused_imports.py
+    +++ importanized/tests/test_data/input_unused_imports.py
+    @@ -1,5 +1,5 @@
+    +from __future__ import absolute_import, print_function, unicode_literals
+     import os
+    -import sys
+
+
+     os.path.exists('.')

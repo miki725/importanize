@@ -8,6 +8,7 @@ from contextlib import suppress
 from functools import reduce
 
 from .parser import Artifacts
+from .plugins import plugin_hooks
 from .statements import ImportStatement
 from .utils import is_site_package, is_std_lib
 
@@ -57,12 +58,37 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
             else:
                 leafless_counter[statement.stem].append(statement)
 
-        merged_statements = list(itertools.chain(*leafless_counter.values()))
+        merged_statements = list(
+            filter(
+                lambda s: not any(
+                    j is False
+                    for j in plugin_hooks.should_include_statement(
+                        group=self, statement=s
+                    )
+                ),
+                itertools.chain(*leafless_counter.values(),),
+            )
+        )
+
+        def filter_leafs(statement: ImportStatement) -> ImportStatement:
+            statement.leafs = list(
+                filter(
+                    lambda l: not any(
+                        j is False
+                        for j in plugin_hooks.should_include_leaf(
+                            group=self, statement=statement, leaf=l
+                        )
+                    ),
+                    statement.leafs,
+                )
+            )
+            return statement
 
         def merge(
             statements: typing.List[ImportStatement],
         ) -> typing.List[ImportStatement]:
             _special = []
+            _standard = []
             _statements = []
 
             for i in statements:
@@ -71,9 +97,12 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
                 else:
                     _statements.append(i)
 
-            _reduced = [reduce(lambda a, b: a + b, _statements)] if _statements else []
+            if _statements:
+                merged = filter_leafs(reduce(lambda a, b: a + b, _statements))
+                if merged.leafs:
+                    _standard.append(merged)
 
-            return _special + _reduced
+            return _special + _standard
 
         for statements in counter.values():
             merged_statements.extend(merge(statements))
@@ -110,7 +139,7 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
         return self.as_string()
 
     def __bool__(self) -> bool:
-        return bool(self.statements)
+        return bool(self.unique_statements)
 
 
 class StdLibGroup(BaseImportGroup):
@@ -123,7 +152,7 @@ class StdLibGroup(BaseImportGroup):
 
 class SitePackagesGroup(BaseImportGroup):
     name: str = "sitepackages"
-    priority: int = 1
+    priority: int = 2
 
     def should_add_statement(self, statement: ImportStatement) -> bool:
         return is_site_package(statement.root_module)
@@ -131,7 +160,7 @@ class SitePackagesGroup(BaseImportGroup):
 
 class PackagesGroup(BaseImportGroup):
     name: str = "packages"
-    priority: int = 2
+    priority: int = 1
 
     @classmethod
     def validate_group_config(cls, group: "GroupConfig") -> "GroupConfig":

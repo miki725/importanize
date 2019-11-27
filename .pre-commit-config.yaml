@@ -34,8 +34,9 @@ repos:
         language: python
         language_version: python3
         types: [python]
-        args: [-v]
-        additional_dependencies: [click]
+        args: [-v, --no-subconfig]
+        additional_dependencies: [click, pluggy, pyflakes]
+        exclude: test_data/.*$
 
   - repo: https://github.com/python/black
     rev: 'master'

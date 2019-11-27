@@ -138,8 +138,8 @@ def test_generate_diff() -> None:
     ) == "\n".join(
         [
             # preserve multiline
-            "--- test.py",
-            "+++ test.py",
+            "--- original/test.py",
+            "+++ importanized/test.py",
             "@@ -1,2 +1,2 @@",
             " hello",
             "-world",

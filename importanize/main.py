@@ -9,6 +9,7 @@ import click
 from . import __description__, __version__
 from .config import FORMATTERS, IMPORTANIZE_CONFIG, Config
 from .importanize import RuntimeConfig
+from .plugins import INSTALLED_PLUGINS, PLUGINS
 from .utils import is_piped
 
 
@@ -53,6 +54,13 @@ ROOT_CONFIG = Config.find(log_errors=False)
     default=True,
     is_flag=True,
     help="If provided, sub-configurations will not be used.",
+)
+@click.option(
+    "--plugins/--no-plugins",
+    "are_plugins_allowed",
+    default=None,
+    is_flag=True,
+    help="If provided, no plugins will be activated.",
 )
 @click.option(
     "-f",
@@ -152,20 +160,25 @@ def cli(
     show_header: bool,
     # config
     is_subconfig_allowed: bool,
+    are_plugins_allowed: bool = None,
     config_path: str = None,
     # config overwrites
     formatter: str = None,
     length: int = None,
 ) -> int:
+    is_in_piped = is_piped(sys.stdin)
+    is_out_piped = is_piped(sys.stdout, check_file_redirection=False)
+
     ctx.exit(
         main(
             RuntimeConfig(
-                path_names=path or ["."],
+                path_names=path or (["."] if not is_in_piped else []),
                 formatter_name=formatter,
                 length=length,
                 root_config=ROOT_CONFIG,
                 config_path=config_path,
                 is_subconfig_allowed=is_subconfig_allowed,
+                are_plugins_allowed=are_plugins_allowed,
                 verbosity=verbosity,
                 is_version_mode=is_version_mode,
                 is_list_mode=is_list_mode,
@@ -173,14 +186,17 @@ def cli(
                 show_diff=show_diff,
                 is_print_mode=is_print_mode,
                 show_header=show_header,
-                is_in_piped=is_piped(sys.stdin),
-                is_out_piped=is_piped(sys.stdout),
+                is_in_piped=is_in_piped,
+                is_out_piped=is_out_piped,
             ).normalize()
         )
     )
 
 
 def version(runtime_config: RuntimeConfig) -> int:
+    plugins = (
+        "\n" + "\n".join(f"{k}=={v.version}" for k, v in PLUGINS.items())
+    ).rstrip()
     click.echo(
         f"importanize\n"
         f"===========\n"
@@ -188,7 +204,9 @@ def version(runtime_config: RuntimeConfig) -> int:
         f"version: {__version__}\n"
         f"python: {sys.executable}\n"
         f"source: https://github.com/miki725/importanize\n\n"
-        f"root config ({runtime_config.merged_config}):\n"
+        f"installed plugins:"
+        f"{plugins}\n\n"
+        f"root config ({runtime_config.merged_config}):\n\n"
         f"{runtime_config.merged_config!r}"
     )
     return 0
@@ -199,6 +217,8 @@ def main(runtime_config: RuntimeConfig) -> int:
     logging.getLogger("").setLevel(VERBOSITY_MAPPING.get(runtime_config.verbosity, 0))
 
     log.debug(f"Running importanize with {runtime_config}")
+    log.debug(f"Running with python {sys.executable}")
+    log.debug(f"Installed plugins: {', '.join(INSTALLED_PLUGINS)}")
 
     if runtime_config.is_version_mode:
         return version(runtime_config)

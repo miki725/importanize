@@ -22,6 +22,7 @@ from .parser import (
     parse_imports_from_tree,
     parse_to_tree,
 )
+from .plugins import deactivate_all_plugins
 from .statements import ImportStatement
 from .utils import StdPath, generate_diff, takeafter
 
@@ -42,6 +43,7 @@ class RuntimeConfig:
     root_config: Config = Config.default()
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
+    are_plugins_allowed: bool = None
     found_configs: typing.Dict[Path, Config] = field(default_factory=lambda: {})
 
     verbosity: int = 0
@@ -99,12 +101,16 @@ class RuntimeConfig:
                     length=self.config_length,
                     formatter=self.formatter,
                     add_imports=self.add_imports,
+                    are_plugins_allowed=self.are_plugins_allowed,
                 )
             )
             return self._merged_config
 
     def normalize(self) -> "RuntimeConfig":
-        if self.is_in_piped or "-" in self.path_names:
+        is_input_stdin = self.is_in_piped or "-" in self.path_names
+        any_files_given = bool([i for i in self.path_names if i != "-"])
+
+        if is_input_stdin and not any_files_given:
             assert (
                 self.is_in_piped
             ), '"-" is given as input path however stdin is not piped'
@@ -112,6 +118,7 @@ class RuntimeConfig:
             self.is_print_mode = True
             self.show_header = False
             self.should_add_last_line = False
+            self.are_plugins_allowed = False
 
         if self.is_out_piped:
             self.is_print_mode = True
@@ -193,7 +200,7 @@ def run_importanize_on_text(
         yield Result(path=path, error=e)
 
     else:
-        artifacts = get_tree_artifacts(tree)
+        artifacts = get_tree_artifacts(tree, text)
         imports = list(parse_imports_from_tree(tree))
 
         log.debug(f"Found {len(imports)} imports in {path}")
@@ -208,7 +215,6 @@ def run_importanize_on_text(
             yield Result(path=path, error=e)
 
         else:
-            log.debug(f"Successfully importanized {path}")
             organized = replace_imports_in_text(
                 text,
                 groups=groups,
@@ -216,6 +222,7 @@ def run_importanize_on_text(
                 artifacts=artifacts,
                 runtime_config=runtime_config,
             )
+            log.debug(f"Successfully importanized {path}")
 
             yield Result(
                 path=path,
@@ -251,6 +258,16 @@ def run_importanize_on_file(
 def run_importanize_on_dir(
     source: Path, config: Config, runtime_config: RuntimeConfig,
 ) -> typing.Iterator[Result]:
+    if runtime_config.is_subconfig_allowed:
+        subconfig = Config.find(
+            cwd=source.parent,
+            root=getattr(config.path, "parent", None),
+            cache=runtime_config.found_configs,
+        )
+        if subconfig:
+            config = subconfig
+            log.info(f"Found subconfig {subconfig}")
+
     if should_skip(source, config):
         log.info(f"Skipping {source} as per {config}")
         return
@@ -319,6 +336,10 @@ class BaseAggregator(metaclass=abc.ABCMeta):
         except (NoImportanizeConfig, InvalidConfig) as e:
             log.error(f"{e}")
             return 1
+
+        if not merged_config.are_plugins_allowed:
+            deactivate_all_plugins()
+
         for source in self.runtime_config.paths:
             for result in run_importanize_on_source(
                 source=source, runtime_config=self.runtime_config, config=merged_config
@@ -327,6 +348,7 @@ class BaseAggregator(metaclass=abc.ABCMeta):
                     self.update(result)
                 else:
                     self.is_success = False
+
         finished = self.finish()
         return int(not self.is_success) or finished
 
@@ -367,7 +389,7 @@ class CIAggregator(DiffAggregator):
 class ListAggregator(BaseAggregator):
     def _init(self) -> None:
         self.groups: ImportGroups = ImportGroups.from_config(
-            self.runtime_config.merged_config
+            self.runtime_config.merged_config,
         )
 
     def update(self, result: Result) -> None:

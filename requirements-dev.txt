@@ -1,4 +1,3 @@
--r requirements.txt
 -r requirements-release.txt
 -e .
 black; platform_python_implementation == "CPython"

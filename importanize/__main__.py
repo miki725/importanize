@@ -7,4 +7,5 @@ from .main import cli
 click_cli = cli
 
 
-click_cli() if __name__ == "__main__" else None
+if __name__ == "__main__":
+    click_cli()
