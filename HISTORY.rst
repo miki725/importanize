@@ -6,9 +6,11 @@ History
 0.8.0 (TBD)
 +++++++++++
 
+* Removing unused imports via ``unused_imports`` bundled-in plugin.
+* Basic plugins via ``pluggy``.
 * Added support for ``.ini`` files configuration style.
 * In addition to ``.importanizerc`` config can be read from ``setup.cfg``,
-  ``importanize.ini`` and ``importanize.json``.
+  ``importanize.ini``, ``importanize.json`` and ``tox.ini``.
 * Added ``lines`` formatter which formats all imports on individual lines
 
   .. code-block:: python

@@ -8,8 +8,8 @@ else
 	COVERAGE_FLAGS=--show-missing --fail-under=100
 endif
 
-importanize_files=$(shell find importanize -name "[!_]*.py" -exec basename {} .py \;)
-COVERAGE_TARGETS=$(addprefix coverage-,$(importanize_files))
+importanize_files=$(subst importanize/,,$(shell find importanize -name "[!_]*.py"))
+COVERAGE_TARGETS=$(addprefix coverage/,$(importanize_files))
 
 
 help:  ## show help
@@ -27,7 +27,6 @@ clean: clean-build clean-pyc  ## clean everything except tox
 clean-build:  ## clean build and distribution artifacts
 	@rm -rf build/
 	@rm -rf dist/
-	@rm -rf *.egg-info
 
 clean-pyc:  ## clean pyc files
 	-@find . -path ./.tox -prune -o -name '*.pyc' -follow -print0 | xargs -0 rm -f
@@ -50,19 +49,20 @@ lint: clean  ## lint whole library
 test: clean  ## run all tests
 	pytest ${PYTEST_FLAGS} tests/ importanize/
 
-coverage-%:
+coverage/%:
 	pytest ${PYTEST_FLAGS} \
 		--cov=importanize \
 		--cov-append \
 		--cov-report= \
-		importanize/$*.py \
-		tests/test_$*.py
-	coverage report $(COVERAGE_FLAGS) --include=importanize/$*.py
+		importanize/$* \
+		tests/$(if $(findstring /,$*),$(shell echo $* | cut -d/ -f1)/test_$(shell echo $* | cut -d/ -f2),test_$*)
+	coverage report $(COVERAGE_FLAGS) --include=importanize/$*
 
 coverage: clean-coverage  ## run all tests with coverage
 	$(MAKE) $(COVERAGE_TARGETS)
 	coverage report $(COVERAGE_FLAGS)
 	coverage xml
+	pytest tests/test_readme.py
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox

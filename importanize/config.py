@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from . import formatters
 from .groups import GROUPS
-from .parser import parse_imports, ParseError
+from .parser import ParseError, parse_imports
 from .statements import ImportStatement
 
 
@@ -84,6 +84,7 @@ class Config:
     )
     exclude: typing.Iterable[str] = ("*/.tox/*",)
     add_imports: typing.Iterable[ImportStatement] = ()
+    are_plugins_allowed: bool = True
 
     @classmethod
     def default(cls) -> "Config":
@@ -112,9 +113,9 @@ class Config:
     @classmethod
     def _parse_add_imports(
         cls, add_imports: typing.List[str]
-    ) -> typing.List[ImportStatement]:
+    ) -> typing.Iterable[ImportStatement]:
         try:
-            return list(
+            return tuple(
                 itertools.chain(
                     *[
                         [s.with_line_numbers([]) for s in parse_imports(i.strip())]
@@ -137,7 +138,7 @@ class Config:
         except KeyError as e:
             raise InvalidConfig(
                 f"{formatter!r} is unsupported formatter. "
-                f'Only {", ".join(FORMATTERS.keys())} are supported.'
+                f"Only {', '.join(FORMATTERS.keys())} are supported."
             ) from e
 
     @classmethod
@@ -187,9 +188,14 @@ class Config:
             formatter=cls._parse_formatter(loaded_data.get("formatter", "")),
             groups=groups or cls.groups,
             exclude=loaded_data.get("exclude", cls.exclude),
-            add_imports=(
-                cls._parse_add_imports(loaded_data.get("add_imports", []))
-                or cls.add_imports
+            add_imports=cls._parse_add_imports(
+                loaded_data.get("add_imports", [str(i) for i in cls.add_imports])
+            ),
+            are_plugins_allowed=(
+                str(loaded_data.get("allow_plugins", str(cls.are_plugins_allowed)))
+                .strip()
+                .lower()
+                == "true"
             ),
         )
 
@@ -229,17 +235,21 @@ class Config:
             length=cls._parse_length(loaded_data.get("length", str(cls.length))),
             formatter=cls._parse_formatter(loaded_data.get("formatter", "")),
             groups=groups or cls.groups,
-            exclude=(
-                [
-                    i.strip()
-                    for i in loaded_data.get("exclude", "").split("\n")
-                    if i.strip()
-                ]
-                or cls.exclude
+            exclude=[
+                i.strip()
+                for i in loaded_data.get("exclude", "\n".join(cls.exclude)).split("\n")
+                if i.strip()
+            ],
+            add_imports=cls._parse_add_imports(
+                loaded_data.get(
+                    "add_imports", "\n".join(str(i) for i in cls.add_imports)
+                ).split("\n")
             ),
-            add_imports=(
-                cls._parse_add_imports(loaded_data.get("add_imports", "").split("\n"))
-                or cls.add_imports
+            are_plugins_allowed=(
+                loaded_data.get("allow_plugins", str(cls.are_plugins_allowed))
+                .strip()
+                .lower()
+                == "true"
             ),
         )
 
@@ -331,24 +341,51 @@ class Config:
         self.length = other.length
         self.formatter = other.formatter
         self.add_imports = other.add_imports
+        self.are_plugins_allowed = (
+            other.are_plugins_allowed
+            if other.are_plugins_allowed is not None
+            else self.are_plugins_allowed
+        )
         return self
 
     def as_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            "path": str(self.path or ""),
+            "path": str(self.relpath or ""),
             "after_imports_new_lines": self.after_imports_new_lines,
             "length": self.length,
             "formatter": self.formatter.name,
             "groups": [i.as_dict() for i in self.groups],
             "exclude": list(self.exclude),
             "add_imports": [str(i) for i in self.add_imports],
+            "allow_plugins": self.are_plugins_allowed,
         }
+
+    def _as_ini_groups(
+        self, packages: typing.List[typing.Dict[str, typing.Any]]
+    ) -> typing.List[str]:
+        return [
+            ":".join(filter(None, [i["type"], ",".join(i.get("packages", []))],))
+            for i in packages
+        ]
+
+    def as_ini(self) -> str:
+        return "[importanize]\n" + "\n".join(
+            [
+                "{}={}".format(
+                    k,
+                    "\n  ".join([""] + getattr(self, f"_as_ini_{k}", lambda x: x)(v))
+                    if isinstance(v, list)
+                    else str(v),
+                ).rstrip()
+                for k, v in self.as_dict().items()
+            ]
+        )
 
     def as_json(self) -> str:
         return json.dumps(self.as_dict(), indent=2, sort_keys=True)
 
     def __repr__(self) -> str:
-        return self.as_json()
+        return self.as_ini()
 
     def __str__(self) -> str:
         return self.relpath

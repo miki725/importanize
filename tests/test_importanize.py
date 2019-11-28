@@ -85,7 +85,7 @@ class TestRuntimeConfig:
             is_in_piped=True,
             is_out_piped=True,
             show_diff=True,
-            path_names=["foo"],
+            path_names=[],
             is_print_mode=False,
             show_header=True,
         ).normalize()
@@ -94,6 +94,21 @@ class TestRuntimeConfig:
         assert r.is_print_mode
         assert not r.show_header
         assert not r.should_add_last_line
+
+    def test_normalize_piped_with_filename(self) -> None:
+        r = RuntimeConfig(
+            is_in_piped=True,
+            is_out_piped=True,
+            show_diff=True,
+            path_names=["foo"],
+            is_print_mode=False,
+            show_header=True,
+        ).normalize()
+
+        assert r.path_names == ["foo"]
+        assert r.is_print_mode
+        assert not r.show_header
+        assert r.should_add_last_line
 
     def test_aggregator(self) -> None:
         assert isinstance(RuntimeConfig(is_ci_mode=True).aggregator, CIAggregator)
@@ -112,6 +127,7 @@ class TestResult:
 
 class TestImportanize:
     test_data = TEST_DATA
+    subconfig_test_data = TEST_DATA / "subconfig"
 
     input_text = test_data / "input.py"
     output_grouped = test_data / "output_grouped.py"
@@ -122,8 +138,13 @@ class TestImportanize:
     input_no_imports = test_data / "input_no_imports.py"
     output_no_imports = test_data / "output_no_imports.py"
 
+    input_unused_groups = test_data / "input_unused_groups.py"
+    output_unused_groups = test_data / "output_unused_groups.py"
+
     config_path = test_data / "config.json"
     invalid = test_data / "invalid.py"
+
+    input_few_imports = subconfig_test_data / "input_few_imports.py"
 
     @cached_property  # type: ignore
     def config(self) -> Config:
@@ -224,12 +245,12 @@ class TestImportanize:
     def test_importanize_dir(self) -> None:
         result = list(
             run_importanize_on_source(
-                self.test_data,
+                self.subconfig_test_data,
                 RuntimeConfig(formatter_name="grouped", _config=self.config),
             )
         )
 
-        assert self.input_text in (i.path for i in result)
+        assert self.input_few_imports in (i.path for i in result)
 
 
 class TestCIAggregator:
@@ -331,6 +352,10 @@ class TestAggregator:
         )()
         assert result == 1
         assert stdout.read() == ""
+
+    def test_no_plugins(self) -> None:
+        result = Aggregator(RuntimeConfig(_paths=[], are_plugins_allowed=False,))()
+        assert result == 0
 
     def test_aggregator_has_changes(self) -> None:
         stdin = OpenStringIO((TEST_DATA / "input.py").read_text())

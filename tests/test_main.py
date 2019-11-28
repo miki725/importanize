@@ -18,6 +18,7 @@ def test_version() -> None:
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
     assert "https://github.com/miki725/importanize" in result.output
+    assert "installed plugins" in result.output
 
 
 def test_ci() -> None:

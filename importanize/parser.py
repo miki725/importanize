@@ -10,6 +10,7 @@ import lib2to3.pytree
 import typing
 from dataclasses import dataclass
 
+from .plugins import plugin_hooks
 from .statements import ImportLeaf, ImportStatement
 
 
@@ -87,7 +88,7 @@ def parse_to_tree(text: str) -> lib2to3.pytree.Node:
     raise ParseError(str(error)) from error
 
 
-def get_tree_artifacts(tree: lib2to3.pytree.Node) -> Artifacts:
+def get_tree_artifacts(tree: lib2to3.pytree.Node, text: str) -> Artifacts:
     """
     Get artifacts for the given parsed file tree
     """
@@ -138,7 +139,9 @@ def get_tree_artifacts(tree: lib2to3.pytree.Node) -> Artifacts:
         - empty_offset
     )
 
-    return Artifacts(sep=sep, first_line=max(first_line, 0))
+    artifacts = Artifacts(sep=sep, first_line=max(first_line, 0))
+    plugin_hooks.inject_tree_artifacts(artifacts=artifacts, tree=tree, text=text)
+    return artifacts
 
 
 def get_text_artifacts(text: str) -> Artifacts:
@@ -150,7 +153,7 @@ def get_text_artifacts(text: str) -> Artifacts:
     except ParseError:
         return Artifacts(sep="\n", first_line=0)
     else:
-        return get_tree_artifacts(tree)
+        return get_tree_artifacts(tree, text)
 
 
 class Leaf:

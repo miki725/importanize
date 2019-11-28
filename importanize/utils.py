@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+import contextlib
 import difflib
 import importlib
 import importlib.util
@@ -156,25 +157,29 @@ def generate_diff(text1: str, text2: str, name: str, color: bool = True) -> str:
         for i in difflib.unified_diff(
             text1.splitlines(),
             text2.splitlines(),
-            fromfile=name,
-            tofile=name,
+            fromfile=f"original{os.sep}{name}",
+            tofile=f"importanized{os.sep}{name}",
             lineterm="",
             n=3,
         )
     )
 
 
-def is_piped(fd: typing.Union[typing.BinaryIO, typing.TextIO] = sys.stdin) -> bool:
-    return (
-        # isatty catches cases when script is redirected from or to a file
-        # e.g. script < file
-        # e.g. script > file
-        not fd.isatty()
-        # S_ISFIFO specifically checks if script is being piped to or out of
-        # e.g. echo foo | script
-        # e.g. script | cat
-        or stat.S_ISFIFO(os.fstat(fd.fileno()).st_mode)
-    )
+def is_piped(
+    fd: typing.Union[typing.BinaryIO, typing.TextIO] = sys.stdin,
+    check_file_redirection: bool = True,
+) -> bool:
+    with contextlib.suppress(Exception):
+        return (
+            # isatty catches cases when script is redirected from or to a file
+            # e.g. script < file
+            # e.g. script > file
+            (not fd.isatty() and check_file_redirection)
+            # S_ISFIFO specifically checks if script is being piped to or out of
+            # e.g. echo foo | script
+            # e.g. script | cat
+            or stat.S_ISFIFO(os.fstat(fd.fileno()).st_mode)
+        )
 
 
 class OpenStringIO(io.StringIO):

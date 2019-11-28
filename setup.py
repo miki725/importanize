@@ -23,7 +23,7 @@ requirements = read("requirements.txt").splitlines() + ["setuptools"]
 
 test_requirements = (
     read("requirements.txt").splitlines()
-    + read("requirements-dev.txt").splitlines()[3:]
+    + read("requirements-dev.txt").splitlines()[2:]
 )
 
 setup(
@@ -40,7 +40,10 @@ setup(
     install_requires=requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    entry_points={"console_scripts": ["importanize = importanize.__main__:cli"]},
+    entry_points={
+        "console_scripts": ["importanize = importanize.__main__:cli"],
+        "importanize": ["unused_imports = importanize.contrib.unused_imports:plugin"],
+    },
     keywords=" ".join(["importanize"]),
     classifiers=[
         "Intended Audience :: Developers",

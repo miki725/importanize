@@ -84,6 +84,10 @@ class ImportLeaf(BaseImport):
             strict=strict,
         )
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.name}" if not self.as_name else f"{self.name} as {self.as_name}"
+
     def as_string(self) -> str:
         string = self.name
         if self.as_name:

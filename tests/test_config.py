@@ -10,8 +10,8 @@ from importanize.config import (
     IMPORTANIZE_SETUP_CONFIG,
     Config,
     GroupConfig,
-    NoImportanizeConfig,
     InvalidConfig,
+    NoImportanizeConfig,
 )
 from importanize.formatters import LinesFormatter
 from importanize.statements import ImportStatement
@@ -63,7 +63,7 @@ class TestConfig:
             formatter=LinesFormatter,
             groups=[GroupConfig(type="remainder")],
             exclude=["exclude"],
-            add_imports=[ImportStatement("foo")],
+            add_imports=(ImportStatement("foo"),),
         )
 
     def test_ini_no_section(self) -> None:
@@ -137,6 +137,7 @@ class TestConfig:
                     "exclude=exclude",
                     "add_imports=",
                     "   import foo",
+                    "allow_plugins=false",
                 ]
             ),
         ) == Config(
@@ -150,6 +151,7 @@ class TestConfig:
             ],
             exclude=["exclude"],
             add_imports=[ImportStatement("foo")],
+            are_plugins_allowed=False,
         )
 
     def test_from_path_no_path(self) -> None:
@@ -205,7 +207,7 @@ class TestConfig:
         assert str(Config(path=Path("setup.py"))) == "setup.py"
 
     def test_repr(self) -> None:
-        assert repr(Config.default()) == Config.default().as_json()
+        assert repr(Config.default()) == Config.default().as_ini()
 
     def test_bool(self) -> None:
         assert not Config.default()
