@@ -2,7 +2,10 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import io
 
+import pytest  # type: ignore
+
 from importanize.utils import (
+    OpenBytesIO,
     OpenStringIO,
     StdPath,
     add_prefix_to_text,
@@ -152,10 +155,26 @@ def test_is_piped() -> None:
     assert is_piped(io.StringIO())
 
 
+def test_open_bytes_io() -> None:
+    fid = OpenBytesIO(b"hello")
+    assert fid.read() == b"hello"
+    assert fid.read() == b"hello"
+    fid.close()
+    assert fid.read() == b"hello"
+
+
+def test_open_string_io() -> None:
+    fid = OpenStringIO("hello")
+    assert fid.read() == "hello"
+    assert fid.read() == "hello"
+    fid.close()
+    assert fid.read() == "hello"
+
+
 class TestStdPath:
     def test_stdin(self) -> None:
         p = StdPath("-").with_streams(
-            stdin=io.StringIO("  hello\n  world\n"), stdout=io.StringIO()
+            stdin=io.BytesIO(b"  hello\n  world\n"), stdout=io.BytesIO()
         )
 
         assert p.is_file()
@@ -165,15 +184,26 @@ class TestStdPath:
         p.write_text("hello\nmars\n")
         p.stdout.seek(0)
 
-        assert p.stdout.read() == "  hello\n  mars\n"
+        assert p.stdout.read() == b"  hello\n  mars\n"
 
     def test_file(self) -> None:
         p = StdPath("test").with_streams(
-            filein=OpenStringIO("hello world"), fileout=OpenStringIO()
+            filein=OpenBytesIO(b"hello world"), fileout=OpenBytesIO()
         )
 
         assert p.read_text() == "hello world"
 
         p.write_text("hello mars")
 
-        assert p.fileout.read() == "hello mars"
+        assert p.fileout.read() == b"hello mars"
+
+    def test_pep263(self) -> None:
+        p = StdPath("-").with_streams(
+            stdin=io.BytesIO("# -*- coding: ascii -*-\nпривет".encode("utf-8")),
+            stdout=io.BytesIO(),
+        )
+
+        assert p.is_file()
+
+        with pytest.raises(UnicodeDecodeError):
+            assert p.read_text()

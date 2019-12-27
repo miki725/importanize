@@ -30,6 +30,8 @@ class UnsusedImportsArtifacts:
 
 class UnusedImportsPlugin(ImportanizePlugin):
     version = importanize.__version__
+    enabled_by_default = True
+    enabled_for_pipes = False
 
     @hookimpl
     def inject_tree_artifacts(

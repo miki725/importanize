@@ -3,11 +3,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 import abc
 import itertools
 import typing
-from contextlib import suppress
 from copy import deepcopy
 
 from .parser import Artifacts
 from .statements import ImportLeaf, ImportStatement
+
+
+if typing.TYPE_CHECKING:
+    from .config import Config
 
 
 class Formatter(metaclass=abc.ABCMeta):
@@ -293,9 +296,12 @@ class LinesFormatter(Formatter):
         )
 
 
-if True:
-    # import necessary objects for type annotations to function
-    # can only import at the end of the module to avoid
-    # circular relationship
-    with suppress(ImportError):
-        from .config import Config
+FORMATTERS: typing.Dict[str, typing.Type[Formatter]] = {
+    formatter.name: formatter
+    for formatter in globals().values()
+    if (
+        isinstance(formatter, type)
+        and formatter is not Formatter
+        and issubclass(formatter, Formatter)
+    )
+}

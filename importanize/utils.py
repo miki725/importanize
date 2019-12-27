@@ -12,6 +12,7 @@ import pathlib
 import re
 import stat
 import sys
+import tokenize
 import typing
 from contextlib import suppress
 
@@ -147,7 +148,7 @@ def add_prefix_to_text(text: str, prefix: str) -> str:
 
 def generate_diff(text1: str, text2: str, name: str, color: bool = True) -> str:
     color_mapping: typing.Dict[str, str] = {
-        "!": "blue",
+        "@": "blue",
         "-": "red",
         "+": "green",
     } if color else {}
@@ -182,6 +183,17 @@ def is_piped(
         )
 
 
+class OpenBytesIO(io.BytesIO):
+    def close(self) -> None:
+        """
+        Dont close io buffer
+        """
+
+    def read(self, size: int = -1) -> bytes:
+        self.seek(0)
+        return super().read(size)
+
+
 class OpenStringIO(io.StringIO):
     def close(self) -> None:
         """
@@ -192,12 +204,6 @@ class OpenStringIO(io.StringIO):
         self.seek(0)
         return super().read(size)
 
-    def write(self, data: str) -> None:
-        """
-        Truncate buffer before writing
-        """
-        super().write(data)
-
 
 BasePath = pathlib.Path
 BasePath = type(pathlib.Path())  # type: ignore
@@ -205,17 +211,18 @@ BasePath = type(pathlib.Path())  # type: ignore
 
 class StdPath(BasePath):
     prefix: str = ""
-    stdin: typing.TextIO = sys.stdin
-    stdout: typing.TextIO = sys.stdout
-    filein: typing.TextIO = None
-    fileout: typing.TextIO = None
+    encoding: str = "utf-8"
+    stdin: typing.BinaryIO = sys.stdin.buffer
+    stdout: typing.BinaryIO = sys.stdout.buffer
+    filein: typing.BinaryIO = None
+    fileout: typing.BinaryIO = None
 
     def with_streams(
         self,
-        stdin: typing.TextIO = None,
-        stdout: typing.TextIO = None,
-        filein: typing.TextIO = None,
-        fileout: typing.TextIO = None,
+        stdin: typing.BinaryIO = None,
+        stdout: typing.BinaryIO = None,
+        filein: typing.BinaryIO = None,
+        fileout: typing.BinaryIO = None,
     ) -> "StdPath":
         self.stdin = stdin or self.stdin
         self.stdout = stdout or self.stdout
@@ -239,21 +246,52 @@ class StdPath(BasePath):
             newline=newline,
         )
 
+    def is_std_stream(self) -> bool:
+        return self.name == "-"
+
     def is_file(self) -> bool:
-        return True if self.name == "-" else super().is_file()
+        return self.is_std_stream() or super().is_file()
+
+    def decode_pep263(self, data: bytes) -> typing.Tuple[str, str]:
+        encoding, lines = tokenize.detect_encoding(io.BytesIO(data).readline)
+
+        try:
+            return data.decode(encoding), encoding
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(
+                e.encoding,
+                e.object,
+                e.start,
+                e.end,
+                (
+                    f"\n"
+                    f"Cannot read Python file {self.name!r} "
+                    f"with PEP263 encoding={self.encoding!r}. \n"
+                    f"Make sure encoding comment is correct in the begining of the file. \n"
+                    f"For example: \n"
+                    f"# -*- coding: utf-8 -*-"
+                ),
+            ) from e
 
     def read_text(self, encoding: str = None, errors: str = None) -> str:
-        if self.name == "-":
-            text, self.prefix = remove_largest_whitespace_prefix(self.stdin.read())
+        if self.is_std_stream():
+            text, self.encoding = self.decode_pep263(self.stdin.read())
+            text_without_whitespace, self.prefix = remove_largest_whitespace_prefix(
+                text
+            )
             if self.prefix:
                 log.debug(f"Stripping prefix {self.prefix!r} in {self}")
-            return text
+            return text_without_whitespace
+
         else:
-            return super().read_text(encoding=encoding, errors=errors)
+            text, self.encoding = self.decode_pep263(super().read_bytes())
+            return text
 
     def write_text(self, data: str, encoding: str = None, errors: str = None) -> None:
-        if self.name == "-":
-            self.stdout.write(add_prefix_to_text(data, self.prefix))
+        if self.is_std_stream():
+            self.stdout.write(
+                add_prefix_to_text(data, self.prefix).encode(self.encoding)
+            )
             self.stdout.flush()
         else:
-            super().write_text(data, encoding=encoding, errors=errors)
+            super().write_bytes(data.encode(encoding or self.encoding))
