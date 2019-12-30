@@ -576,6 +576,25 @@ Uses ``pyflakes`` to remove unused imports:
 
      os.path.exists('.')
 
+This plugin is enabled by default. To disable removing unused imports you can
+either:
+
+* disable all plugins via ``allow_plugins``:
+
+  .. code-block:: ini
+
+      allow_plugins=false
+
+* disable ``unused_imports`` specific plugin by omitting it from ``plugins``
+  configuration:
+
+  .. code-block:: ini
+
+      plugins=
+        # other plugins except unused_imports
+
+* add ``# noqa`` comment to unused imports to not remove them
+
 Separate Libraries
 ~~~~~~~~~~~~~~~~~~
 
@@ -594,3 +613,11 @@ Splits all libraries into independant blocks within import groups:
      import pluggy
 
      from . import foo
+
+This plugin is not enabled by default. To enable add ``separate_libs`` to
+``plugins`` configuration:
+
+.. code-block:: ini
+
+    plugins=
+      separate_libs
