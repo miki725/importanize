@@ -7,6 +7,9 @@ History
 +++++++++++
 
 * Removing unused imports via ``unused_imports`` bundled-in plugin.
+* Grouping all libraries separately via ``separate_libs`` bundled-in plugin.
+* PEP263 support. ``importanize`` not honors encoding comment on top
+  of the file on how it reads python source files.
 * Basic plugins via ``pluggy``.
 * Added support for ``.ini`` files configuration style.
 * In addition to ``.importanizerc`` config can be read from ``setup.cfg``,

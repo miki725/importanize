@@ -12,8 +12,8 @@ from pathlib import Path
 
 import click
 
-from .config import FORMATTERS, Config, InvalidConfig, NoImportanizeConfig
-from .formatters import Formatter
+from .config import Config, InvalidConfig, NoImportanizeConfig
+from .formatters import FORMATTERS, Formatter
 from .groups import ImportGroups
 from .parser import (
     Artifacts,
@@ -22,7 +22,11 @@ from .parser import (
     parse_imports_from_tree,
     parse_to_tree,
 )
-from .plugins import deactivate_all_plugins
+from .plugins import (
+    NOT_PIPED_PLUGIN_NAMES,
+    deactivate_all_plugins,
+    ensure_activated_plugins,
+)
 from .statements import ImportStatement
 from .utils import StdPath, generate_diff, takeafter
 
@@ -44,6 +48,7 @@ class RuntimeConfig:
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
     are_plugins_allowed: bool = None
+    should_deactivate_piped_plugins: bool = None
     found_configs: typing.Dict[Path, Config] = field(default_factory=lambda: {})
 
     verbosity: int = 0
@@ -118,7 +123,7 @@ class RuntimeConfig:
             self.is_print_mode = True
             self.show_header = False
             self.should_add_last_line = False
-            self.are_plugins_allowed = False
+            self.should_deactivate_piped_plugins = True
 
         if self.is_out_piped:
             self.is_print_mode = True
@@ -190,8 +195,6 @@ def replace_imports_in_text(
 def run_importanize_on_text(
     text: str, path: Path, config: Config, runtime_config: RuntimeConfig
 ) -> typing.Iterator[Result]:
-    log.debug(f"About to importanize {path}")
-
     try:
         tree = parse_to_tree(text)
 
@@ -236,6 +239,8 @@ def run_importanize_on_text(
 def run_importanize_on_file(
     source: Path, config: Config, runtime_config: RuntimeConfig
 ) -> typing.Iterator[Result]:
+    log.debug(f"About to importanize {source}")
+
     if runtime_config.is_subconfig_allowed:
         subconfig = Config.find(
             cwd=source.parent,
@@ -250,9 +255,17 @@ def run_importanize_on_file(
         log.info(f"Skipping {source} as per {config}")
         return
 
-    yield from run_importanize_on_text(
-        source.read_text(), path=source, config=config, runtime_config=runtime_config
-    )
+    try:
+        text = source.read_text()
+
+    except UnicodeDecodeError as e:
+        log.error(f"Could not read {source} {e}")
+        yield Result(path=source, error=e)
+
+    else:
+        yield from run_importanize_on_text(
+            text, path=source, config=config, runtime_config=runtime_config
+        )
 
 
 def run_importanize_on_dir(
@@ -339,6 +352,15 @@ class BaseAggregator(metaclass=abc.ABCMeta):
 
         if not merged_config.are_plugins_allowed:
             deactivate_all_plugins()
+        else:
+            ensure_activated_plugins(
+                set(merged_config.plugins)
+                - (
+                    set(NOT_PIPED_PLUGIN_NAMES)
+                    if self.runtime_config.should_deactivate_piped_plugins
+                    else set()
+                )
+            )
 
         for source in self.runtime_config.paths:
             for result in run_importanize_on_source(

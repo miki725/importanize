@@ -7,9 +7,10 @@ import typing
 import click
 
 from . import __description__, __version__
-from .config import FORMATTERS, IMPORTANIZE_CONFIG, Config
+from .config import IMPORTANIZE_CONFIG, Config
+from .formatters import FORMATTERS
 from .importanize import RuntimeConfig
-from .plugins import INSTALLED_PLUGINS, PLUGINS
+from .plugins import ALL_PLUGINS, INSTALLED_PLUGIN_NAMES
 from .utils import is_piped
 
 
@@ -195,7 +196,7 @@ def cli(
 
 def version(runtime_config: RuntimeConfig) -> int:
     plugins = (
-        "\n" + "\n".join(f"{k}=={v.version}" for k, v in PLUGINS.items())
+        "\n" + "\n".join(f"{k}=={v.version}" for k, v in ALL_PLUGINS.items())
     ).rstrip()
     click.echo(
         f"importanize\n"
@@ -218,7 +219,7 @@ def main(runtime_config: RuntimeConfig) -> int:
 
     log.debug(f"Running importanize with {runtime_config}")
     log.debug(f"Running with python {sys.executable}")
-    log.debug(f"Installed plugins: {', '.join(INSTALLED_PLUGINS)}")
+    log.debug(f"Installed plugins: {', '.join(INSTALLED_PLUGIN_NAMES)}")
 
     if runtime_config.is_version_mode:
         return version(runtime_config)

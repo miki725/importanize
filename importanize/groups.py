@@ -4,13 +4,16 @@ import abc
 import itertools
 import typing
 from collections import OrderedDict, defaultdict
-from contextlib import suppress
 from functools import reduce
 
 from .parser import Artifacts
 from .plugins import plugin_hooks
 from .statements import ImportStatement
 from .utils import is_site_package, is_std_lib
+
+
+if typing.TYPE_CHECKING:
+    from .config import Config, GroupConfig
 
 
 class BaseImportGroup(metaclass=abc.ABCMeta):
@@ -41,7 +44,13 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
 
     @property
     def unique_statements(self) -> typing.List[ImportStatement]:
-        return sorted(list(set(self.merged_statements)))
+        try:
+            return self._unique_statements
+        except AttributeError:
+            self._unique_statements: typing.List[ImportStatement] = sorted(
+                list(set(self.merged_statements))
+            )
+            return self._unique_statements
 
     @property
     def merged_statements(self) -> typing.List[ImportStatement]:
@@ -126,14 +135,28 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
         return self.artifacts.sep.join([i.as_string() for i in self.unique_statements])
 
     def formatted(self) -> str:
-        return self.artifacts.sep.join(
-            [
+        lines: typing.List[str] = []
+
+        for i, statement in enumerate(self.unique_statements):
+            lines += filter(
+                lambda x: x is not None,
+                plugin_hooks.group_prepend_to_statement(
+                    group=self, index=i, statement=statement
+                ),
+            )
+            lines.append(
                 self.config.formatter(
-                    i, config=self.config, artifacts=self.artifacts
+                    statement, config=self.config, artifacts=self.artifacts
                 ).format()
-                for i in self.unique_statements
-            ]
-        )
+            )
+            lines += filter(
+                lambda x: x is not None,
+                plugin_hooks.group_append_to_statement(
+                    group=self, index=i, statement=statement
+                ),
+            )
+
+        return self.artifacts.sep.join(lines)
 
     def __str__(self) -> str:
         return self.as_string()
@@ -194,10 +217,12 @@ GROUPS: typing.Dict[str, typing.Type[BaseImportGroup]] = OrderedDict(
     sorted(
         (
             (i.name, i)
-            for i in globals().values()
-            if isinstance(i, type)
-            and i is not BaseImportGroup
-            and issubclass(i, BaseImportGroup)
+            for i in list(globals().values()) + plugin_hooks.register_import_group()
+            if (
+                isinstance(i, type)
+                and i is not BaseImportGroup
+                and issubclass(i, BaseImportGroup)
+            )
         ),
         key=lambda i: i[1].priority,
     )
@@ -271,8 +296,3 @@ class ImportGroups:
 
     def __str__(self) -> str:
         return self.as_string()
-
-
-if True:
-    with suppress(ImportError):
-        from .config import Config, GroupConfig

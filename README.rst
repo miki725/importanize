@@ -306,6 +306,27 @@ Configuration Options
     Note that this configuration is only global and is not honored in
     subconfigurations.
 
+:``plugins``:
+    If plugins are allowed, which plugins to use. If not specified
+    all by default enabled plugins will be used.
+
+    .. code-block:: ini
+
+        [importanize]
+        plugins=
+            unused_imports
+
+    or:
+
+    .. code-block:: json
+
+        {
+            "plugins": ["unused_imports"]
+        }
+
+    Note that this configuration is only global and is not honored in
+    subconfigurations.
+
 To view all additional run-time options you can use ``--help`` parameter:
 
 .. code-block:: bash
@@ -501,11 +522,10 @@ Then to run tests, you can use ``nosetests`` or simply use Makefile command:
 Plugins
 -------
 
-There is rudimentarry support for plugins. Currently plugin interface
-only allows to skip specific imports which allows for removing
-unused imports. Plugins can be dynamically registered via `pluggy
-<https://pluggy.readthedocs.io/en/latest/>`_ however ``importanize`` ships with
-some bundled-in plugins at ``importanize/contrib``.
+There is rudimentarry support for plugins. Currently plugin interface is
+limited but allows for some useful operations. Plugins can be dynamically
+registered via `pluggy <https://pluggy.readthedocs.io/en/latest/>`_ however
+``importanize`` ships with some bundled-in plugins at ``importanize/contrib``.
 
 To create a plugin simply implement ``ImportanizePlugin`` class.
 Note that example below does not implement all supported methods.
@@ -533,6 +553,8 @@ Then register the plugin in ``setup.py``:
         },
     )
 
+All installed plugins are listed as part of ``importanize --version`` command.
+
 Bundled Plugins
 +++++++++++++++
 
@@ -553,3 +575,22 @@ Uses ``pyflakes`` to remove unused imports:
 
 
      os.path.exists('.')
+
+Separate Libraries
+~~~~~~~~~~~~~~~~~~
+
+Splits all libraries into independant blocks within import groups:
+
+.. code-block:: bash
+
+    $ importanize tests/test_data/input_separate_libs.py --print --diff --no-subconfig -c tests/test_data/subconfig/separate_libs.ini
+    --- original/tests/test_data/input_separate_libs.py
+    +++ importanized/tests/test_data/input_separate_libs.py
+    @@ -2,6 +2,7 @@
+     import sys
+
+     import click
+    +
+     import pluggy
+
+     from . import foo

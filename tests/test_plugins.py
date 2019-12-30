@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
-from importanize.contrib.unused_imports import UnusedImportsPlugin
-from importanize.plugins import deactivate_all_plugins, plugin_manager
+from importanize.plugins import (
+    activate_plugin,
+    deactivate_all_plugins,
+    deactivate_piped_plugins,
+    plugin_manager,
+)
 
 
 def test_plugins() -> None:
-    plugin_manager.register(UnusedImportsPlugin())
+    activate_plugin("unused_imports")
+    activate_plugin("separate_libs")
 
-    assert plugin_manager.list_name_plugin()
+    assert len(plugin_manager.list_name_plugin()) == 2
+
+    deactivate_piped_plugins()
+
+    assert len(plugin_manager.list_name_plugin()) == 1
 
     deactivate_all_plugins()
 

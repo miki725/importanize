@@ -42,7 +42,10 @@ setup(
     tests_require=test_requirements,
     entry_points={
         "console_scripts": ["importanize = importanize.__main__:cli"],
-        "importanize": ["unused_imports = importanize.contrib.unused_imports:plugin"],
+        "importanize": [
+            "unused_imports = importanize.contrib.unused_imports:plugin",
+            "separate_libs = importanize.contrib.separate_libs:plugin",
+        ],
     },
     keywords=" ".join(["importanize"]),
     classifiers=[

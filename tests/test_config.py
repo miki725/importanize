@@ -119,6 +119,12 @@ class TestConfig:
                 "\n".join(["[importanize]", "after_imports_new_lines=10"]),
             )
 
+    def test_ini_invalid_plugins(self) -> None:
+        with pytest.raises(InvalidConfig):
+            Config.from_ini(
+                StdPath("invalid.ini"), "\n".join(["[importanize]", "plugins=\n  foo"]),
+            )
+
     def test_ini(self) -> None:
         Config.from_ini(StdPath("config.ini"), "\n".join(["[importanize]"])) == Config(
             StdPath("config.ini")

@@ -11,8 +11,10 @@ import typing
 from dataclasses import dataclass
 
 from . import formatters
+from .formatters import FORMATTERS
 from .groups import GROUPS
 from .parser import ParseError, parse_imports
+from .plugins import DEFAULT_PLUGIN_NAMES, INSTALLED_PLUGIN_NAMES
 from .statements import ImportStatement
 
 
@@ -29,15 +31,6 @@ IMPORTANIZE_CONFIG = [
     IMPORTANIZE_TOX_CONFIG,
 ]
 
-FORMATTERS: typing.Dict[str, typing.Type[formatters.Formatter]] = {
-    formatter.name: formatter
-    for formatter in vars(formatters).values()
-    if (
-        isinstance(formatter, type)
-        and formatter is not formatters.Formatter
-        and issubclass(formatter, formatters.Formatter)
-    )
-}
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +78,7 @@ class Config:
     exclude: typing.Iterable[str] = ("*/.tox/*",)
     add_imports: typing.Iterable[ImportStatement] = ()
     are_plugins_allowed: bool = True
+    plugins: typing.Iterable[str] = tuple(DEFAULT_PLUGIN_NAMES)
 
     @classmethod
     def default(cls) -> "Config":
@@ -162,6 +156,18 @@ class Config:
         raise InvalidConfig("Can only add between 0 and 5 new lines after imports")
 
     @classmethod
+    def _parse_plugins(cls, plugins: typing.List[str]) -> typing.Iterable[str]:
+        valid_plugins = []
+        for i in plugins:
+            if i not in INSTALLED_PLUGIN_NAMES:
+                raise InvalidConfig(
+                    f"{i!r} plugin is not installed. "
+                    f"{', '.join(INSTALLED_PLUGIN_NAMES)} are installed."
+                )
+            valid_plugins.append(i)
+        return tuple(valid_plugins)
+
+    @classmethod
     def from_json(cls, path: pathlib.Path, data: str) -> "Config":
         # not a json file altogether
         if not data.strip().startswith("{") or not data.strip().endswith("}"):
@@ -197,6 +203,7 @@ class Config:
                 .lower()
                 == "true"
             ),
+            plugins=cls._parse_plugins(loaded_data.get("plugins", cls.plugins)),
         )
 
     @classmethod
@@ -250,6 +257,15 @@ class Config:
                 .strip()
                 .lower()
                 == "true"
+            ),
+            plugins=cls._parse_plugins(
+                [
+                    i.strip()
+                    for i in loaded_data.get("plugins", "\n".join(cls.plugins)).split(
+                        "\n"
+                    )
+                    if i.strip()
+                ]
             ),
         )
 
@@ -358,6 +374,7 @@ class Config:
             "exclude": list(self.exclude),
             "add_imports": [str(i) for i in self.add_imports],
             "allow_plugins": self.are_plugins_allowed,
+            "plugins": list(self.plugins),
         }
 
     def _as_ini_groups(

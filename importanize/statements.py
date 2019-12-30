@@ -6,6 +6,7 @@ import re
 import typing
 from functools import reduce, total_ordering
 
+from .plugins import plugin_hooks
 from .utils import list_set
 
 
@@ -266,6 +267,20 @@ class ImportStatement(BaseImport):
         return all(params)
 
     def __gt__(self, other: "ImportStatement") -> bool:
+        result = self._gt(other)
+
+        return next(
+            (
+                i
+                for i in plugin_hooks.statement_gt_overwrite(
+                    a=self, b=other, result=result
+                )
+                if i is not None
+            ),
+            result,
+        )
+
+    def _gt(self, other: "ImportStatement") -> bool:
         """
         Follows the following rules:
 
@@ -286,7 +301,7 @@ class ImportStatement(BaseImport):
             return True
 
         # local imports
-        if all([self.stem.startswith("."), other.stem.startswith(".")]):
+        if self.stem.startswith(".") and other.stem.startswith("."):
             # double dot import should be ahead of single dot
             # so only make comparison when different number of dots
             self_local = DOTS.findall(self.stem)[0][0]

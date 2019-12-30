@@ -8,9 +8,9 @@ else
 	COVERAGE_FLAGS=--show-missing --fail-under=100
 endif
 
-importanize_files=$(subst importanize/,,$(shell find importanize -name "[!_]*.py"))
-COVERAGE_TARGETS=$(addprefix coverage/,$(importanize_files))
-
+importanize_files=$(shell find importanize -name "[!_]*.py" | cut -d/ -f2-)
+test_files=$(shell find tests -maxdepth 1 -name "test_[!_]*.py" | cut -d/ -f2- | cut -d_ -f2-)
+independentant_test_files=$(filter-out $(importanize_files),$(test_files))
 
 help:  ## show help
 	@grep -E '^[a-zA-Z_\-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -47,22 +47,23 @@ lint: clean  ## lint whole library
 	fi
 
 test: clean  ## run all tests
-	pytest ${PYTEST_FLAGS} tests/ importanize/
+	pytest ${PYTEST_FLAGS} importanize/ tests/
 
 coverage/%:
-	pytest ${PYTEST_FLAGS} \
+	pytest ${PYTEST_FLAGS} ${PYTEST_DEBUG_FLAGS} \
 		--cov=importanize \
 		--cov-append \
 		--cov-report= \
-		importanize/$* \
-		tests/$(if $(findstring /,$*),$(shell echo $* | cut -d/ -f1)/test_$(shell echo $* | cut -d/ -f2),test_$*)
+		tests/$(if $(findstring /,$*),$(shell echo $* | cut -d/ -f1)/test_$(shell echo $* | cut -d/ -f2),test_$*) \
+		importanize/$*
 	coverage report $(COVERAGE_FLAGS) --include=importanize/$*
 
 coverage: clean-coverage  ## run all tests with coverage
-	$(MAKE) $(COVERAGE_TARGETS)
+	$(MAKE) $(addprefix coverage/,$(importanize_files))
 	coverage report $(COVERAGE_FLAGS)
 	coverage xml
-	pytest tests/test_readme.py
+	# running independant tests which do not correlate to a source file
+	pytest $(addprefix tests/test_,$(independentant_test_files))
 
 test-all: clean  ## run all tests with tox with different python/django versions
 	tox

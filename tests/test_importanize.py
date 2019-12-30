@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import io
 from pathlib import Path
 
 from cached_property import cached_property  # type: ignore
@@ -17,10 +18,10 @@ from importanize.importanize import (
     run_importanize_on_source,
 )
 from importanize.statements import ImportLeaf, ImportStatement
-from importanize.utils import OpenStringIO, StdPath
+from importanize.utils import OpenBytesIO, OpenStringIO, StdPath
 
 
-TEST_DATA = Path(__file__).parent / "test_data"
+TEST_DATA = StdPath(__file__).parent / "test_data"
 CONFIG = Config(
     # need path so that subconfigs are not found within test_data subfolder
     path=TEST_DATA / "config",
@@ -34,6 +35,8 @@ CONFIG = Config(
             ],
         )
     ],
+    are_plugins_allowed=False,
+    plugins=[],
 )
 
 
@@ -162,6 +165,18 @@ class TestImportanize:
     def test_importanize_invalid_python(self) -> None:
         result = next(
             run_importanize_on_source(self.invalid, RuntimeConfig(_config=self.config))
+        )
+
+        assert not result.is_success
+
+    def test_importanize_invalid_encoding(self) -> None:
+        result = next(
+            run_importanize_on_source(
+                self.invalid.with_streams(
+                    filein=io.BytesIO("# -*- coding: ascii -*-\nпривет".encode("utf-8"))
+                ),
+                RuntimeConfig(_config=self.config),
+            )
         )
 
         assert not result.is_success
@@ -323,8 +338,8 @@ class TestPrintAggregator:
         assert (TEST_DATA / "output_grouped.py").read_text() not in text
 
     def test_print_aggregator_piped(self) -> None:
-        stdin = OpenStringIO((TEST_DATA / "input.py").read_text())
-        stdout = OpenStringIO()
+        stdin = OpenBytesIO((TEST_DATA / "input.py").read_bytes())
+        stdout = OpenBytesIO()
         out = OpenStringIO()
         result = PrintAggregator(
             RuntimeConfig(
@@ -332,17 +347,20 @@ class TestPrintAggregator:
                 _paths=[StdPath("-").with_streams(stdin=stdin, stdout=stdout)],
                 show_header=True,
                 stdout=out,
+                is_subconfig_allowed=False,
             )
         )()
         assert result == 0
         assert str(TEST_DATA / "input.py") not in out.read()
-        assert (TEST_DATA / "output_grouped.py").read_text() in stdout.read()
+        assert (TEST_DATA / "output_grouped.py").read_text() in stdout.read().decode(
+            "utf-8"
+        )
 
 
 class TestAggregator:
     def test_invalid_config(self) -> None:
-        stdin = OpenStringIO((TEST_DATA / "output_grouped.py").read_text())
-        stdout = OpenStringIO()
+        stdin = OpenBytesIO((TEST_DATA / "output_grouped.py").read_bytes())
+        stdout = OpenBytesIO()
         result = Aggregator(
             RuntimeConfig(
                 config_path=__file__,
@@ -351,41 +369,49 @@ class TestAggregator:
             )
         )()
         assert result == 1
-        assert stdout.read() == ""
+        assert stdout.read().decode("utf-8") == ""
 
-    def test_no_plugins(self) -> None:
+    def test_plugins_not_allowed(self) -> None:
         result = Aggregator(RuntimeConfig(_paths=[], are_plugins_allowed=False,))()
         assert result == 0
 
+    def test_no_plugins(self) -> None:
+        result = Aggregator(RuntimeConfig(_paths=[], are_plugins_allowed=True))()
+        assert result == 0
+
     def test_aggregator_has_changes(self) -> None:
-        stdin = OpenStringIO((TEST_DATA / "input.py").read_text())
-        stdout = OpenStringIO()
+        stdin = OpenBytesIO((TEST_DATA / "input.py").read_bytes())
+        stdout = OpenBytesIO()
         result = Aggregator(
             RuntimeConfig(
                 _config=CONFIG,
                 _paths=[StdPath("-").with_streams(stdin=stdin, stdout=stdout)],
                 show_header=True,
+                is_subconfig_allowed=False,
             )
         )()
         assert result == 0
-        assert (TEST_DATA / "output_grouped.py").read_text() in stdout.read()
+        assert (TEST_DATA / "output_grouped.py").read_text() in stdout.read().decode(
+            "utf-8"
+        )
 
     def test_aggregator_no_changes(self) -> None:
-        stdin = OpenStringIO((TEST_DATA / "output_grouped.py").read_text())
-        stdout = OpenStringIO()
+        stdin = OpenBytesIO((TEST_DATA / "output_grouped.py").read_bytes())
+        stdout = OpenBytesIO()
         result = Aggregator(
             RuntimeConfig(
                 _config=CONFIG,
                 _paths=[StdPath("-").with_streams(stdin=stdin, stdout=stdout)],
                 show_header=True,
+                is_subconfig_allowed=False,
             )
         )()
         assert result == 0
-        assert stdout.read() == ""
+        assert stdout.read().decode("utf-8") == ""
 
     def test_aggregator_invalid(self) -> None:
-        stdin = OpenStringIO((TEST_DATA / "invalid.py").read_text())
-        stdout = OpenStringIO()
+        stdin = OpenBytesIO((TEST_DATA / "invalid.py").read_bytes())
+        stdout = OpenBytesIO()
         result = Aggregator(
             RuntimeConfig(
                 _config=CONFIG,
@@ -394,17 +420,17 @@ class TestAggregator:
             )
         )()
         assert result == 1
-        assert stdout.read() == ""
+        assert stdout.read().decode("utf-8") == ""
 
     def test_aggregator_subconfig(self) -> None:
-        out = OpenStringIO()
+        stdout = OpenBytesIO()
         result = Aggregator(
             RuntimeConfig(
                 _config=CONFIG,
                 _paths=[
                     StdPath(
                         TEST_DATA / "subconfig" / "input_few_imports.py"
-                    ).with_streams(fileout=out)
+                    ).with_streams(fileout=stdout)
                 ],
                 show_header=True,
             )
@@ -412,4 +438,4 @@ class TestAggregator:
         assert result == 0
         assert (
             TEST_DATA / "subconfig" / "output_grouped_few_imports.py"
-        ).read_text() in out.read()
+        ).read_text() in stdout.read().decode("utf-8")
