@@ -319,8 +319,14 @@ def should_skip(source: Path, config: Config) -> bool:
         relative = str(
             norm_path.relative_to(getattr(config.path, "parent", norm_path.root))
         )
-    absolute_match = any(fnmatch(norm, i) for i in config.exclude)
-    relative_match = any(fnmatch(relative, i,) for i in config.exclude)
+    absolute_match = any(
+        fnmatch(norm, i.replace("\\", os.sep).replace("/", os.sep))
+        for i in config.exclude
+    )
+    relative_match = any(
+        fnmatch(relative, i.replace("\\", os.sep).replace("/", os.sep))
+        for i in config.exclude
+    )
     return absolute_match or relative_match
 
 

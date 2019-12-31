@@ -202,6 +202,33 @@ class TestImportanize:
 
         assert result == []
 
+    def test_importanize_skipping_file_relative(self) -> None:
+        self.config.exclude = ["tests\\test_data/*.py"]
+        self.config.path = TEST_DATA.parent.parent / "setup.ini"
+        result = list(
+            run_importanize_on_source(
+                self.input_text,
+                RuntimeConfig(
+                    formatter_name="grouped",
+                    is_subconfig_allowed=False,
+                    _config=self.config,
+                ),
+            )
+        )
+
+        assert result == []
+
+    def test_importanize_skipping_file_backslash(self) -> None:
+        self.config.exclude = ["*\\test_data\\*.py"]
+        result = list(
+            run_importanize_on_source(
+                self.input_text,
+                RuntimeConfig(formatter_name="grouped", _config=self.config),
+            )
+        )
+
+        assert result == []
+
     def test_importanize_skipping_dir(self) -> None:
         self.config.exclude = ["*/test_data"]
         result = list(
