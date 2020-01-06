@@ -7,3 +7,4 @@
   language: python
   language_version: python3
   types: [python]
+  args: [-v, --no-auto-pipe]

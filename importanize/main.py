@@ -57,6 +57,17 @@ ROOT_CONFIG = Config.find(log_errors=False)
     help="If provided, sub-configurations will not be used.",
 )
 @click.option(
+    "--no-auto-pipe",
+    "should_auto_detect_pipe",
+    default=True,
+    is_flag=True,
+    help=(
+        "If provided, pipes (stdin and stdout) will be not automatically detected. "
+        "Instead to echo to stdout --print and/or --no-header options should be used. "
+        "For stdin explicit file path '-' should be specified."
+    ),
+)
+@click.option(
     "--plugins/--no-plugins",
     "are_plugins_allowed",
     default=None,
@@ -161,6 +172,7 @@ def cli(
     show_header: bool,
     # config
     is_subconfig_allowed: bool,
+    should_auto_detect_pipe: bool,
     are_plugins_allowed: bool = None,
     config_path: str = None,
     # config overwrites
@@ -179,6 +191,7 @@ def cli(
                 root_config=ROOT_CONFIG,
                 config_path=config_path,
                 is_subconfig_allowed=is_subconfig_allowed,
+                should_auto_detect_pipe=should_auto_detect_pipe,
                 are_plugins_allowed=are_plugins_allowed,
                 verbosity=verbosity,
                 is_version_mode=is_version_mode,
