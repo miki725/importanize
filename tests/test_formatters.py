@@ -41,9 +41,10 @@ class BaseTestFormatter:
             inline_comments=inline_comments,
             standalone_comments=standalone_comments,
         )
-        assert self.formatter(
+        actual = self.formatter(
             statement, config=Config.default(), artifacts=Artifacts(sep=sep)
-        ).format() == sep.join(expected)
+        ).format()
+        assert actual == sep.join(expected)
 
 
 class TestGroupedFormatter(BaseTestFormatter):
@@ -117,6 +118,26 @@ class TestGroupedFormatter(BaseTestFormatter):
                 "    zz,",
                 ")",
             ],
+            inline_comments=["noqa"],
+        )
+        self._test(
+            "foo",
+            [
+                ImportLeaf("bar", inline_comments=["hello"]),
+                ImportLeaf("rainbows", inline_comments=["world"]),
+                ImportLeaf("zz", standalone_comments=["and lots of sleep"]),
+            ],
+            [
+                "# comment",
+                "#",
+                "from foo import (  # noqa",
+                "    bar,  # hello",
+                "    rainbows,  # world",
+                "    # and lots of sleep",
+                "    zz,",
+                ")",
+            ],
+            standalone_comments=["comment", ""],
             inline_comments=["noqa"],
         )
 
