@@ -86,7 +86,7 @@ class GroupedFormatter(Formatter):
         string = self.format_statement_standalone_comments() + self.string
 
         if self.all_comments:
-            string += "  # {}".format(" ".join(self.all_comments))
+            string += "  # {}".format(" ".join(self.all_comments)).rstrip()
 
         return string
 
@@ -96,14 +96,16 @@ class GroupedFormatter(Formatter):
     def format_statement_standalone_comments(self) -> str:
         if self.standalone_comments:
             return (
-                self.artifacts.sep.join(f"# {i}" for i in self.standalone_comments)
+                self.artifacts.sep.join(
+                    f"# {i}".rstrip() for i in self.standalone_comments
+                )
                 + self.artifacts.sep
             )
         return ""
 
     def format_statement_inline_comments(self, sep: str) -> str:
         if self.all_inline_comments:
-            return "  # {}".format(" ".join(self.all_inline_comments))
+            return "  # {}".format(" ".join(self.all_inline_comments)).rstrip()
         return ""
 
     def format_leaf_start(self, leaf: "ImportLeaf", sep: str) -> str:
@@ -116,7 +118,9 @@ class GroupedFormatter(Formatter):
         string = ""
 
         if leaf.standalone_comments:
-            string += sep.join(f"# {i}" for i in leaf.standalone_comments) + sep
+            string += (
+                sep.join(f"# {i}".rstrip() for i in leaf.standalone_comments) + sep
+            )
 
         return string
 
@@ -127,7 +131,7 @@ class GroupedFormatter(Formatter):
         string = ""
 
         if leaf.inline_comments:
-            string += "  # {}".format(" ".join(leaf.inline_comments))
+            string += "  # {}".format(" ".join(leaf.inline_comments)).rstrip()
 
         return string
 
