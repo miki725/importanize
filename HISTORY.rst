@@ -14,6 +14,7 @@ History
 * Added support for ``.ini`` files configuration style.
 * In addition to ``.importanizerc`` config can be read from ``setup.cfg``,
   ``importanize.ini``, ``importanize.json`` and ``tox.ini``.
+* Added ``--no-auto-pipe`` flag in case incorrect auto pipe detection.
 * Added ``lines`` formatter which formats all imports on individual lines
 
   .. code-block:: python

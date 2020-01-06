@@ -449,7 +449,7 @@ All found imports can be aggregated with ``--list`` parameter:
 Pipe Support
 ------------
 
-Pipes for both ``stdin`` and ``stdout`` are supported:
+Pipes for both ``stdin`` and ``stdout`` are supported and are auto-detected:
 
 .. code-block:: python
 
@@ -485,6 +485,21 @@ level (e.g. inside function), any whitespace prefix will be honored:
     $ python -c "print('    import sys\n    import os')" | importanize
         import os
         import sys
+
+Just in case pipes are incorrectly detected auto-detection can be disabled
+with ``--no-auto-pipe`` which will require to explicitly use ``--print``,
+``--no-header`` and/or ``-`` file path:
+
+.. code-block:: python
+
+    $ cat tests/test_data/input_readme_diff.py | importanize --no-auto-pipe --print -
+    from package.subpackage.module.submodule import (
+        CONSTANT,
+        Klass,
+        bar,
+        foo,
+        rainbows,
+    )
 
 Pre-Commit
 ----------

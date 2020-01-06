@@ -48,6 +48,7 @@ class RuntimeConfig:
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
     are_plugins_allowed: bool = None
+    should_auto_detect_pipe: bool = True
     should_deactivate_piped_plugins: bool = None
     found_configs: typing.Dict[Path, Config] = field(default_factory=lambda: {})
 
@@ -115,7 +116,7 @@ class RuntimeConfig:
         is_input_stdin = self.is_in_piped or "-" in self.path_names
         any_files_given = bool([i for i in self.path_names if i != "-"])
 
-        if is_input_stdin and not any_files_given:
+        if self.should_auto_detect_pipe and is_input_stdin and not any_files_given:
             assert (
                 self.is_in_piped
             ), '"-" is given as input path however stdin is not piped'
@@ -123,9 +124,11 @@ class RuntimeConfig:
             self.is_print_mode = True
             self.show_header = False
             self.should_add_last_line = False
+
+        if "-" in self.path_names:
             self.should_deactivate_piped_plugins = True
 
-        if self.is_out_piped:
+        if self.should_auto_detect_pipe and self.is_out_piped:
             self.is_print_mode = True
 
         if self.show_diff:
