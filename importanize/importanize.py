@@ -173,12 +173,28 @@ def replace_imports_in_text(
     artifacts: Artifacts,
     runtime_config: RuntimeConfig,
 ) -> str:
+    text_lines = text.splitlines()
+
     line_numbers = groups.all_line_numbers()
     line = min(line_numbers) if line_numbers else None
     first_import_line_number = line or artifacts.first_line
+    last_import_line_number = (
+        max(line_numbers) if line_numbers else first_import_line_number
+    )
 
-    lines = [l for i, l in enumerate(text.splitlines()) if i not in line_numbers]
-    lines_after = list(takeafter(lambda i: i.strip(), lines[first_import_line_number:]))
+    if line_numbers:
+        for i in range(first_import_line_number, last_import_line_number + 1):
+            if i in line_numbers:
+                continue
+            if not text_lines[i].strip():
+                line_numbers.append(i)
+
+    lines = [l for i, l in enumerate(text_lines) if i not in line_numbers]
+    lines_after = (
+        list(takeafter(lambda i: i.strip(), lines[first_import_line_number:]))
+        if config.after_imports_normalize_new_lines
+        else lines[first_import_line_number:]
+    )
 
     formatted_imports = groups.formatted()
 
@@ -187,7 +203,9 @@ def replace_imports_in_text(
         + formatted_imports.splitlines()
         + (
             [""] * config.after_imports_new_lines
-            if lines_after and formatted_imports
+            if lines_after
+            and formatted_imports
+            and config.after_imports_normalize_new_lines
             else []
         )
         + lines_after

@@ -247,6 +247,13 @@ Configuration Options
 
     Can only be specified in configuration file.
 
+:``after_imports_normalize_new_lines``:
+    Boolean whether to adjust number of new lines after imports. By
+    default this option is enabled. Enabling this option will disable
+    ``after_imports_new_lines``.
+
+    Can only be specified in configuration file.
+
 :``after_imports_new_lines``:
     Number of lines to be included after imports.
 

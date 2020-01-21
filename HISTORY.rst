@@ -25,6 +25,7 @@ History
       from package.subpackage.module.submodule import foo
       from package.subpackage.module.submodule import rainbows
 
+* Added ``after_imports_normalize_new_lines`` configuration.
 * Complete refactor of parsing imports. No more string splitting.
   Advantage is that comments around imports are now fully supported:
 
