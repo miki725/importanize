@@ -47,7 +47,7 @@ lint: clean  ## lint whole library
 	fi
 
 test: clean  ## run all tests
-	pytest ${PYTEST_FLAGS} importanize/ tests/
+	pytest ${PYTEST_FLAGS} ${PYTEST_DEBUG_FLAGS} importanize/ tests/
 
 coverage/%:
 	pytest ${PYTEST_FLAGS} ${PYTEST_DEBUG_FLAGS} \

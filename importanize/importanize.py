@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import abc
 import logging
 import os
+import re
 import sys
 import typing
 from contextlib import suppress
@@ -28,7 +29,7 @@ from .plugins import (
     ensure_activated_plugins,
 )
 from .statements import ImportStatement
-from .utils import StdPath, generate_diff, takeafter
+from .utils import StdPath, generate_diff, get_number_cluster_gaps, takeafter
 
 
 log = logging.getLogger(__name__)
@@ -173,26 +174,45 @@ def replace_imports_in_text(
     artifacts: Artifacts,
     runtime_config: RuntimeConfig,
 ) -> str:
+    text_lines = text.splitlines()
+
     line_numbers = groups.all_line_numbers()
     line = min(line_numbers) if line_numbers else None
     first_import_line_number = line or artifacts.first_line
 
-    lines = [l for i, l in enumerate(text.splitlines()) if i not in line_numbers]
-    lines_after = list(takeafter(lambda i: i.strip(), lines[first_import_line_number:]))
+    # remove whitespace between import gaps if gap is just whitespace
+    # if not whitespace presumably there is code there since
+    # no imports were parsed there therefore we leave it intact
+    for gap in get_number_cluster_gaps(line_numbers):
+        if not any(text_lines[i].strip() for i in gap):
+            line_numbers += gap
+
+    lines = [l for i, l in enumerate(text_lines) if i not in line_numbers]
+    lines_after = (
+        list(takeafter(lambda i: i.strip(), lines[first_import_line_number:]))
+        if config.after_imports_normalize_new_lines
+        else lines[first_import_line_number:]
+    )
 
     formatted_imports = groups.formatted()
 
-    return artifacts.sep.join(
+    organized = artifacts.sep.join(
         lines[:first_import_line_number]
         + formatted_imports.splitlines()
         + (
             [""] * config.after_imports_new_lines
-            if lines_after and formatted_imports
+            if lines_after
+            and formatted_imports
+            and config.after_imports_normalize_new_lines
             else []
         )
         + lines_after
         + ([""] if runtime_config.should_add_last_line else [])
     )
+
+    # handle edge case if not removed gaps above have extra whitespace
+    # by limiting at most 2 blank lines anywhere in the source file
+    return re.sub(f"({artifacts.sep}){{3,}}", artifacts.sep * 3, organized)
 
 
 def run_importanize_on_text(

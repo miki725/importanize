@@ -44,4 +44,7 @@ from .module import bar
 from .module import foo
 
 
+def function(): pass
+
+
 # stuff here

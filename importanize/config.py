@@ -66,6 +66,7 @@ class GroupConfig:
 @dataclass
 class Config:
     path: typing.Union[pathlib.Path, None] = None
+    after_imports_normalize_new_lines: bool = True
     after_imports_new_lines: int = 2
     length: int = 80
     formatter: typing.Type[formatters.Formatter] = formatters.GroupedFormatter
@@ -185,6 +186,12 @@ class Config:
 
         return cls(
             path=path,
+            after_imports_normalize_new_lines=bool(
+                loaded_data.get(
+                    "after_imports_normalize_new_lines",
+                    cls.after_imports_normalize_new_lines,
+                )
+            ),
             after_imports_new_lines=cls._parse_after_imports_new_lines(
                 loaded_data.get(
                     "after_imports_new_lines", str(cls.after_imports_new_lines)
@@ -234,6 +241,15 @@ class Config:
 
         return cls(
             path=path,
+            after_imports_normalize_new_lines=(
+                str(
+                    loaded_data.get(
+                        "after_imports_normalize_new_lines",
+                        cls.after_imports_normalize_new_lines,
+                    )
+                ).lower()
+                == "true"
+            ),
             after_imports_new_lines=cls._parse_after_imports_new_lines(
                 loaded_data.get(
                     "after_imports_new_lines", str(cls.after_imports_new_lines)
@@ -367,6 +383,7 @@ class Config:
     def as_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             "path": str(self.relpath or ""),
+            "after_imports_normalize_new_lines": self.after_imports_normalize_new_lines,
             "after_imports_new_lines": self.after_imports_new_lines,
             "length": self.length,
             "formatter": self.formatter.name,
