@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import abc
 import logging
 import os
+import re
 import sys
 import typing
 from contextlib import suppress
@@ -28,7 +29,7 @@ from .plugins import (
     ensure_activated_plugins,
 )
 from .statements import ImportStatement
-from .utils import StdPath, generate_diff, takeafter
+from .utils import StdPath, generate_diff, get_number_cluster_gaps, takeafter
 
 
 log = logging.getLogger(__name__)
@@ -178,16 +179,13 @@ def replace_imports_in_text(
     line_numbers = groups.all_line_numbers()
     line = min(line_numbers) if line_numbers else None
     first_import_line_number = line or artifacts.first_line
-    last_import_line_number = (
-        max(line_numbers) if line_numbers else first_import_line_number
-    )
 
-    if line_numbers:
-        for i in range(first_import_line_number, last_import_line_number + 1):
-            if i in line_numbers:
-                continue
-            if not text_lines[i].strip():
-                line_numbers.append(i)
+    # remove whitespace between import gaps if gap is just whitespace
+    # if not whitespace presumably there is code there since
+    # no imports were parsed there therefore we leave it intact
+    for gap in get_number_cluster_gaps(line_numbers):
+        if not any(text_lines[i].strip() for i in gap):
+            line_numbers += gap
 
     lines = [l for i, l in enumerate(text_lines) if i not in line_numbers]
     lines_after = (
@@ -198,7 +196,7 @@ def replace_imports_in_text(
 
     formatted_imports = groups.formatted()
 
-    return artifacts.sep.join(
+    organized = artifacts.sep.join(
         lines[:first_import_line_number]
         + formatted_imports.splitlines()
         + (
@@ -211,6 +209,10 @@ def replace_imports_in_text(
         + lines_after
         + ([""] if runtime_config.should_add_last_line else [])
     )
+
+    # handle edge case if not removed gaps above have extra whitespace
+    # by limiting at most 2 blank lines anywhere in the source file
+    return re.sub(f"({artifacts.sep}){{3,}}", artifacts.sep * 3, organized)
 
 
 def run_importanize_on_text(

@@ -25,6 +25,11 @@ from z import *
 import coverage  # in site-packages
 from z import foo
 
+def function(): pass
+
+
+
+
 import datetime.parser
 import foo as\
 bar

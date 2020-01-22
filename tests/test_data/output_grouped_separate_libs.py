@@ -55,4 +55,7 @@ from ..othermodule import rainbows
 from .module import bar, foo
 
 
+def function(): pass
+
+
 # stuff here

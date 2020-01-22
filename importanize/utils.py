@@ -124,6 +124,49 @@ class TextPrefixSpex(typing.NamedTuple):
     prefix: str
 
 
+def get_number_clusters(numbers: typing.List[int]) -> typing.List[typing.List[int]]:
+    """
+    Get the number clusters
+
+    ::
+
+        >>> get_number_clusters([1, 2, 3, 5, 6, 8, 9])
+        [[1, 2, 3], [5, 6], [8, 9]]
+    """
+    clusters = []
+    cluster = []
+    for i, number in enumerate(numbers):
+        previous_number = numbers[max(i - 1, 0)]
+        if previous_number <= number <= previous_number + 1:
+            cluster.append(number)
+        else:
+            clusters.append(cluster)
+            cluster = []
+            cluster.append(number)
+    if cluster:
+        clusters.append(cluster)
+    return clusters
+
+
+def get_number_cluster_gaps(numbers: typing.List[int]) -> typing.List[typing.List[int]]:
+    """
+    Get the gaps between number clusters
+
+    ::
+
+        >>> get_number_cluster_gaps([1, 2, 3, 5, 6, 8, 9, 13, 14, 16])
+        [[4], [7], [10, 11, 12], [15]]
+    """
+    clusters = get_number_clusters(numbers)
+    gaps = []
+
+    for i, cluster in enumerate(clusters[1:]):
+        previous_cluster = clusters[i]
+        gaps.append(list(range(previous_cluster[-1] + 1, cluster[0])))
+
+    return gaps
+
+
 def remove_largest_whitespace_prefix(text: str) -> TextPrefixSpex:
     lines = text.splitlines(keepends=True)
     prefix = largest_prefix(
