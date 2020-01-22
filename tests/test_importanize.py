@@ -16,6 +16,7 @@ from importanize.importanize import (
     Result,
     RuntimeConfig,
     run_importanize_on_source,
+    run_importanize_on_text,
 )
 from importanize.statements import ImportLeaf, ImportStatement
 from importanize.utils import OpenBytesIO, OpenStringIO, StdPath
@@ -252,6 +253,22 @@ class TestImportanize:
         assert result.organized == self.output_grouped.read_text()
         assert result.has_changes
         assert result.is_success
+
+    def test_importanize_grouped_windows_line_endings(self) -> None:
+        result = next(
+            run_importanize_on_text(
+                "\r\n".join(self.input_text.read_text().splitlines()),
+                self.input_text,
+                self.config,
+                RuntimeConfig(formatter_name="grouped", _config=self.config),
+            )
+        )
+
+        assert (
+            result.organized.splitlines()
+            == self.output_grouped.read_text().splitlines()
+        )
+        assert result.organized.splitlines(True)[0].endswith("\r\n")
 
     def test_importanize_grouped_no_add_lines(self) -> None:
         self.config.after_imports_normalize_new_lines = False
