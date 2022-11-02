@@ -75,7 +75,9 @@ class BaseImportGroup(metaclass=abc.ABCMeta):
                         group=self, statement=s
                     )
                 ),
-                itertools.chain(*leafless_counter.values(),),
+                itertools.chain(
+                    *leafless_counter.values(),
+                ),
             )
         )
 

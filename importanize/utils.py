@@ -190,11 +190,15 @@ def add_prefix_to_text(text: str, prefix: str) -> str:
 
 
 def generate_diff(text1: str, text2: str, name: str, color: bool = True) -> str:
-    color_mapping: typing.Dict[str, str] = {
-        "@": "blue",
-        "-": "red",
-        "+": "green",
-    } if color else {}
+    color_mapping: typing.Dict[str, str] = (
+        {
+            "@": "blue",
+            "-": "red",
+            "+": "green",
+        }
+        if color
+        else {}
+    )
 
     return "\n".join(
         click.style(i, fg=color_mapping[i[:1]]) if i[:1] in color_mapping else i

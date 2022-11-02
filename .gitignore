@@ -50,6 +50,7 @@ docs/_build
 .venv
 .vim
 Session.vim
+tags
 
 # system
 .DS_Store

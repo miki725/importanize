@@ -24,93 +24,79 @@ class ImportanizePlugin:
     enabled_for_pipes: bool
 
     def register_import_group(self) -> "BaseImportGroup":
-        """
-        """
+        """ """
 
     def statement_gt_overwrite(
         self, a: "ImportStatement", b: "ImportStatement", result: bool
     ) -> typing.Optional[bool]:
-        """
-        """
+        """ """
 
     def group_prepend_to_statement(
         self, group: "BaseImportGroup", index: int, statement: "ImportStatement"
     ) -> str:
-        """
-        """
+        """ """
 
     def group_append_to_statement(
         self, group: "BaseImportGroup", index: int, statement: "ImportStatement"
     ) -> str:
-        """
-        """
+        """ """
 
     def inject_tree_artifacts(
         self, artifacts: "Artifacts", tree: lib2to3.pytree.Node, text: str
     ) -> "Artifacts":
-        """
-        """
+        """ """
 
     def should_include_statement(
         self, group: "BaseImportGroup", statement: "ImportStatement"
     ) -> bool:
-        """
-        """
+        """ """
 
     def should_include_leaf(
         self, group: "BaseImportGroup", statement: "ImportStatement", leaf: "ImportLeaf"
     ) -> bool:
-        """
-        """
+        """ """
 
 
 class ImportanizeSpec:
     @hookspec
     def register_import_group(self) -> typing.List["BaseImportGroup"]:
-        """
-        """
+        """ """
 
     @hookspec
     def statement_gt_overwrite(
         self, a: "ImportStatement", b: "ImportStatement", result: bool
     ) -> typing.List[typing.Optional[bool]]:
-        """
-        """
+        """ """
 
     @hookspec
     def inject_tree_artifacts(
         self, artifacts: "Artifacts", tree: lib2to3.pytree.Node, text: str
     ) -> typing.List["Artifacts"]:
-        """
-        """
+        """ """
 
     @hookspec
     def group_prepend_to_statement(
         self, group: "BaseImportGroup", index: int, statement: "ImportStatement"
     ) -> typing.List[str]:
-        """
-        """
+        """ """
 
     @hookspec
     def group_append_to_statement(
         self, group: "BaseImportGroup", index: int, statement: "ImportStatement"
     ) -> typing.List[str]:
-        """
-        """
+        """ """
 
     @hookspec
     def should_include_statement(
         self, group: "BaseImportGroup", statement: "ImportStatement"
     ) -> typing.List[bool]:
-        """
-        """
+        """ """
 
     @hookspec
     def should_include_leaf(
         self, group: "BaseImportGroup", statement: "ImportStatement", leaf: "ImportLeaf"
     ) -> typing.List[bool]:
-        """
-        """
+        """ """
 
 
 plugin_manager = pluggy.PluginManager("importanize")

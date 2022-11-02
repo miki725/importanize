@@ -45,7 +45,7 @@ class RuntimeConfig:
     should_add_last_line: bool = True
 
     _config: typing.Optional[Config] = None
-    root_config: Config = Config.default()
+    root_config: Config = field(default_factory=lambda: Config.default())
     config_path: typing.Optional[str] = None
     is_subconfig_allowed: bool = True
     are_plugins_allowed: bool = None
@@ -292,7 +292,9 @@ def run_importanize_on_file(
 
 
 def run_importanize_on_dir(
-    source: Path, config: Config, runtime_config: RuntimeConfig,
+    source: Path,
+    config: Config,
+    runtime_config: RuntimeConfig,
 ) -> typing.Iterator[Result]:
     if runtime_config.is_subconfig_allowed:
         subconfig = Config.find(
@@ -366,8 +368,7 @@ class BaseAggregator(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def update(self, result: Result) -> None:
-        """
-        """
+        """ """
 
     def finish(self) -> int:
         return 0

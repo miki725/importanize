@@ -430,7 +430,12 @@ class TestAggregator:
         assert stdout.read().decode("utf-8") == ""
 
     def test_plugins_not_allowed(self) -> None:
-        result = Aggregator(RuntimeConfig(_paths=[], are_plugins_allowed=False,))()
+        result = Aggregator(
+            RuntimeConfig(
+                _paths=[],
+                are_plugins_allowed=False,
+            )
+        )()
         assert result == 0
 
     def test_no_plugins(self) -> None:

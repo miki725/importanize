@@ -94,7 +94,8 @@ class TestConfig:
     def test_ini_invalid_formatter(self) -> None:
         with pytest.raises(InvalidConfig):
             Config.from_ini(
-                StdPath("invalid.ini"), "\n".join(["[importanize]", "formatter=foo"]),
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "formatter=foo"]),
             )
 
     def test_ini_invalid_length(self) -> None:
@@ -122,7 +123,8 @@ class TestConfig:
     def test_ini_invalid_plugins(self) -> None:
         with pytest.raises(InvalidConfig):
             Config.from_ini(
-                StdPath("invalid.ini"), "\n".join(["[importanize]", "plugins=\n  foo"]),
+                StdPath("invalid.ini"),
+                "\n".join(["[importanize]", "plugins=\n  foo"]),
             )
 
     def test_ini(self) -> None:

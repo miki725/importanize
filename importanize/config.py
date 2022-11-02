@@ -398,7 +398,12 @@ class Config:
         self, packages: typing.List[typing.Dict[str, typing.Any]]
     ) -> typing.List[str]:
         return [
-            ":".join(filter(None, [i["type"], ",".join(i.get("packages", []))],))
+            ":".join(
+                filter(
+                    None,
+                    [i["type"], ",".join(i.get("packages", []))],
+                )
+            )
             for i in packages
         ]
 

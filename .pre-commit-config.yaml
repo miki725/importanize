@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 'master'
+    rev: v4.3.0
     hooks:
       - id: check-added-large-files
         args: [--maxkb=1024]
@@ -22,7 +22,6 @@ repos:
       - id: end-of-file-fixer
       - id: fix-encoding-pragma
         exclude: test_data/.*$
-      - id: flake8
       - id: mixed-line-ending
       - id: trailing-whitespace
 
@@ -38,8 +37,13 @@ repos:
         additional_dependencies: [click, pluggy, pyflakes]
         exclude: test_data/.*$
 
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+
   - repo: https://github.com/python/black
-    rev: 'master'
+    rev: '22.10.0'
     hooks:
       - id: black
         args: [--line-length=88, --safe]
@@ -47,7 +51,7 @@ repos:
         exclude: test_data/.*$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'master'
+    rev: 'v0.982'
     hooks:
       - id: mypy
         language_version: python3
@@ -55,11 +59,11 @@ repos:
         exclude: test_data/.*$
 
   - repo: https://github.com/mgedmin/check-manifest
-    rev: 'master'
+    rev: '0.48'
     hooks:
       - id: check-manifest
 
   - repo: https://github.com/miki725/pre-commit-twine-check
-    rev: 'master'
+    rev: '0.1'
     hooks:
       - id: twine-check

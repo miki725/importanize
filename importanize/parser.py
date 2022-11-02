@@ -181,12 +181,12 @@ class Leaf:
         self.prefix: str = self.leaf.prefix
         self.value: str = self.leaf.value
 
-        self.combinable_types: typing.Set[
-            int
-        ] = combinable_types or self.IMPORT_COMBINABLE_TYPES
-        self.combinable_value: str = f" {self.leaf.value} " if self.leaf.value in {
-            "as"
-        } else self.leaf.value
+        self.combinable_types: typing.Set[int] = (
+            combinable_types or self.IMPORT_COMBINABLE_TYPES
+        )
+        self.combinable_value: str = (
+            f" {self.leaf.value} " if self.leaf.value in {"as"} else self.leaf.value
+        )
 
         self.prefix_lines: typing.List[str] = self.prefix.splitlines()
         self.relevant_prefix_lines: typing.List[str] = list(
