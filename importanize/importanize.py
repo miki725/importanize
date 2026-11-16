@@ -31,7 +31,6 @@ from .plugins import (
 from .statements import ImportStatement
 from .utils import StdPath, generate_diff, get_number_cluster_gaps, takeafter
 
-
 log = logging.getLogger(__name__)
 
 

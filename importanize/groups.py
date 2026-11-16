@@ -11,7 +11,6 @@ from .plugins import plugin_hooks
 from .statements import ImportStatement
 from .utils import is_site_package, is_std_lib
 
-
 if typing.TYPE_CHECKING:
     from .config import Config, GroupConfig
 

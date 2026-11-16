@@ -13,7 +13,6 @@ from .importanize import RuntimeConfig
 from .plugins import ALL_PLUGINS, INSTALLED_PLUGIN_NAMES
 from .utils import is_piped
 
-
 LOGGING_FORMAT = "%(message)s"
 VERBOSITY_MAPPING = {0: logging.ERROR, 1: logging.INFO, 2: logging.DEBUG}
 logging.basicConfig(format=LOGGING_FORMAT, handlers=[logging.StreamHandler(sys.stderr)])

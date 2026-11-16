@@ -12,7 +12,6 @@ from importanize.formatters import (
 from importanize.parser import Artifacts
 from importanize.statements import ImportLeaf, ImportStatement
 
-
 # Define some names for tests purposes
 module = "module"
 obj1 = "object1"

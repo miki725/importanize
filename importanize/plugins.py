@@ -6,7 +6,6 @@ from contextlib import suppress
 
 import pluggy  # type: ignore
 
-
 if typing.TYPE_CHECKING:
     from .groups import BaseImportGroup
     from .parser import Artifacts

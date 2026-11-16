@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
         args: [--maxkb=1024]
@@ -37,13 +37,13 @@ repos:
         additional_dependencies: [click, pluggy, pyflakes]
         exclude: test_data/.*$
 
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.5.0
     hooks:
       - id: flake8
 
-  - repo: https://github.com/python/black
-    rev: '22.10.0'
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: '26.10.1'
     hooks:
       - id: black
         args: [--line-length=88, --safe]
@@ -51,7 +51,7 @@ repos:
         exclude: test_data/.*$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v0.982'
+    rev: 'v2.4.1'
     hooks:
       - id: mypy
         language_version: python3
@@ -59,7 +59,7 @@ repos:
         exclude: test_data/.*$
 
   - repo: https://github.com/mgedmin/check-manifest
-    rev: '0.48'
+    rev: '0.51'
     hooks:
       - id: check-manifest
 
