@@ -8,7 +8,6 @@ from copy import deepcopy
 from .parser import Artifacts
 from .statements import ImportLeaf, ImportStatement
 
-
 if typing.TYPE_CHECKING:
     from .config import Config
 

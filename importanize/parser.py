@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from .plugins import plugin_hooks
 from .statements import ImportLeaf, ImportStatement
 
-
 ENCODING_COMMENTS = ("coding=", "coding:")
 STATEMENT_COMMENTS = ("noqa", "type:")
 GRAMMARS = [

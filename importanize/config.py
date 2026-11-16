@@ -17,7 +17,6 @@ from .parser import ParseError, parse_imports
 from .plugins import DEFAULT_PLUGIN_NAMES, INSTALLED_PLUGIN_NAMES
 from .statements import ImportStatement
 
-
 IMPORTANIZE_HIDDEN_CONFIG = ".importanizerc"
 IMPORTANIZE_JSON_CONFIG = "importanize.json"
 IMPORTANIZE_INI_CONFIG = "importanize.ini"
@@ -412,9 +411,13 @@ class Config:
             [
                 "{}={}".format(
                     k,
-                    "\n  ".join([""] + getattr(self, f"_as_ini_{k}", lambda x: x)(v))
-                    if isinstance(v, list)
-                    else str(v),
+                    (
+                        "\n  ".join(
+                            [""] + getattr(self, f"_as_ini_{k}", lambda x: x)(v)
+                        )
+                        if isinstance(v, list)
+                        else str(v)
+                    ),
                 ).rstrip()
                 for k, v in self.as_dict().items()
             ]

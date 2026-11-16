@@ -13,7 +13,6 @@ import importanize
 
 from ..plugins import ImportanizePlugin, hookimpl
 
-
 log = logging.getLogger(__name__)
 
 

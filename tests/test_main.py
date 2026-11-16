@@ -9,7 +9,6 @@ from importanize.config import IMPORTANIZE_INI_CONFIG
 from importanize.importanize import RuntimeConfig
 from importanize.main import main
 
-
 TEST_DATA = Path(__file__).parent / "test_data"
 
 

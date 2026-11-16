@@ -21,7 +21,6 @@ from importanize.importanize import (
 from importanize.statements import ImportLeaf, ImportStatement
 from importanize.utils import OpenBytesIO, OpenStringIO, StdPath
 
-
 TEST_DATA = StdPath(__file__).parent / "test_data"
 CONFIG = Config(
     # need path so that subconfigs are not found within test_data subfolder

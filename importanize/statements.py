@@ -9,7 +9,6 @@ from functools import reduce, total_ordering
 from .plugins import plugin_hooks
 from .utils import list_set
 
-
 DOTS = re.compile(r"^(\.+)(.*)")
 
 

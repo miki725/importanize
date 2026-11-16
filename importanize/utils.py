@@ -18,7 +18,6 @@ from contextlib import suppress
 
 import click
 
-
 log = logging.getLogger(__name__)
 PREFIX_RE = re.compile(r"^\s+")
 
